@@ -1,0 +1,654 @@
+{
+  "classification": {
+    "accuracy": 0.8385826771653543,
+    "balanced_accuracy": 0.8298571428571428,
+    "macro_f1": 0.8121529659741042,
+    "confusion_matrix": [
+      [
+        35,
+        0,
+        1,
+        1,
+        3
+      ],
+      [
+        2,
+        26,
+        2,
+        0,
+        2
+      ],
+      [
+        4,
+        7,
+        101,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        18,
+        2
+      ],
+      [
+        0,
+        15,
+        0,
+        2,
+        33
+      ]
+    ],
+    "per_class": [
+      {
+        "category": "emergency",
+        "precision": 0.8536585365853658,
+        "recall": 0.875,
+        "f1": 0.8641975308641976,
+        "support": 40
+      },
+      {
+        "category": "in_vehicle",
+        "precision": 0.5416666666666666,
+        "recall": 0.8125,
+        "f1": 0.65,
+        "support": 32
+      },
+      {
+        "category": "human",
+        "precision": 0.9711538461538461,
+        "recall": 0.9017857142857143,
+        "f1": 0.9351851851851851,
+        "support": 112
+      },
+      {
+        "category": "traffic",
+        "precision": 0.8571428571428571,
+        "recall": 0.9,
+        "f1": 0.8780487804878048,
+        "support": 20
+      },
+      {
+        "category": "environmental",
+        "precision": 0.825,
+        "recall": 0.66,
+        "f1": 0.7333333333333334,
+        "support": 50
+      }
+    ]
+  },
+  "calibration": {
+    "mean_conf_correct": 0.9051302075386047,
+    "mean_conf_wrong": 0.7078740000724792,
+    "wrong_predictions": [
+      {
+        "file": "door7_aug4.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.9899
+      },
+      {
+        "file": "glass-knock-71787.wav",
+        "true": "in_vehicle",
+        "pred": "emergency",
+        "confidence": 0.9882
+      },
+      {
+        "file": "door7_aug0.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.9834
+      },
+      {
+        "file": "door1_aug3.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.9627
+      },
+      {
+        "file": "door1.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.9545
+      },
+      {
+        "file": "door1_aug2.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.9285
+      },
+      {
+        "file": "door10_aug4.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.9218
+      },
+      {
+        "file": "door10.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.8794
+      },
+      {
+        "file": "door10_aug3.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.8761
+      },
+      {
+        "file": "thunderstorm (8)_aug0.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.8671
+      },
+      {
+        "file": "glass-slide-glass-break-zombie-zam-327853.wav",
+        "true": "in_vehicle",
+        "pred": "environmental",
+        "confidence": 0.8409
+      },
+      {
+        "file": "female-scream-longer-251068_aug1_aug1.wav",
+        "true": "human",
+        "pred": "in_vehicle",
+        "confidence": 0.7603
+      },
+      {
+        "file": "door10_aug2.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.7575
+      },
+      {
+        "file": "female-scream-longer-251068.wav",
+        "true": "human",
+        "pred": "in_vehicle",
+        "confidence": 0.7497
+      },
+      {
+        "file": "road (90).wav",
+        "true": "traffic",
+        "pred": "environmental",
+        "confidence": 0.7448
+      },
+      {
+        "file": "35716__analogchill__scream.wav",
+        "true": "human",
+        "pred": "emergency",
+        "confidence": 0.7433
+      },
+      {
+        "file": "door1_aug1.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.7378
+      },
+      {
+        "file": "door10_aug0.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.7285
+      },
+      {
+        "file": "door1_aug0.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.7166
+      },
+      {
+        "file": "female-scream-longer-251068_aug2_aug2.wav",
+        "true": "human",
+        "pred": "in_vehicle",
+        "confidence": 0.7067
+      },
+      {
+        "file": "door10_aug1.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.691
+      },
+      {
+        "file": "ambulance708.wav",
+        "true": "emergency",
+        "pred": "environmental",
+        "confidence": 0.6831
+      },
+      {
+        "file": "female-scream-short-251067.wav",
+        "true": "human",
+        "pred": "in_vehicle",
+        "confidence": 0.664
+      },
+      {
+        "file": "glass-hit-102623.wav",
+        "true": "in_vehicle",
+        "pred": "human",
+        "confidence": 0.6614
+      },
+      {
+        "file": "door1_aug4.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.6555
+      },
+      {
+        "file": "glass-shatter-7-95202.wav",
+        "true": "in_vehicle",
+        "pred": "human",
+        "confidence": 0.6384
+      },
+      {
+        "file": "ambulance835.wav",
+        "true": "emergency",
+        "pred": "human",
+        "confidence": 0.6383
+      },
+      {
+        "file": "rain-in-forest-birds-nature-111405_aug4_aug4.wav",
+        "true": "environmental",
+        "pred": "traffic",
+        "confidence": 0.6103
+      },
+      {
+        "file": "female-scream-short-251067_aug4_aug4.wav",
+        "true": "human",
+        "pred": "in_vehicle",
+        "confidence": 0.6079
+      },
+      {
+        "file": "road (82).wav",
+        "true": "traffic",
+        "pred": "environmental",
+        "confidence": 0.5967
+      },
+      {
+        "file": "knocking-on-glass-pane-98196.wav",
+        "true": "in_vehicle",
+        "pred": "emergency",
+        "confidence": 0.5936
+      },
+      {
+        "file": "273153__hoerspielwerkstatt-hef__child-scream2_aug1.wav",
+        "true": "human",
+        "pred": "emergency",
+        "confidence": 0.578
+      },
+      {
+        "file": "IFJ0_15_10_0_30_0_0_0_aug0.wav",
+        "true": "human",
+        "pred": "emergency",
+        "confidence": 0.5665
+      },
+      {
+        "file": "ambulance710.wav",
+        "true": "emergency",
+        "pred": "environmental",
+        "confidence": 0.5633
+      },
+      {
+        "file": "female-scream-short-251067_aug1_aug1.wav",
+        "true": "human",
+        "pred": "in_vehicle",
+        "confidence": 0.5389
+      },
+      {
+        "file": "ambulance877.wav",
+        "true": "emergency",
+        "pred": "traffic",
+        "confidence": 0.5207
+      },
+      {
+        "file": "35716__analogchill__scream_aug2.wav",
+        "true": "human",
+        "pred": "emergency",
+        "confidence": 0.5161
+      },
+      {
+        "file": "injury-scream-86808.wav",
+        "true": "human",
+        "pred": "in_vehicle",
+        "confidence": 0.5086
+      },
+      {
+        "file": "rain-in-forest-birds-nature-111405.wav",
+        "true": "environmental",
+        "pred": "traffic",
+        "confidence": 0.4993
+      },
+      {
+        "file": "glass-shatter-impact-93797.wav",
+        "true": "in_vehicle",
+        "pred": "environmental",
+        "confidence": 0.4909
+      },
+      {
+        "file": "ambulance707.wav",
+        "true": "emergency",
+        "pred": "environmental",
+        "confidence": 0.3623
+      }
+    ],
+    "buckets": [
+      {
+        "range": "[0.00,0.40)",
+        "n": 1,
+        "accuracy": 0.0,
+        "mean_confidence": 0.36230769753456116
+      },
+      {
+        "range": "[0.40,0.50)",
+        "n": 4,
+        "accuracy": 0.5,
+        "mean_confidence": 0.49305522441864014
+      },
+      {
+        "range": "[0.50,0.60)",
+        "n": 17,
+        "accuracy": 0.47058823529411764,
+        "mean_confidence": 0.5538278818130493
+      },
+      {
+        "range": "[0.60,0.70)",
+        "n": 16,
+        "accuracy": 0.4375,
+        "mean_confidence": 0.6485051512718201
+      },
+      {
+        "range": "[0.70,0.80)",
+        "n": 27,
+        "accuracy": 0.6666666666666666,
+        "mean_confidence": 0.7499843835830688
+      },
+      {
+        "range": "[0.80,0.90)",
+        "n": 34,
+        "accuracy": 0.8823529411764706,
+        "mean_confidence": 0.8493958115577698
+      },
+      {
+        "range": "[0.90,0.95)",
+        "n": 32,
+        "accuracy": 0.9375,
+        "mean_confidence": 0.924543023109436
+      },
+      {
+        "range": "[0.95,1.00]",
+        "n": 123,
+        "accuracy": 0.959349593495935,
+        "mean_confidence": 0.9835404753684998
+      }
+    ],
+    "ece": 0.0437488758892525
+  },
+  "latency": {
+    "runs": 50,
+    "threads": 1,
+    "preprocess_ms": {
+      "mean": 5.446985873859376,
+      "median": 5.40714553790167,
+      "p95": 7.174125057645142,
+      "max": 7.1820830926299095
+    },
+    "forward_ms": {
+      "mean": 3.3185565867461264,
+      "median": 3.2681034645065665,
+      "p95": 4.544417024590075,
+      "max": 5.436499952338636
+    },
+    "total_ms": {
+      "mean": 8.765542460605502,
+      "median": 8.771083492320031,
+      "p95": 10.522374999709427,
+      "max": 11.855041957460344
+    }
+  },
+  "threshold": {
+    "recommended": 0.75,
+    "val_row": {
+      "threshold": 0.75,
+      "flagged_pct": 0.155893536121673,
+      "errors_caught": 0.7894736842105263,
+      "false_alarms": 0.10655737704918032,
+      "accepted_accuracy": 0.9819819819819819,
+      "youden_j": 0.682916307161346
+    },
+    "test_row": {
+      "threshold": 0.75,
+      "flagged_pct": 0.2047244094488189,
+      "errors_caught": 0.6829268292682927,
+      "false_alarms": 0.11267605633802817,
+      "accepted_accuracy": 0.9356435643564357,
+      "youden_j": 0.5702507729302646
+    },
+    "val_sweep": [
+      {
+        "threshold": 0.3,
+        "flagged_pct": 0.0,
+        "errors_caught": 0.0,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.9277566539923955,
+        "youden_j": 0.0
+      },
+      {
+        "threshold": 0.35,
+        "flagged_pct": 0.0,
+        "errors_caught": 0.0,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.9277566539923955,
+        "youden_j": 0.0
+      },
+      {
+        "threshold": 0.4,
+        "flagged_pct": 0.0076045627376425855,
+        "errors_caught": 0.05263157894736842,
+        "false_alarms": 0.004098360655737705,
+        "accepted_accuracy": 0.9310344827586207,
+        "youden_j": 0.048533218291630716
+      },
+      {
+        "threshold": 0.45,
+        "flagged_pct": 0.015209125475285171,
+        "errors_caught": 0.15789473684210525,
+        "false_alarms": 0.004098360655737705,
+        "accepted_accuracy": 0.9382239382239382,
+        "youden_j": 0.15379637618636754
+      },
+      {
+        "threshold": 0.5,
+        "flagged_pct": 0.049429657794676805,
+        "errors_caught": 0.3157894736842105,
+        "false_alarms": 0.028688524590163935,
+        "accepted_accuracy": 0.948,
+        "youden_j": 0.2871009490940466
+      },
+      {
+        "threshold": 0.55,
+        "flagged_pct": 0.06463878326996197,
+        "errors_caught": 0.3684210526315789,
+        "false_alarms": 0.040983606557377046,
+        "accepted_accuracy": 0.9512195121951219,
+        "youden_j": 0.3274374460742019
+      },
+      {
+        "threshold": 0.6,
+        "flagged_pct": 0.09125475285171103,
+        "errors_caught": 0.42105263157894735,
+        "false_alarms": 0.06557377049180328,
+        "accepted_accuracy": 0.9539748953974896,
+        "youden_j": 0.35547886108714405
+      },
+      {
+        "threshold": 0.65,
+        "flagged_pct": 0.11026615969581749,
+        "errors_caught": 0.47368421052631576,
+        "false_alarms": 0.08196721311475409,
+        "accepted_accuracy": 0.9572649572649573,
+        "youden_j": 0.3917169974115617
+      },
+      {
+        "threshold": 0.7,
+        "flagged_pct": 0.12927756653992395,
+        "errors_caught": 0.631578947368421,
+        "false_alarms": 0.09016393442622951,
+        "accepted_accuracy": 0.9694323144104804,
+        "youden_j": 0.5414150129421915
+      },
+      {
+        "threshold": 0.75,
+        "flagged_pct": 0.155893536121673,
+        "errors_caught": 0.7894736842105263,
+        "false_alarms": 0.10655737704918032,
+        "accepted_accuracy": 0.9819819819819819,
+        "youden_j": 0.682916307161346
+      },
+      {
+        "threshold": 0.8,
+        "flagged_pct": 0.20912547528517111,
+        "errors_caught": 0.7894736842105263,
+        "false_alarms": 0.16393442622950818,
+        "accepted_accuracy": 0.9807692307692307,
+        "youden_j": 0.6255392579810182
+      },
+      {
+        "threshold": 0.85,
+        "flagged_pct": 0.24714828897338403,
+        "errors_caught": 0.7894736842105263,
+        "false_alarms": 0.20491803278688525,
+        "accepted_accuracy": 0.9797979797979798,
+        "youden_j": 0.5845556514236411
+      },
+      {
+        "threshold": 0.9,
+        "flagged_pct": 0.3269961977186312,
+        "errors_caught": 0.9473684210526315,
+        "false_alarms": 0.2786885245901639,
+        "accepted_accuracy": 0.9943502824858758,
+        "youden_j": 0.6686798964624676
+      },
+      {
+        "threshold": 0.95,
+        "flagged_pct": 0.4372623574144487,
+        "errors_caught": 1.0,
+        "false_alarms": 0.39344262295081966,
+        "accepted_accuracy": 1.0,
+        "youden_j": 0.6065573770491803
+      }
+    ],
+    "test_sweep": [
+      {
+        "threshold": 0.3,
+        "flagged_pct": 0.0,
+        "errors_caught": 0.0,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.8385826771653543,
+        "youden_j": 0.0
+      },
+      {
+        "threshold": 0.35,
+        "flagged_pct": 0.0,
+        "errors_caught": 0.0,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.8385826771653543,
+        "youden_j": 0.0
+      },
+      {
+        "threshold": 0.4,
+        "flagged_pct": 0.003937007874015748,
+        "errors_caught": 0.024390243902439025,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.841897233201581,
+        "youden_j": 0.024390243902439025
+      },
+      {
+        "threshold": 0.45,
+        "flagged_pct": 0.003937007874015748,
+        "errors_caught": 0.024390243902439025,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.841897233201581,
+        "youden_j": 0.024390243902439025
+      },
+      {
+        "threshold": 0.5,
+        "flagged_pct": 0.01968503937007874,
+        "errors_caught": 0.07317073170731707,
+        "false_alarms": 0.009389671361502348,
+        "accepted_accuracy": 0.8473895582329317,
+        "youden_j": 0.06378106034581472
+      },
+      {
+        "threshold": 0.55,
+        "flagged_pct": 0.047244094488188976,
+        "errors_caught": 0.17073170731707318,
+        "false_alarms": 0.023474178403755867,
+        "accepted_accuracy": 0.859504132231405,
+        "youden_j": 0.1472575289133173
+      },
+      {
+        "threshold": 0.6,
+        "flagged_pct": 0.08661417322834646,
+        "errors_caught": 0.2926829268292683,
+        "false_alarms": 0.046948356807511735,
+        "accepted_accuracy": 0.875,
+        "youden_j": 0.24573457002175653
+      },
+      {
+        "threshold": 0.65,
+        "flagged_pct": 0.1220472440944882,
+        "errors_caught": 0.3902439024390244,
+        "false_alarms": 0.07042253521126761,
+        "accepted_accuracy": 0.8878923766816144,
+        "youden_j": 0.3198213672277568
+      },
+      {
+        "threshold": 0.7,
+        "flagged_pct": 0.14960629921259844,
+        "errors_caught": 0.5121951219512195,
+        "false_alarms": 0.07981220657276995,
+        "accepted_accuracy": 0.9074074074074074,
+        "youden_j": 0.4323829153784496
+      },
+      {
+        "threshold": 0.75,
+        "flagged_pct": 0.2047244094488189,
+        "errors_caught": 0.6829268292682927,
+        "false_alarms": 0.11267605633802817,
+        "accepted_accuracy": 0.9356435643564357,
+        "youden_j": 0.5702507729302646
+      },
+      {
+        "threshold": 0.8,
+        "flagged_pct": 0.2559055118110236,
+        "errors_caught": 0.7317073170731707,
+        "false_alarms": 0.1643192488262911,
+        "accepted_accuracy": 0.9417989417989417,
+        "youden_j": 0.5673880682468796
+      },
+      {
+        "threshold": 0.85,
+        "flagged_pct": 0.3110236220472441,
+        "errors_caught": 0.7560975609756098,
+        "false_alarms": 0.22535211267605634,
+        "accepted_accuracy": 0.9428571428571428,
+        "youden_j": 0.5307454482995534
+      },
+      {
+        "threshold": 0.9,
+        "flagged_pct": 0.38976377952755903,
+        "errors_caught": 0.8292682926829268,
+        "false_alarms": 0.3051643192488263,
+        "accepted_accuracy": 0.9548387096774194,
+        "youden_j": 0.5241039734341004
+      },
+      {
+        "threshold": 0.95,
+        "flagged_pct": 0.515748031496063,
+        "errors_caught": 0.8780487804878049,
+        "false_alarms": 0.4460093896713615,
+        "accepted_accuracy": 0.959349593495935,
+        "youden_j": 0.4320393908164434
+      }
+    ],
+    "method": "maximize (errors caught - correct flagged) on val, 0.05 grid"
+  }
+}
