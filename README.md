@@ -30,5 +30,9 @@ python -m pytest model/tests -v
 | Folder | Contents |
 | --- | --- |
 | `model/` | Deployed classifier: data prep, training, evaluation, inference, tests |
+| `backend/` | FastAPI service: auth/RBAC, device manager, data ingestion, alert tracking, DB access |
+| `frontend/` | React role-based dashboard (owner, IoT staff, cloud staff) |
+| `edge_client/` | Simulated car client that uploads audio events to the backend |
+| `infra/` | AWS deployment (EC2 Auto Scaling, ALB, RDS, S3, CloudWatch) |
 | `scripts/` | Audio utilities (`normalize_audio.py`) |
 | `Audio_Datasets/` | Professor-provided training audio (local only, not in git) |
