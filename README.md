@@ -25,6 +25,21 @@ pip install -r model/requirements.txt
 python -m pytest model/tests -v
 ```
 
+## Backend databases: `backend/`
+
+- PostgreSQL (SQLAlchemy models in `backend/app/models/`): users, cars, devices, subscriptions,
+  alert_type_config, model_versions
+- MongoDB (`backend/app/db/mongo.py`): alerts, device_data_records
+
+From the repo root:
+
+```bash
+pip install -r backend/requirements.txt
+cp backend/.env.example backend/.env           # set DATABASE_URL, MONGO_URL, SEED_PASSWORD
+python -m backend.app.db.init_db --seed        # create tables + indexes, load demo data
+python -m pytest backend/tests -v              # uses SQLite + mongomock, no servers needed
+```
+
 ## Repository layout
 
 | Folder | Contents |

@@ -1,0 +1,11 @@
+# backend/ dependencies. Install from the repo root:
+#   pip install -r backend/requirements.txt
+sqlalchemy>=2.0
+psycopg[binary]>=3.2
+pymongo>=4.8
+pydantic-settings>=2.4
+bcrypt>=4.2
+
+# tests
+pytest
+mongomock>=4.2
