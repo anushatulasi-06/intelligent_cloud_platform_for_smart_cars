@@ -1,0 +1,24 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+
+# Datasets and generated audio (large; kept locally / in S3, not in git)
+Audio_Datasets/
+model/data/
+
+
+# Large model weights. The deployed model/ checkpoint (~120 KB) is committed;
+# everything else stays local until model artifacts move to S3.
+*.pth
+*.npz
+!model/checkpoints/cnn_weights.pth
