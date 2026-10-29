@@ -1,0 +1,530 @@
+{
+  "classification": {
+    "accuracy": 0.9333333333333333,
+    "balanced_accuracy": 0.8926929017105442,
+    "macro_f1": 0.886858242740923,
+    "confusion_matrix": [
+      [
+        39,
+        2,
+        0,
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        11,
+        0,
+        0,
+        0,
+        2
+      ],
+      [
+        1,
+        0,
+        12,
+        1,
+        0,
+        1
+      ],
+      [
+        0,
+        3,
+        0,
+        113,
+        0,
+        0
+      ],
+      [
+        1,
+        1,
+        0,
+        0,
+        16,
+        0
+      ],
+      [
+        0,
+        1,
+        2,
+        0,
+        0,
+        47
+      ]
+    ],
+    "per_class": [
+      {
+        "category": "emergency",
+        "precision": 0.9512195121951219,
+        "recall": 0.9069767441860465,
+        "f1": 0.9285714285714286,
+        "support": 43
+      },
+      {
+        "category": "accident",
+        "precision": 0.6111111111111112,
+        "recall": 0.8461538461538461,
+        "f1": 0.7096774193548387,
+        "support": 13
+      },
+      {
+        "category": "in_vehicle",
+        "precision": 0.8571428571428571,
+        "recall": 0.8,
+        "f1": 0.8275862068965518,
+        "support": 15
+      },
+      {
+        "category": "human",
+        "precision": 0.9741379310344828,
+        "recall": 0.9741379310344828,
+        "f1": 0.9741379310344828,
+        "support": 116
+      },
+      {
+        "category": "traffic",
+        "precision": 1.0,
+        "recall": 0.8888888888888888,
+        "f1": 0.9411764705882353,
+        "support": 18
+      },
+      {
+        "category": "environmental",
+        "precision": 0.94,
+        "recall": 0.94,
+        "f1": 0.94,
+        "support": 50
+      }
+    ]
+  },
+  "calibration": {
+    "mean_conf_correct": 0.9635087847709656,
+    "mean_conf_wrong": 0.6727204322814941,
+    "wrong_predictions": [
+      {
+        "file": "ambulance765.wav",
+        "true": "emergency",
+        "pred": "human",
+        "confidence": 0.9852
+      },
+      {
+        "file": "road (35).wav",
+        "true": "traffic",
+        "pred": "emergency",
+        "confidence": 0.9168
+      },
+      {
+        "file": "Rain (95)_aug2.wav",
+        "true": "environmental",
+        "pred": "accident",
+        "confidence": 0.8812
+      },
+      {
+        "file": "ambulance920.wav",
+        "true": "emergency",
+        "pred": "accident",
+        "confidence": 0.8734
+      },
+      {
+        "file": "31-5_aug1.wav",
+        "true": "human",
+        "pred": "accident",
+        "confidence": 0.8307
+      },
+      {
+        "file": "31-5_aug3.wav",
+        "true": "human",
+        "pred": "accident",
+        "confidence": 0.8165
+      },
+      {
+        "file": "cleaning-window-glass-squeak-7044.wav",
+        "true": "in_vehicle",
+        "pred": "emergency",
+        "confidence": 0.7565
+      },
+      {
+        "file": "wind (73)_aug0.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.6741
+      },
+      {
+        "file": "road (68).wav",
+        "true": "traffic",
+        "pred": "accident",
+        "confidence": 0.6467
+      },
+      {
+        "file": "ambulance858.wav",
+        "true": "emergency",
+        "pred": "human",
+        "confidence": 0.6046
+      },
+      {
+        "file": "filling-glass-various-sounds-68575.wav",
+        "true": "in_vehicle",
+        "pred": "human",
+        "confidence": 0.5702
+      },
+      {
+        "file": "glass-slide-glass-break-zombie-zam-327853.wav",
+        "true": "in_vehicle",
+        "pred": "environmental",
+        "confidence": 0.5605
+      },
+      {
+        "file": "5-3.wav",
+        "true": "accident",
+        "pred": "environmental",
+        "confidence": 0.5149
+      },
+      {
+        "file": "14-7.wav",
+        "true": "accident",
+        "pred": "environmental",
+        "confidence": 0.5014
+      },
+      {
+        "file": "thunderstorm (8)_aug0.wav",
+        "true": "environmental",
+        "pred": "in_vehicle",
+        "confidence": 0.4944
+      },
+      {
+        "file": "ambulance710.wav",
+        "true": "emergency",
+        "pred": "accident",
+        "confidence": 0.4345
+      },
+      {
+        "file": "31-5_aug4.wav",
+        "true": "human",
+        "pred": "accident",
+        "confidence": 0.3747
+      }
+    ],
+    "buckets": [
+      {
+        "range": "[0.00,0.40)",
+        "n": 1,
+        "accuracy": 0.0,
+        "mean_confidence": 0.37473931908607483
+      },
+      {
+        "range": "[0.40,0.50)",
+        "n": 3,
+        "accuracy": 0.3333333333333333,
+        "mean_confidence": 0.45602425932884216
+      },
+      {
+        "range": "[0.50,0.60)",
+        "n": 7,
+        "accuracy": 0.42857142857142855,
+        "mean_confidence": 0.5497437119483948
+      },
+      {
+        "range": "[0.60,0.70)",
+        "n": 7,
+        "accuracy": 0.5714285714285714,
+        "mean_confidence": 0.6544484496116638
+      },
+      {
+        "range": "[0.70,0.80)",
+        "n": 8,
+        "accuracy": 0.875,
+        "mean_confidence": 0.763678789138794
+      },
+      {
+        "range": "[0.80,0.90)",
+        "n": 13,
+        "accuracy": 0.6923076923076923,
+        "mean_confidence": 0.863085150718689
+      },
+      {
+        "range": "[0.90,0.95)",
+        "n": 14,
+        "accuracy": 0.9285714285714286,
+        "mean_confidence": 0.9249510169029236
+      },
+      {
+        "range": "[0.95,1.00]",
+        "n": 202,
+        "accuracy": 0.995049504950495,
+        "mean_confidence": 0.9915858507156372
+      }
+    ],
+    "ece": 0.023659494110182186
+  },
+  "latency": {
+    "runs": 50,
+    "threads": 1,
+    "preprocess_ms": {
+      "mean": 2.7760524954646826,
+      "median": 2.7780415257439017,
+      "p95": 3.187958034686744,
+      "max": 3.294500056654215
+    },
+    "forward_ms": {
+      "mean": 1.786125903017819,
+      "median": 1.7392715672031045,
+      "p95": 1.9736660178750753,
+      "max": 2.20512505620718
+    },
+    "total_ms": {
+      "mean": 4.5621783984825015,
+      "median": 4.555979510769248,
+      "p95": 4.989958950318396,
+      "max": 5.104125011712313
+    }
+  },
+  "threshold": {
+    "recommended": 0.85,
+    "val_row": {
+      "threshold": 0.85,
+      "flagged_pct": 0.14453125,
+      "errors_caught": 0.8823529411764706,
+      "false_alarms": 0.09205020920502092,
+      "accepted_accuracy": 0.9908675799086758,
+      "youden_j": 0.7903027319714496
+    },
+    "test_row": {
+      "threshold": 0.85,
+      "flagged_pct": 0.12156862745098039,
+      "errors_caught": 0.7647058823529411,
+      "false_alarms": 0.07563025210084033,
+      "accepted_accuracy": 0.9821428571428571,
+      "youden_j": 0.6890756302521008
+    },
+    "val_sweep": [
+      {
+        "threshold": 0.3,
+        "flagged_pct": 0.0,
+        "errors_caught": 0.0,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.93359375,
+        "youden_j": 0.0
+      },
+      {
+        "threshold": 0.35,
+        "flagged_pct": 0.0,
+        "errors_caught": 0.0,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.93359375,
+        "youden_j": 0.0
+      },
+      {
+        "threshold": 0.4,
+        "flagged_pct": 0.0,
+        "errors_caught": 0.0,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.93359375,
+        "youden_j": 0.0
+      },
+      {
+        "threshold": 0.45,
+        "flagged_pct": 0.0,
+        "errors_caught": 0.0,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.93359375,
+        "youden_j": 0.0
+      },
+      {
+        "threshold": 0.5,
+        "flagged_pct": 0.00390625,
+        "errors_caught": 0.0,
+        "false_alarms": 0.0041841004184100415,
+        "accepted_accuracy": 0.9333333333333333,
+        "youden_j": -0.0041841004184100415
+      },
+      {
+        "threshold": 0.55,
+        "flagged_pct": 0.01953125,
+        "errors_caught": 0.17647058823529413,
+        "false_alarms": 0.008368200836820083,
+        "accepted_accuracy": 0.9442231075697212,
+        "youden_j": 0.16810238739847405
+      },
+      {
+        "threshold": 0.6,
+        "flagged_pct": 0.05078125,
+        "errors_caught": 0.4117647058823529,
+        "false_alarms": 0.02510460251046025,
+        "accepted_accuracy": 0.9588477366255144,
+        "youden_j": 0.38666010337189266
+      },
+      {
+        "threshold": 0.65,
+        "flagged_pct": 0.0859375,
+        "errors_caught": 0.5882352941176471,
+        "false_alarms": 0.0502092050209205,
+        "accepted_accuracy": 0.9700854700854701,
+        "youden_j": 0.5380260890967266
+      },
+      {
+        "threshold": 0.7,
+        "flagged_pct": 0.09765625,
+        "errors_caught": 0.6470588235294118,
+        "false_alarms": 0.058577405857740586,
+        "accepted_accuracy": 0.974025974025974,
+        "youden_j": 0.5884814176716712
+      },
+      {
+        "threshold": 0.75,
+        "flagged_pct": 0.109375,
+        "errors_caught": 0.6470588235294118,
+        "false_alarms": 0.07112970711297072,
+        "accepted_accuracy": 0.9736842105263158,
+        "youden_j": 0.5759291164164411
+      },
+      {
+        "threshold": 0.8,
+        "flagged_pct": 0.12109375,
+        "errors_caught": 0.7647058823529411,
+        "false_alarms": 0.07531380753138076,
+        "accepted_accuracy": 0.9822222222222222,
+        "youden_j": 0.6893920748215604
+      },
+      {
+        "threshold": 0.85,
+        "flagged_pct": 0.14453125,
+        "errors_caught": 0.8823529411764706,
+        "false_alarms": 0.09205020920502092,
+        "accepted_accuracy": 0.9908675799086758,
+        "youden_j": 0.7903027319714496
+      },
+      {
+        "threshold": 0.9,
+        "flagged_pct": 0.171875,
+        "errors_caught": 0.8823529411764706,
+        "false_alarms": 0.12133891213389121,
+        "accepted_accuracy": 0.9905660377358491,
+        "youden_j": 0.7610140290425793
+      },
+      {
+        "threshold": 0.95,
+        "flagged_pct": 0.2265625,
+        "errors_caught": 0.8823529411764706,
+        "false_alarms": 0.1799163179916318,
+        "accepted_accuracy": 0.98989898989899,
+        "youden_j": 0.7024366231848388
+      }
+    ],
+    "test_sweep": [
+      {
+        "threshold": 0.3,
+        "flagged_pct": 0.0,
+        "errors_caught": 0.0,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.9333333333333333,
+        "youden_j": 0.0
+      },
+      {
+        "threshold": 0.35,
+        "flagged_pct": 0.0,
+        "errors_caught": 0.0,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.9333333333333333,
+        "youden_j": 0.0
+      },
+      {
+        "threshold": 0.4,
+        "flagged_pct": 0.00392156862745098,
+        "errors_caught": 0.058823529411764705,
+        "false_alarms": 0.0,
+        "accepted_accuracy": 0.937007874015748,
+        "youden_j": 0.058823529411764705
+      },
+      {
+        "threshold": 0.45,
+        "flagged_pct": 0.011764705882352941,
+        "errors_caught": 0.11764705882352941,
+        "false_alarms": 0.004201680672268907,
+        "accepted_accuracy": 0.9404761904761905,
+        "youden_j": 0.1134453781512605
+      },
+      {
+        "threshold": 0.5,
+        "flagged_pct": 0.01568627450980392,
+        "errors_caught": 0.17647058823529413,
+        "false_alarms": 0.004201680672268907,
+        "accepted_accuracy": 0.9442231075697212,
+        "youden_j": 0.1722689075630252
+      },
+      {
+        "threshold": 0.55,
+        "flagged_pct": 0.027450980392156862,
+        "errors_caught": 0.29411764705882354,
+        "false_alarms": 0.008403361344537815,
+        "accepted_accuracy": 0.9516129032258065,
+        "youden_j": 0.2857142857142857
+      },
+      {
+        "threshold": 0.6,
+        "flagged_pct": 0.043137254901960784,
+        "errors_caught": 0.4117647058823529,
+        "false_alarms": 0.01680672268907563,
+        "accepted_accuracy": 0.9590163934426229,
+        "youden_j": 0.3949579831932773
+      },
+      {
+        "threshold": 0.65,
+        "flagged_pct": 0.054901960784313725,
+        "errors_caught": 0.5294117647058824,
+        "false_alarms": 0.02100840336134454,
+        "accepted_accuracy": 0.966804979253112,
+        "youden_j": 0.5084033613445378
+      },
+      {
+        "threshold": 0.7,
+        "flagged_pct": 0.07058823529411765,
+        "errors_caught": 0.5882352941176471,
+        "false_alarms": 0.03361344537815126,
+        "accepted_accuracy": 0.9704641350210971,
+        "youden_j": 0.5546218487394958
+      },
+      {
+        "threshold": 0.75,
+        "flagged_pct": 0.07450980392156863,
+        "errors_caught": 0.5882352941176471,
+        "false_alarms": 0.037815126050420166,
+        "accepted_accuracy": 0.9703389830508474,
+        "youden_j": 0.5504201680672269
+      },
+      {
+        "threshold": 0.8,
+        "flagged_pct": 0.10196078431372549,
+        "errors_caught": 0.6470588235294118,
+        "false_alarms": 0.06302521008403361,
+        "accepted_accuracy": 0.9737991266375546,
+        "youden_j": 0.5840336134453782
+      },
+      {
+        "threshold": 0.85,
+        "flagged_pct": 0.12156862745098039,
+        "errors_caught": 0.7647058823529411,
+        "false_alarms": 0.07563025210084033,
+        "accepted_accuracy": 0.9821428571428571,
+        "youden_j": 0.6890756302521008
+      },
+      {
+        "threshold": 0.9,
+        "flagged_pct": 0.15294117647058825,
+        "errors_caught": 0.8823529411764706,
+        "false_alarms": 0.10084033613445378,
+        "accepted_accuracy": 0.9907407407407407,
+        "youden_j": 0.7815126050420168
+      },
+      {
+        "threshold": 0.95,
+        "flagged_pct": 0.20784313725490197,
+        "errors_caught": 0.9411764705882353,
+        "false_alarms": 0.15546218487394958,
+        "accepted_accuracy": 0.995049504950495,
+        "youden_j": 0.7857142857142857
+      }
+    ],
+    "method": "maximize (errors caught - correct flagged) on val, 0.05 grid"
+  }
+}

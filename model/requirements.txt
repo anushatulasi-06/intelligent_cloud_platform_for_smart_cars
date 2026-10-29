@@ -1,0 +1,12 @@
+# model/ dependencies (deployed classifier).
+# On EC2, install the CPU-only torch build to keep the install small:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r model/requirements.txt
+torch
+librosa
+soundfile
+numpy
+matplotlib
+pydub
+imageio-ffmpeg
+pytest
