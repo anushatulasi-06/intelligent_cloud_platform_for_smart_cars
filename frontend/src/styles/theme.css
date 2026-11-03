@@ -1,0 +1,83 @@
+/* Smart Car Platform theme. Every colour used by the UI is defined here;
+   other stylesheets and components reference only these variables. */
+
+:root {
+  /* ---- Core palette ---- */
+  --sidebar: #0F172A;
+  --sidebar-active: #1E293B;
+  --bg: #F4F6FB;
+  --card: #FFFFFF;
+  --border: #E2E8F0;
+  --brand-from: #4F46E5;
+  --brand-to: #0EA5E9;
+  --primary: #4F46E5;
+  --success: #10B981;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+  --text: #0F172A;
+  --text-2: #475569;
+  --text-3: #94A3B8;
+  --thead-bg: #EEF2FF;
+  --thead-text: #4338CA;
+
+  /* ---- Layout accents ---- */
+  --accent-bar: #F97316;          /* active sidebar item bar */
+  --sidebar-locked: #64748B;      /* locked sidebar item text/icon */
+  --sidebar-text: #CBD5E1;        /* sidebar item text */
+  --on-dark: #FFFFFF;             /* text on dark or coloured fills */
+  --zebra: #F8FAFC;               /* alternate table rows */
+  --row-hover: #EEF2FF;
+  --secondary-bg: #E0E7FF;        /* secondary button / indigo tint */
+  --secondary-text: var(--thead-text);
+  --primary-hover: #4338CA;
+  --success-hover: #059669;
+  --danger-hover: #DC2626;
+  --brand-gradient: linear-gradient(135deg, var(--brand-from), var(--brand-to));
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.18);
+  --overlay: rgba(15, 23, 42, 0.45);
+  --focus-ring: rgba(79, 70, 229, 0.35);
+
+  /* ---- Tints (KPI icon squares, light fills) ---- */
+  --tint-primary: #E0E7FF;
+  --tint-success: #D1FAE5;
+  --tint-danger: #FEE2E2;
+  --tint-warning: #FEF3C7;
+  --tint-sky: #E0F2FE;
+  --tint-pink: #FCE7F3;
+  --tint-teal: #CCFBF1;
+  --sky: #0EA5E9;
+  --pink: #EC4899;
+  --teal: #14B8A6;
+
+  /* ---- Sidebar icon tiles ---- */
+  --tile-dashboard: var(--primary);
+  --tile-map: var(--sky);
+  --tile-tracking: var(--success);
+  --tile-alerts: var(--danger);
+  --tile-simulator: var(--warning);
+  --tile-devices: var(--pink);
+  --tile-config: var(--teal);
+
+  /* ---- Severity badges (bg / text) ---- */
+  --sev-critical-bg: #FEE2E2;  --sev-critical-text: #DC2626;
+  --sev-high-bg: #FFEDD5;      --sev-high-text: #EA580C;
+  --sev-medium-bg: #FEF3C7;    --sev-medium-text: #B45309;
+  --sev-low-bg: #D1FAE5;       --sev-low-text: #047857;
+
+  /* ---- Status badges (bg / text) ---- */
+  --st-new-bg: #DBEAFE;          --st-new-text: #1D4ED8;
+  --st-ack-bg: #FEF3C7;          --st-ack-text: #B45309;
+  --st-resolved-bg: #D1FAE5;     --st-resolved-text: #047857;
+  --st-online-bg: #D1FAE5;       --st-online-text: #047857;
+  --st-offline-bg: #E2E8F0;      --st-offline-text: #475569;
+  --st-failed-bg: #FEE2E2;       --st-failed-text: #DC2626;
+  --st-indigo-bg: #E0E7FF;       --st-indigo-text: #4338CA;
+
+  /* ---- Sound-type dots ---- */
+  --sound-emergency: #EF4444;
+  --sound-in_vehicle: #6366F1;
+  --sound-traffic: #F59E0B;
+  --sound-human: #EC4899;
+  --sound-environmental: #14B8A6;
+}

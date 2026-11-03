@@ -1,0 +1,250 @@
+{
+  "owner": {
+    "cars": [
+      {
+        "id": 1,
+        "make": "Toyota",
+        "model": "Camry",
+        "devices_total": 2,
+        "devices_online": 2,
+        "status": "online"
+      },
+      {
+        "id": 2,
+        "make": "Honda",
+        "model": "Civic",
+        "devices_total": 2,
+        "devices_online": 0,
+        "status": "offline"
+      }
+    ],
+    "counts": {
+      "alerts_today": 13,
+      "unresolved": 12
+    },
+    "recent_alerts": [
+      {
+        "id": "e2d40702e359b9c99141ef3d",
+        "record_id": "1edd74d0-cfc1-45a0-a48c-48098abdd3d6",
+        "car_id": 1,
+        "device_id": 1,
+        "sound_type": "in_vehicle",
+        "lat": 37.32963,
+        "lon": -121.88266,
+        "confidence": 0.676,
+        "probs": {
+          "in_vehicle": 0.676,
+          "emergency": 0.118,
+          "human": 0.084,
+          "traffic": 0.079,
+          "environmental": 0.043
+        },
+        "is_anomaly": true,
+        "severity": "high",
+        "status": "new",
+        "model_version": "cnn-v3",
+        "s3_object_key": "audio/1/2026/11/02/1edd74d0-cfc1-45a0-a48c-48098abdd3d6.wav",
+        "timestamp": "2026-11-02T16:55:00.000Z",
+        "acknowledged_by": null,
+        "acknowledged_at": null,
+        "resolved_by": null,
+        "resolved_at": null,
+        "resolution_note": null
+      },
+      {
+        "id": "2bb6146b2ad7e1b1f8b49bf1",
+        "record_id": "d942202b-12a2-4202-adb5-6a6ada600058",
+        "car_id": 1,
+        "device_id": 1,
+        "sound_type": "human",
+        "lat": 37.32652,
+        "lon": -121.88045,
+        "confidence": 0.848,
+        "probs": {
+          "human": 0.848,
+          "emergency": 0.033,
+          "in_vehicle": 0.046,
+          "traffic": 0.037,
+          "environmental": 0.036
+        },
+        "is_anomaly": false,
+        "severity": "medium",
+        "status": "new",
+        "model_version": "cnn-v3",
+        "s3_object_key": "audio/1/2026/11/02/d942202b-12a2-4202-adb5-6a6ada600058.wav",
+        "timestamp": "2026-11-02T15:26:00.000Z",
+        "acknowledged_by": null,
+        "acknowledged_at": null,
+        "resolved_by": null,
+        "resolved_at": null,
+        "resolution_note": null
+      },
+      {
+        "id": "4064bce3443d24f46da59f3a",
+        "record_id": "4a8a833a-99bb-4ef2-ae2f-2d64048e5546",
+        "car_id": 1,
+        "device_id": 1,
+        "sound_type": "traffic",
+        "lat": 37.32779,
+        "lon": -121.87575,
+        "confidence": 0.976,
+        "probs": {
+          "traffic": 0.976,
+          "emergency": 0.001,
+          "in_vehicle": 0.004,
+          "human": 0.017,
+          "environmental": 0.002
+        },
+        "is_anomaly": false,
+        "severity": "low",
+        "status": "new",
+        "model_version": "cnn-v3",
+        "s3_object_key": "audio/1/2026/11/02/4a8a833a-99bb-4ef2-ae2f-2d64048e5546.wav",
+        "timestamp": "2026-11-02T14:21:00.000Z",
+        "acknowledged_by": null,
+        "acknowledged_at": null,
+        "resolved_by": null,
+        "resolved_at": null,
+        "resolution_note": null
+      },
+      {
+        "id": "5e0dccd879bacfcced3a5f8f",
+        "record_id": "a8ecdd42-42ee-4280-a73a-dcb021ec6ed9",
+        "car_id": 2,
+        "device_id": 3,
+        "sound_type": "traffic",
+        "lat": 37.34145,
+        "lon": -121.94191,
+        "confidence": 0.883,
+        "probs": {
+          "traffic": 0.883,
+          "emergency": 0.011,
+          "in_vehicle": 0.039,
+          "human": 0.035,
+          "environmental": 0.032
+        },
+        "is_anomaly": false,
+        "severity": "low",
+        "status": "new",
+        "model_version": "cnn-v3",
+        "s3_object_key": "audio/2/2026/11/02/a8ecdd42-42ee-4280-a73a-dcb021ec6ed9.wav",
+        "timestamp": "2026-11-02T12:55:00.000Z",
+        "acknowledged_by": null,
+        "acknowledged_at": null,
+        "resolved_by": null,
+        "resolved_at": null,
+        "resolution_note": null
+      },
+      {
+        "id": "15ec8e707ccf9ff1c5ff540c",
+        "record_id": "96a9c41d-4238-4db8-a206-c1e13a606f0b",
+        "car_id": 2,
+        "device_id": 3,
+        "sound_type": "traffic",
+        "lat": 37.35162,
+        "lon": -121.93028,
+        "confidence": 0.885,
+        "probs": {
+          "traffic": 0.885,
+          "emergency": 0.016,
+          "in_vehicle": 0.038,
+          "human": 0.036,
+          "environmental": 0.025
+        },
+        "is_anomaly": false,
+        "severity": "low",
+        "status": "new",
+        "model_version": "cnn-v3",
+        "s3_object_key": "audio/2/2026/11/02/96a9c41d-4238-4db8-a206-c1e13a606f0b.wav",
+        "timestamp": "2026-11-02T10:35:00.000Z",
+        "acknowledged_by": null,
+        "acknowledged_at": null,
+        "resolved_by": null,
+        "resolved_at": null,
+        "resolution_note": null
+      }
+    ]
+  },
+  "fleet_summary": {
+    "total_cars": 4,
+    "devices": {
+      "online": 4,
+      "offline": 3,
+      "registered": 1
+    },
+    "alerts_today": 22,
+    "anomalies_today": 10,
+    "alerts_by_type": {
+      "emergency": 3,
+      "in_vehicle": 3,
+      "human": 6,
+      "traffic": 6,
+      "environmental": 4
+    },
+    "alerts_per_day": [
+      {
+        "date": "2026-10-27",
+        "count": 26
+      },
+      {
+        "date": "2026-10-28",
+        "count": 15
+      },
+      {
+        "date": "2026-10-29",
+        "count": 23
+      },
+      {
+        "date": "2026-10-30",
+        "count": 10
+      },
+      {
+        "date": "2026-10-31",
+        "count": 26
+      },
+      {
+        "date": "2026-11-01",
+        "count": 24
+      },
+      {
+        "date": "2026-11-02",
+        "count": 22
+      }
+    ]
+  },
+  "alert_report": {
+    "group_by": "sound_type",
+    "rows": [
+      {
+        "key": "emergency",
+        "count": 9,
+        "anomalies": 4,
+        "avg_confidence": 0.797
+      },
+      {
+        "key": "in_vehicle",
+        "count": 9,
+        "anomalies": 4,
+        "avg_confidence": 0.788
+      },
+      {
+        "key": "human",
+        "count": 12,
+        "anomalies": 3,
+        "avg_confidence": 0.798
+      },
+      {
+        "key": "traffic",
+        "count": 11,
+        "anomalies": 5,
+        "avg_confidence": 0.8
+      },
+      {
+        "key": "environmental",
+        "count": 5,
+        "anomalies": 5,
+        "avg_confidence": 0.624
+      }
+    ]
+  }
+}

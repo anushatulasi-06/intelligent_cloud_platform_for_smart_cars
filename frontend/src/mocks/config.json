@@ -1,0 +1,165 @@
+{
+  "alert_types": [
+    {
+      "alert_type": "emergency",
+      "default_severity": "high",
+      "description": "Siren, emergency vehicle",
+      "enabled": true
+    },
+    {
+      "alert_type": "in_vehicle",
+      "default_severity": "high",
+      "description": "Crash, glass breaking",
+      "enabled": true
+    },
+    {
+      "alert_type": "human",
+      "default_severity": "medium",
+      "description": "Scream, crying baby",
+      "enabled": true
+    },
+    {
+      "alert_type": "traffic",
+      "default_severity": "low",
+      "description": "Horn, traffic noise",
+      "enabled": true
+    },
+    {
+      "alert_type": "environmental",
+      "default_severity": "low",
+      "description": "Rain, wind, street ambience",
+      "enabled": true
+    }
+  ],
+  "models": [
+    {
+      "id": 3,
+      "version_label": "cnn-v3",
+      "trained_date": "2026-10-28",
+      "accuracy": 0.912,
+      "confidence_threshold": 0.75,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "version_label": "cnn-v2",
+      "trained_date": "2026-10-14",
+      "accuracy": 0.884,
+      "confidence_threshold": 0.7,
+      "is_active": false
+    },
+    {
+      "id": 1,
+      "version_label": "cnn-v1",
+      "trained_date": "2026-10-01",
+      "accuracy": 0.851,
+      "confidence_threshold": 0.7,
+      "is_active": false
+    }
+  ],
+  "db_health": {
+    "postgres": {
+      "status": "healthy",
+      "latency_ms": 4,
+      "pool_in_use": 3,
+      "pool_size": 10
+    },
+    "mongodb": {
+      "status": "healthy",
+      "latency_ms": 7
+    },
+    "s3": {
+      "status": "degraded"
+    },
+    "checked_at": "2026-11-02T17:00:00.000Z"
+  },
+  "db_stats": {
+    "stores": [
+      {
+        "name": "users",
+        "engine": "postgresql",
+        "count": 9,
+        "size_bytes": 49152,
+        "oldest": "2026-09-15T10:00:00Z"
+      },
+      {
+        "name": "cars",
+        "engine": "postgresql",
+        "count": 4,
+        "size_bytes": 32768,
+        "oldest": "2026-09-15T10:05:00Z"
+      },
+      {
+        "name": "devices",
+        "engine": "postgresql",
+        "count": 8,
+        "size_bytes": 40960,
+        "oldest": "2026-09-20T12:00:00Z"
+      },
+      {
+        "name": "subscriptions",
+        "engine": "postgresql",
+        "count": 8,
+        "size_bytes": 24576,
+        "oldest": "2026-09-22T08:30:00Z"
+      },
+      {
+        "name": "alerts",
+        "engine": "mongodb",
+        "count": 46,
+        "size_bytes": 1835008,
+        "oldest": "2026-11-01T05:29:00.000Z"
+      },
+      {
+        "name": "device_data_records",
+        "engine": "mongodb",
+        "count": 52,
+        "size_bytes": 917504,
+        "oldest": "2026-11-01T05:29:01.200Z"
+      },
+      {
+        "name": "car_positions",
+        "engine": "mongodb",
+        "count": 96300,
+        "size_bytes": 12582912,
+        "oldest": "2026-09-24T08:00:00Z"
+      },
+      {
+        "name": "raw-audio",
+        "engine": "s3",
+        "count": 52,
+        "size_bytes": 734003200,
+        "oldest": "2026-11-01T05:29:01.200Z"
+      }
+    ]
+  },
+  "backups": [
+    {
+      "job_id": "bk-0003",
+      "status": "succeeded",
+      "started_at": "2026-11-01T03:00:00Z",
+      "finished_at": "2026-11-01T03:02:41Z",
+      "size_bytes": 3145728,
+      "s3_prefix": "backups/2026-11-01/",
+      "error": null
+    },
+    {
+      "job_id": "bk-0002",
+      "status": "failed",
+      "started_at": "2026-10-31T03:00:00Z",
+      "finished_at": "2026-10-31T03:00:12Z",
+      "size_bytes": null,
+      "s3_prefix": null,
+      "error": "pg_dump: connection timed out"
+    },
+    {
+      "job_id": "bk-0001",
+      "status": "succeeded",
+      "started_at": "2026-10-30T03:00:00Z",
+      "finished_at": "2026-10-30T03:02:20Z",
+      "size_bytes": 2936012,
+      "s3_prefix": "backups/2026-10-30/",
+      "error": null
+    }
+  ]
+}
