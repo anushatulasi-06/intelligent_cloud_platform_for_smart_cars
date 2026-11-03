@@ -1,0 +1,13 @@
+{
+  "me": {
+    "id": 201,
+    "name": "XXXXX",
+    "email": "demo@example.com",
+    "role": "cloud_staff"
+  },
+  "health": {
+    "status": "ok",
+    "version": "0.1.0",
+    "time": "2026-11-02T17:00:00.000Z"
+  }
+}
