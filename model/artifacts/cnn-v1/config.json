@@ -1,0 +1,66 @@
+{
+  "format_version": 1,
+  "version_label": "cnn-v1",
+  "dummy": false,
+  "created_at": "2026-11-04T20:02:12+00:00",
+  "categories": [
+    "emergency",
+    "in_vehicle",
+    "human",
+    "traffic",
+    "environmental"
+  ],
+  "audio": {
+    "sample_rate": 16000,
+    "channels": 1,
+    "duration_s": 4.0,
+    "clip_samples": 64000,
+    "pad": "zeros_at_end",
+    "crop": "loudest_window",
+    "crop_search_hop_s": 0.25
+  },
+  "features": {
+    "type": "log_mel",
+    "n_fft": 2048,
+    "hop_length": 512,
+    "win_length": null,
+    "n_mels": 128,
+    "window": "hann",
+    "center": true,
+    "pad_mode": "constant",
+    "power": 2.0,
+    "fmin": 0.0,
+    "fmax": 8000.0,
+    "htk": false,
+    "mel_norm": "slaney",
+    "db_ref": "max",
+    "amin": 1e-10,
+    "top_db": 80.0,
+    "scaling": "(db + top_db) / top_db",
+    "n_frames": 126
+  },
+  "input_shape": [
+    1,
+    128,
+    126
+  ],
+  "architecture": {
+    "name": "AudioCNN",
+    "channels": [
+      16,
+      32,
+      64
+    ],
+    "pool_size": [
+      4,
+      4
+    ],
+    "dropout": 0.3,
+    "num_classes": 5
+  },
+  "confidence_threshold": 0.75,
+  "libraries": {
+    "librosa": "1.0.0",
+    "torch": "2.15.0"
+  }
+}
