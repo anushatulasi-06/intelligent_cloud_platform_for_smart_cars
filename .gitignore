@@ -22,3 +22,8 @@ model/data/
 *.pth
 *.npz
 !model/checkpoints/cnn_weights.pth
+
+# Dev backups written locally when S3 is not configured (backend DEV_FAKE_BACKUP)
+backend/.local_backups/
+# Dev audio clips for alerts when S3 is not configured (backend LOCAL_AUDIO_DIR)
+backend/.local_audio/

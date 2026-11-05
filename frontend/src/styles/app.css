@@ -446,7 +446,42 @@ a.drawer-item:hover { box-shadow: 0 0 0 2px var(--secondary-bg), var(--shadow); 
 .drawer-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
 .drawer-row .sound { font-size: 14px; font-weight: 600; }
 .drawer-foot { display: flex; justify-content: space-between; gap: 8px; padding: 14px 16px; background: var(--card); border-top: 1px solid var(--border); }
+.drawer-hint { color: var(--text-3); }
 .unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
 
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .action-row-top { margin-top: 12px; }
+
+/* ---------- Toggle switch (checkbox with role="switch") ---------- */
+.toggle { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-2); font-weight: 500; }
+.toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.toggle-track {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  transition: transform 0.15s;
+}
+.toggle input:checked + .toggle-track { background: var(--success); }
+.toggle input:checked + .toggle-track::after { transform: translateX(18px); }
+.toggle input:focus-visible + .toggle-track { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+/* ---------- Config: database tab ---------- */
+.health-latency { font-size: 16px; font-weight: 500; color: var(--text-2); }
+.stack-sm { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.retention-result { margin: 0; padding: 8px 12px; border-radius: var(--radius-btn); background: var(--thead-bg); color: var(--thead-text); font-weight: 600; }
+.field.grow input { width: 100%; }

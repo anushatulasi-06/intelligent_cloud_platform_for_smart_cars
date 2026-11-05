@@ -11,6 +11,53 @@ React 18 + Vite + React Router v6, plain JavaScript and plain CSS, no UI library
 >   placeholder waiting for its owner. Find your frames in [What's left, by owner](#4-whats-left-by-owner).
 > - Build a page in 4 steps: [How to build your page](#5-how-to-build-your-page).
 > - Please read [Rules](#6-rules-please-follow) before opening a PR.
+> - Pulled before? Check [What changed recently](#what-changed-recently): some API functions were renamed.
+
+---
+
+## What changed recently
+
+**2026-11-03 – Alerts and Config pages finished to spec** (branch `feature/component-c4c5`)
+
+⚠️ **Renamed API functions.** If you call any of these, update your code:
+
+| Old name | New name |
+|---|---|
+| `updateAlertStatus(id, body, role)` | `updateAlert(id, { status, note }, role)` |
+| `getAlertAudio(id)` | `alertAudio(id)` |
+| `startDbBackup()` | `startBackup()` |
+
+**Behaviour changes**
+- **Alert status changes are strictly step by step:** new → acknowledged → resolved. Cloud staff
+  can no longer resolve a `new` alert directly; the mock returns 403 if a step is skipped. The
+  button rules are shared in `src/pages/alerts/alertActions.js`, so reuse it on F6.
+- **F8a** edits an alert type in a form below the table instead of in the row.
+- **F8b** validates the threshold when you click Save and shows an error outside 0.50–0.95.
+  The confirm text reads "Only one model is active at a time. Activate <version>?".
+- **F14** refreshes with the new `usePolling` hook. Health cards show text plus latency.
+  Retention can now purge `car_positions` too.
+- **Drawer** items show "new - click to open F7".
+
+**Files moved**
+- `src/pages/AlertsPage.jsx` and `AlertDetailPage.jsx` → `src/pages/alerts/`
+- `src/pages/ConfigPage.jsx` → `src/pages/config/`
+
+**New files**
+- `src/pages/alerts/alertActions.js` (which Ack/Resolve buttons a role sees)
+- `src/utils/usePolling.js` (repeat a refresh every N ms)
+
+**Mock data regenerated**
+- 25 alerts across 4 cars with exactly 3 anomalies
+- models: the single real trained model, cnn-v1 (test accuracy 0.839, threshold 0.75, active)
+- alert-type descriptions list 3 example sounds each
+- device-data stats are now counted from the records
+
+Alert and record ids changed, so update any id you hard-coded while testing.
+
+**2026-11-02 – Skeleton**
+- App shell, shared components, mock API for every endpoint, colourful theme, role routing.
+- Then aligned with the Component Design doc, and the app moved from `frontend/smart-car-platform-ui/`
+  into `frontend/`.
 
 ---
 
@@ -85,18 +132,32 @@ Subscriptions has `roles: ['owner']`, and Overview shows F2 to owners and F6 to 
 - **F12 Alerts:**
   - filters for car, sound type, severity, status and dates
   - 20 rows per page, "review" tag on anomalies
-  - Ack/Resolve per role: owners can only acknowledge; cloud staff can acknowledge and resolve
-  - Code: [`AlertsPage.jsx`](src/pages/AlertsPage.jsx)
+  - Ack/Resolve: alerts move one step at a time, new → acknowledged → resolved. Owners see only
+    Ack; only cloud staff see Resolve. Buttons not valid for the alert's status are disabled with a
+    tooltip. The rules live in [`alertActions.js`](src/pages/alerts/alertActions.js).
+  - Code: [`AlertsPage.jsx`](src/pages/alerts/AlertsPage.jsx)
 - **F7 Alert detail:**
-  - facts next to the class-probability bars, then the audio player (link auto-refreshes before it expires)
-  - note with Acknowledge/Resolve, and **Show on map** (opens `/map?car_id=<id>`)
-  - Code: [`AlertDetailPage.jsx`](src/pages/AlertDetailPage.jsx)
-- **F8a Alert types:** inline edit of severity, description and enabled flag.
-- **F8b Models:** activate with confirm; threshold of the active model limited to 0.50–0.95.
-- **F14 Database:** health cards (30 s refresh), stores table, backups, retention (dry run by default,
-  Run disabled under 30 days, confirm before a real run).
-- Code for the Config tabs: [`ConfigPage.jsx`](src/pages/ConfigPage.jsx) and
-  [`pages/config/`](src/pages/config/).
+  - facts card (car/device, sound type, severity, confidence, anomaly, time, position) next to the
+    class-probability bars (emergency, traffic, in_vehicle, human, environmental)
+  - audio player using `alertAudio(id)`; the link auto-refreshes before it expires
+  - status and notes card: status badge, optional note, Acknowledge/Resolve, and
+    **Show on map** (links to `/map?car_id=<id>`). Success shows a toast; a 403/409 shows an error line.
+  - Code: [`AlertDetailPage.jsx`](src/pages/alerts/AlertDetailPage.jsx)
+- **Alerts drawer:** the 5 newest alerts, each with "new - click to open F7", and **Mark all as seen**.
+- **Config** (`cloud_staff` only). Code: [`pages/config/`](src/pages/config/), one file per tab.
+  - **F8a Alert types:** table of the five categories. **Edit** opens a form below the table
+    (severity, description, enabled toggle) that saves with `updateAlertType()`. Changes apply to
+    new alerts only.
+  - **F8b Models:** version table with active/standby badges. **Activate** asks "Only one model is
+    active at a time. Activate <version>?" first (shown on standby versions; the mock has only the active one). The threshold form for the active model (default 0.75)
+    shows an error outside 0.50–0.95.
+  - **F14 Database:** refreshes every 30 s with `usePolling`.
+    - health cards for PostgreSQL, MongoDB and Amazon S3 (Healthy/Degraded/Down plus latency)
+    - stores table
+    - **Run backup now** (`startBackup()`): the new job row moves queued → running → succeeded
+    - retention: `device_data_records`, `car_positions` or `alerts`; minimum 30 days; dry run on by
+      default and shows "N candidates"; a real run asks for confirmation, then shows
+      "Deleted N, archived to S3".
 
 ---
 
@@ -132,8 +193,8 @@ Each frame lists what the design doc's GUI template asks for, and which mock API
 **F6 Cloud dashboard** (`/dashboard`, overview tab, cloud staff)
 - KPI cards: cars, devices online, alerts today, anomalies.
 - Bar charts: alerts by type, and alerts per day for the window.
-- Latest alerts table with Ack/Resolve; a row opens F7. Copy the action logic from `AlertsPage.jsx`.
-- API: `getFleetSummary({ window_days })`, `listAlerts()`, `updateAlertStatus()`, `getAlertReport()`.
+- Latest alerts table with Ack/Resolve; a row opens F7. Reuse `alertActions()` from `src/pages/alerts/alertActions.js` for the buttons.
+- API: `getFleetSummary({ window_days })`, `listAlerts()`, `updateAlert(id, { status, note })`, `getAlertReport()`.
 
 **F9 Map View** (`/map`)
 - Filters: status, alert type, car. Auto-refresh every 5 s.
@@ -212,8 +273,13 @@ Each frame lists what the design doc's GUI template asks for, and which mock API
 
 ## 5. How to build your page
 
-**Step 1 – Route.** Your route is already in [`src/App.jsx`](src/App.jsx) and renders
-`PlaceholderPage`. Swap in your component and keep the `guard`:
+**Step 1 – Folder and route.** Put your page in its own folder, `src/pages/<page>/`, like
+`pages/alerts/` and `pages/config/`. Use one file per frame or tab, plus any helpers that only that
+page uses. For example: `pages/dashboard/`, `pages/map/`, `pages/tracking/`, `pages/devices/`,
+`pages/simulator/`.
+
+Your route is already in [`src/App.jsx`](src/App.jsx) and renders `PlaceholderPage`. Swap in your
+component and keep the `guard`:
 
 ```jsx
 <Route path="/map" element={guard('map', <MapViewPage />)} />
@@ -232,21 +298,25 @@ For a breadcrumb title, extend the `title` logic in
 with `useActiveTab`:
 
 ```jsx
-import { PAGES, visibleTabs } from '../config/pages.js';
-import { useActiveTab } from '../components/PageTabs.jsx';
-import { useRole } from '../config/RoleContext.jsx';
+// from src/pages/devices/DevicesPage.jsx
+import { PAGES, visibleTabs } from '../../config/pages.js';
+import { useActiveTab } from '../../components/PageTabs.jsx';
+import { useRole } from '../../config/RoleContext.jsx';
 
 const page = PAGES.find((p) => p.key === 'devices');
 const { role } = useRole();
 const tab = useActiveTab(visibleTabs(page, role));   // 'devices' | 'data'
 ```
 
+See [`pages/config/ConfigPage.jsx`](src/pages/config/ConfigPage.jsx) for a complete tabbed page.
+
 **Step 3 – Data.** Load data through `endpoints.js` with the `useAsync` hook. Never call `fetch` from a page.
 
 ```jsx
 const { data, loading, error, reload } = useAsync(() => listDevices(filters), [filters]);
-// polling:
-useEffect(() => { const t = setInterval(reload, 15000); return () => clearInterval(t); }, [reload]);
+// polling (src/utils/usePolling.js):
+usePolling(reload, 15000);              // every 15 s
+usePolling(reload, 2000, jobRunning);   // only while a condition holds
 ```
 
 **Step 4 – UI.** Build the page from the shared components and show results with a toast:
@@ -284,8 +354,19 @@ If your page changes an alert, send `window.dispatchEvent(new Event(ALERTS_CHANG
 | `useToast` | Success and error messages. |
 | `PageTabs` / `useActiveTab` | Tabs (the layout renders the bar; you only read the active tab). |
 
+**On/off toggle** (a CSS pattern rather than a component; useful for F3 subscription toggles):
+
+```jsx
+<label className="toggle">
+  <input type="checkbox" role="switch" checked={on} onChange={(e) => setOn(e.target.checked)} />
+  <span className="toggle-track" aria-hidden="true" />
+  Enabled
+</label>
+```
+
 Icons: `<Icon name="..." />` from `src/layout/icons.jsx`. Helpers: `formatDateTime`,
-`formatPercent`, `formatBytes` and `humanize` in `src/utils/format.js`.
+`formatPercent`, `formatBytes` and `humanize` in `src/utils/format.js`. Hooks: `useAsync` and
+`usePolling` in `src/utils/`.
 
 ---
 
@@ -300,8 +381,8 @@ Icons: `<Icon name="..." />` from `src/layout/icons.jsx`. Helpers: `formatDateTi
 4. **Follow the design doc** for your frames: the GUI template, the business rules (BR-x) and the
    decision tables (DT-x). The mock API already applies many of these rules, so show its 409/422
    messages instead of re-checking everything in the page.
-5. **Hide actions the role can't use.** Use `useRole()` and `canAccess()`; see how `AlertsPage`
-   shows Ack/Resolve.
+5. **Hide actions the role can't use.** Use `useRole()` and `canAccess()`; see how `alertActions.js`
+   decides which Ack/Resolve buttons to show.
 6. **Run `npm run build` before you push**, and click through your page as each of the three roles.
 
 ---
@@ -312,8 +393,21 @@ Icons: `<Icon name="..." />` from `src/layout/icons.jsx`. Helpers: `formatDateTi
   update, ack, …) stay in memory until you reload the page.
 - Errors are thrown as `ApiError` with the HTTP status the backend would return, so
   `catch (e) { e.status, e.message }` works the same now and later.
+- **Constants exported for pages:**
+  - `ALERT_TRANSITIONS` (who may move an alert to which status)
+  - `THRESHOLD_MIN` / `THRESHOLD_MAX` / `THRESHOLD_DEFAULT` (0.50 / 0.95 / 0.75)
+  - `RETENTION_COLLECTIONS` and `RETENTION_MIN_DAYS` (30)
+  - `DEVICE_COMMANDS`
 - **Mock data:**
-  - 4 cars, 8 devices, 46 alerts, 52 device-data records, 3 model versions, 3 backups
+  - 4 cars, 8 devices, 25 alerts (3 anomalies, all four severities, all three statuses), 31 device-data
+    records, 1 model version (cnn-v1, the real trained model: accuracy 0.839, active), 3 backups
+  - Alert types: one row per category (5), each describing 3 example sounds. Default severities follow
+    the doc: emergency and in_vehicle high, human medium, traffic and environmental low.
+  - The 3 oldest emergency alerts are `critical`. They were "created before" the default changed, and
+    alerts keep their original severity (BR-CF-3). This puts all four severities in the list for
+    filtering.
+  - `car_positions` has only a count and an oldest date, so retention estimates its candidates.
+    Alerts and records are all recent, so they show 0 candidates at 30+ days.
   - Field names follow the doc's data tables, e.g. S3 keys `audio/{car}/{yyyy}/{mm}/{dd}/{record_id}.wav`
     and 24-character hex alert ids
 - **Edge-only endpoints** have no UI function: `POST /device-data`, `/devices/{id}/heartbeat`,
@@ -330,6 +424,7 @@ Icons: `<Icon name="..." />` from `src/layout/icons.jsx`. Helpers: `formatDateTi
 | Alerts tab bar | The doc lists "List, Detail" tabs for Alerts; the current UI uses a breadcrumb instead. |
 | Badge colours | The doc says teal/gold/coral; we use the agreed palette in `theme.css`. |
 | Wordmark position | The doc puts it in the header; it's currently at the top of the sidebar. |
+| Alert types: "3 per category" | Implemented as 5 rows (one per category), each describing 3 example sounds, matching the doc's `alert_type_config` (five rows) and the CNN's 5 classes. 15 separate sub-type rows would change the schema, subscriptions and alerts, so agree on that first if needed. |
 | Design doc inconsistencies | `PUT /admin/models/{id}/activate` returns the model (API table) or `{ active }` (pseudocode). "Weights missing" is 409 (API table) or 422 (DT-CF-1). The mock follows the API table for the response shape. |
 
 ---
@@ -349,8 +444,8 @@ frontend/
     │   └── RoleContext.jsx      # useRole()
     ├── layout/                  # AppLayout, Sidebar, Header, AlertsDrawer, RequireAccess, icons, alertEvents
     ├── components/              # shared components
-    ├── pages/                   # AlertsPage, AlertDetailPage, ConfigPage + config/ tabs, PlaceholderPage
+    ├── pages/                   # alerts/ (F12, F7), config/ (Config page + F8a, F8b, F14 tabs), PlaceholderPage
     ├── styles/theme.css         # ALL colours (CSS variables)
     ├── styles/app.css           # layout + component styles
-    └── utils/                   # format helpers, useAsync
+    └── utils/                   # format helpers, useAsync, usePolling
 ```

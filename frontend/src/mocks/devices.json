@@ -118,7 +118,7 @@
       "command_id": 1,
       "device_id": 1,
       "command": "sync_config",
-      "status": "failed",
+      "status": "acknowledged",
       "created_at": "2026-11-02T15:00:00.000Z",
       "acked_at": "2026-11-02T15:00:04.000Z"
     },
@@ -126,7 +126,7 @@
       "command_id": 2,
       "device_id": 1,
       "command": "start_route",
-      "status": "failed",
+      "status": "acknowledged",
       "created_at": "2026-11-02T14:00:00.000Z",
       "acked_at": "2026-11-02T14:00:04.000Z"
     },
@@ -142,7 +142,7 @@
       "command_id": 4,
       "device_id": 2,
       "command": "start_route",
-      "status": "failed",
+      "status": "acknowledged",
       "created_at": "2026-11-02T12:00:00.000Z",
       "acked_at": "2026-11-02T12:00:04.000Z"
     },
@@ -150,7 +150,7 @@
       "command_id": 5,
       "device_id": 4,
       "command": "sync_config",
-      "status": "acknowledged",
+      "status": "failed",
       "created_at": "2026-11-02T11:00:00.000Z",
       "acked_at": "2026-11-02T11:00:04.000Z"
     },
@@ -174,7 +174,7 @@
       "command_id": 8,
       "device_id": 5,
       "command": "start_route",
-      "status": "failed",
+      "status": "acknowledged",
       "created_at": "2026-11-02T08:00:00.000Z",
       "acked_at": "2026-11-02T08:00:04.000Z"
     },
@@ -198,7 +198,7 @@
       "command_id": 11,
       "device_id": 7,
       "command": "sync_config",
-      "status": "failed",
+      "status": "acknowledged",
       "created_at": "2026-11-02T05:00:00.000Z",
       "acked_at": "2026-11-02T05:00:04.000Z"
     },
@@ -206,7 +206,7 @@
       "command_id": 12,
       "device_id": 7,
       "command": "start_route",
-      "status": "acknowledged",
+      "status": "failed",
       "created_at": "2026-11-02T04:00:00.000Z",
       "acked_at": "2026-11-02T04:00:04.000Z"
     },
@@ -214,7 +214,7 @@
       "command_id": 13,
       "device_id": 8,
       "command": "sync_config",
-      "status": "acknowledged",
+      "status": "failed",
       "created_at": "2026-11-02T03:00:00.000Z",
       "acked_at": "2026-11-02T03:00:04.000Z"
     },
@@ -243,12 +243,12 @@
         {
           "ts": "2026-11-02T15:00:00.000Z",
           "command": "sync_config",
-          "status": "failed"
+          "status": "acknowledged"
         },
         {
           "ts": "2026-11-02T14:00:00.000Z",
           "command": "start_route",
-          "status": "failed"
+          "status": "acknowledged"
         },
         {
           "ts": "2026-11-02T13:00:00.000Z",
@@ -258,13 +258,13 @@
         {
           "ts": "2026-11-02T12:00:00.000Z",
           "command": "start_route",
-          "status": "failed"
+          "status": "acknowledged"
         }
       ],
       "last_alert": {
-        "id": "e2d40702e359b9c99141ef3d",
-        "sound_type": "in_vehicle",
-        "confidence": 0.676,
+        "id": "d6e2d40702e359b9c99141ef",
+        "sound_type": "emergency",
+        "confidence": 0.79,
         "severity": "high"
       }
     },
@@ -283,7 +283,7 @@
         {
           "ts": "2026-11-02T11:00:00.000Z",
           "command": "sync_config",
-          "status": "acknowledged"
+          "status": "failed"
         },
         {
           "ts": "2026-11-02T10:00:00.000Z",
@@ -292,10 +292,10 @@
         }
       ],
       "last_alert": {
-        "id": "5e0dccd879bacfcced3a5f8f",
-        "sound_type": "traffic",
-        "confidence": 0.883,
-        "severity": "low"
+        "id": "15fa3b4be418ca3cf203273c",
+        "sound_type": "human",
+        "confidence": 0.663,
+        "severity": "medium"
       }
     },
     "3": {
@@ -318,7 +318,7 @@
         {
           "ts": "2026-11-02T08:00:00.000Z",
           "command": "start_route",
-          "status": "failed"
+          "status": "acknowledged"
         },
         {
           "ts": "2026-11-02T07:00:00.000Z",
@@ -332,10 +332,10 @@
         }
       ],
       "last_alert": {
-        "id": "2f2b7da15288e7480ac3d3de",
-        "sound_type": "human",
-        "confidence": 0.902,
-        "severity": "medium"
+        "id": "6000582bb6146b2ad7e1b1f8",
+        "sound_type": "environmental",
+        "confidence": 0.953,
+        "severity": "low"
       }
     },
     "4": {
@@ -353,17 +353,17 @@
         {
           "ts": "2026-11-02T05:00:00.000Z",
           "command": "sync_config",
-          "status": "failed"
+          "status": "acknowledged"
         },
         {
           "ts": "2026-11-02T04:00:00.000Z",
           "command": "start_route",
-          "status": "acknowledged"
+          "status": "failed"
         },
         {
           "ts": "2026-11-02T03:00:00.000Z",
           "command": "sync_config",
-          "status": "acknowledged"
+          "status": "failed"
         },
         {
           "ts": "2026-11-02T02:00:00.000Z",
@@ -372,10 +372,10 @@
         }
       ],
       "last_alert": {
-        "id": "3b4be418ca3cf203273c4035",
-        "sound_type": "human",
-        "confidence": 0.812,
-        "severity": "medium"
+        "id": "048e55464064bce3443d24f4",
+        "sound_type": "in_vehicle",
+        "confidence": 0.831,
+        "severity": "high"
       }
     }
   }

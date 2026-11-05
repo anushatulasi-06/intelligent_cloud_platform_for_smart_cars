@@ -3,25 +3,25 @@
     {
       "alert_type": "emergency",
       "default_severity": "high",
-      "description": "Siren, emergency vehicle",
+      "description": "Siren, ambulance horn, fire truck",
       "enabled": true
     },
     {
       "alert_type": "in_vehicle",
       "default_severity": "high",
-      "description": "Crash, glass breaking",
+      "description": "Glass breaking, crash impact, car alarm",
       "enabled": true
     },
     {
       "alert_type": "human",
       "default_severity": "medium",
-      "description": "Scream, crying baby",
+      "description": "Scream, crying baby, shouting",
       "enabled": true
     },
     {
       "alert_type": "traffic",
       "default_severity": "low",
-      "description": "Horn, traffic noise",
+      "description": "Horn, tyre screech, engine rev",
       "enabled": true
     },
     {
@@ -33,28 +33,12 @@
   ],
   "models": [
     {
-      "id": 3,
-      "version_label": "cnn-v3",
-      "trained_date": "2026-10-28",
-      "accuracy": 0.912,
-      "confidence_threshold": 0.75,
-      "is_active": true
-    },
-    {
-      "id": 2,
-      "version_label": "cnn-v2",
-      "trained_date": "2026-10-14",
-      "accuracy": 0.884,
-      "confidence_threshold": 0.7,
-      "is_active": false
-    },
-    {
       "id": 1,
       "version_label": "cnn-v1",
-      "trained_date": "2026-10-01",
-      "accuracy": 0.851,
-      "confidence_threshold": 0.7,
-      "is_active": false
+      "trained_date": "2026-10-29",
+      "accuracy": 0.839,
+      "confidence_threshold": 0.75,
+      "is_active": true
     }
   ],
   "db_health": {
@@ -106,30 +90,30 @@
       {
         "name": "alerts",
         "engine": "mongodb",
-        "count": 46,
+        "count": 25,
         "size_bytes": 1835008,
-        "oldest": "2026-11-01T05:29:00.000Z"
+        "oldest": "2026-11-01T07:42:00.000Z"
       },
       {
         "name": "device_data_records",
         "engine": "mongodb",
-        "count": 52,
+        "count": 31,
         "size_bytes": 917504,
-        "oldest": "2026-11-01T05:29:01.200Z"
+        "oldest": "2026-11-01T07:42:01.200Z"
       },
       {
         "name": "car_positions",
         "engine": "mongodb",
         "count": 96300,
         "size_bytes": 12582912,
-        "oldest": "2026-09-24T08:00:00Z"
+        "oldest": "2026-07-02T08:00:00Z"
       },
       {
         "name": "raw-audio",
         "engine": "s3",
-        "count": 52,
+        "count": 31,
         "size_bytes": 734003200,
-        "oldest": "2026-11-01T05:29:01.200Z"
+        "oldest": "2026-11-01T07:42:01.200Z"
       }
     ]
   },

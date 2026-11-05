@@ -58,8 +58,8 @@ export default function AlertsDrawer({ open, onClose, seen, onMarkAllSeen }) {
                       <span>{formatDateTime(a.timestamp)}</span>
                     </div>
                     <div className="drawer-row">
-                      <span className="cell-inline">
-                        <StatusBadge value={a.status} />
+                      <span className="cell-inline drawer-hint">
+                        {a.status}{linkable ? ' - click to open F7' : ''}
                         {a.is_anomaly && <StatusBadge value="review" />}
                       </span>
                       {unread && <span className="unread-dot" title="Unread" />}

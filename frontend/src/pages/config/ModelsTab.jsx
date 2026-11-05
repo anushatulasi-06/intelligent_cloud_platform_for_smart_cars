@@ -1,38 +1,49 @@
-// F8b: model versions (active / standby), activation with confirmation, and the
-// confidence threshold of the active model (BR-CF-2: 0.50 to 0.95).
+// F8b Config: Models. Version table with active/standby badges; Activate asks
+// for confirmation (one active model at a time). Threshold form for the active
+// model, 0.50 to 0.95 (BR-CF-2), default 0.75.
 import { useEffect, useState } from 'react';
 import {
-  listModels, updateModelThreshold, activateModel, THRESHOLD_MIN, THRESHOLD_MAX,
+  listModels, updateModelThreshold, activateModel, THRESHOLD_MIN, THRESHOLD_MAX, THRESHOLD_DEFAULT,
 } from '../../api/endpoints.js';
 import { useAsync } from '../../utils/useAsync.js';
-import { formatPercent } from '../../utils/format.js';
 import DataTable from '../../components/DataTable.jsx';
 import StatusBadge from '../../components/StatusBadge.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import { useToast } from '../../components/Toast.jsx';
+
+const fmt2 = (x) => Number(x).toFixed(2);
 
 export default function ModelsTab() {
   const toast = useToast();
   const { data, loading, error, reload } = useAsync(listModels, []);
   const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [threshold, setThreshold] = useState('');
+  const [threshold, setThreshold] = useState(String(THRESHOLD_DEFAULT));
+  const [thresholdError, setThresholdError] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const active = data?.find((m) => m.is_active);
-  useEffect(() => { if (active) setThreshold(String(active.confidence_threshold)); }, [active?.id, active?.confidence_threshold]);
+  // Show the active model's current threshold (0.75 unless changed).
+  useEffect(() => {
+    setThreshold(String(active ? active.confidence_threshold : THRESHOLD_DEFAULT));
+    setThresholdError(null);
+  }, [active?.id, active?.confidence_threshold]);
 
-  const t = Number(threshold);
-  const thresholdValid = threshold !== '' && t >= THRESHOLD_MIN && t <= THRESHOLD_MAX;
-
-  async function saveThreshold() {
+  async function saveThreshold(e) {
+    e.preventDefault();
+    const t = Number(threshold);
+    if (threshold.trim() === '' || Number.isNaN(t) || t < THRESHOLD_MIN || t > THRESHOLD_MAX) {
+      setThresholdError(`Threshold must be between ${fmt2(THRESHOLD_MIN)} and ${fmt2(THRESHOLD_MAX)}.`);
+      return;
+    }
+    setThresholdError(null);
     setSaving(true);
     try {
       await updateModelThreshold(active.id, { confidence_threshold: t });
-      toast(`Threshold of ${active.version_label} set to ${t.toFixed(2)}`);
+      toast(`Threshold of ${active.version_label} set to ${fmt2(t)}`);
       reload();
-    } catch (e) {
-      toast(`Save failed: ${e.message}`, 'error');
+    } catch (err) {
+      setThresholdError(`${err.status ?? 'Error'}: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -45,8 +56,8 @@ export default function ModelsTab() {
       toast(`${pending.version_label} is now active (takes effect on the next record)`);
       setPending(null);
       reload();
-    } catch (e) {
-      toast(`Activation failed: ${e.message}`, 'error');
+    } catch (err) {
+      toast(`Activation failed: ${err.message}`, 'error');
     } finally {
       setBusy(false);
     }
@@ -55,8 +66,8 @@ export default function ModelsTab() {
   const columns = [
     { key: 'version_label', header: 'Version' },
     { key: 'trained_date', header: 'Trained' },
-    { key: 'accuracy', header: 'Accuracy', render: (m) => formatPercent(m.accuracy) },
-    { key: 'confidence_threshold', header: 'Threshold', render: (m) => Number(m.confidence_threshold).toFixed(2) },
+    { key: 'accuracy', header: 'Accuracy', render: (m) => fmt2(m.accuracy) },
+    { key: 'confidence_threshold', header: 'Threshold', render: (m) => fmt2(m.confidence_threshold) },
     { key: 'is_active', header: 'Status', render: (m) => <StatusBadge value={m.is_active ? 'active' : 'standby'} /> },
     {
       key: 'actions', header: '',
@@ -71,37 +82,34 @@ export default function ModelsTab() {
         <DataTable columns={columns} rows={data} loading={loading && !data} error={error} empty="No model versions" />
       </section>
 
-      <section className="panel">
+      <form className="panel" onSubmit={saveThreshold} noValidate aria-label="Threshold of the active model">
         <h2>Threshold of the active model{active ? ` (${active.version_label})` : ''}</h2>
         <div className="action-row">
           <label className="field">
-            <span>Confidence threshold ({THRESHOLD_MIN.toFixed(2)} to {THRESHOLD_MAX.toFixed(2)})</span>
+            <span>Confidence threshold ({fmt2(THRESHOLD_MIN)} to {fmt2(THRESHOLD_MAX)})</span>
             <input
-              type="number" min={THRESHOLD_MIN} max={THRESHOLD_MAX} step="0.01" className="input-narrow"
+              type="number" step="0.01" min={THRESHOLD_MIN} max={THRESHOLD_MAX} className="input-narrow"
               value={threshold}
               disabled={!active}
-              onChange={(e) => setThreshold(e.target.value)}
+              aria-invalid={!!thresholdError}
+              onChange={(e) => { setThreshold(e.target.value); setThresholdError(null); }}
             />
           </label>
-          <button
-            className="btn btn-primary"
-            disabled={!active || !thresholdValid || saving || t === Number(active?.confidence_threshold)}
-            onClick={saveThreshold}
-          >Save</button>
+          <button type="submit" className="btn btn-primary" disabled={!active || saving}>
+            {saving ? 'Saving...' : 'Save'}
+          </button>
         </div>
-        {!thresholdValid && threshold !== '' && (
-          <p className="state-error small">Must be between {THRESHOLD_MIN.toFixed(2)} and {THRESHOLD_MAX.toFixed(2)}.</p>
-        )}
+        {thresholdError && <p className="state-error small">{thresholdError}</p>}
         <p className="muted small">
           Clips whose top confidence is below this value are flagged as anomalies. Only one model is active at a time;
           activating another version takes effect on the next record.
         </p>
-      </section>
+      </form>
 
       <ConfirmDialog
         open={!!pending}
         title="Activate model"
-        message={`Make ${pending?.version_label} the active model? The current model goes to standby. It takes effect on the next record.`}
+        message={`Only one model is active at a time. Activate ${pending?.version_label}?`}
         confirmLabel="Activate"
         busy={busy}
         onConfirm={confirmActivate}

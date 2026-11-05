@@ -1,9 +1,9 @@
 // Config (cloud_staff): tabs Alert types (F8a), Models (F8b), Database (F14), selected via ?tab=.
-import { PAGES } from '../config/pages.js';
-import { useActiveTab } from '../components/PageTabs.jsx';
-import AlertTypesTab from './config/AlertTypesTab.jsx';
-import ModelsTab from './config/ModelsTab.jsx';
-import DatabaseTab from './config/DatabaseTab.jsx';
+import { PAGES } from '../../config/pages.js';
+import { useActiveTab } from '../../components/PageTabs.jsx';
+import AlertTypesTab from './AlertTypesTab.jsx';
+import ModelsTab from './ModelsTab.jsx';
+import DatabaseTab from './DatabaseTab.jsx';
 
 const page = PAGES.find((p) => p.key === 'config');
 
