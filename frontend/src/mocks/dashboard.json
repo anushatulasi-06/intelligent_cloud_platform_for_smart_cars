@@ -19,32 +19,32 @@
       }
     ],
     "counts": {
-      "alerts_today": 13,
-      "unresolved": 12
+      "alerts_today": 7,
+      "unresolved": 8
     },
     "recent_alerts": [
       {
-        "id": "e2d40702e359b9c99141ef3d",
-        "record_id": "1edd74d0-cfc1-45a0-a48c-48098abdd3d6",
+        "id": "d6e2d40702e359b9c99141ef",
+        "record_id": "541edd74-d0cf-4c15-aa04-8c48098abdd3",
         "car_id": 1,
         "device_id": 1,
-        "sound_type": "in_vehicle",
-        "lat": 37.32963,
-        "lon": -121.88266,
-        "confidence": 0.676,
+        "sound_type": "emergency",
+        "lat": 37.32998,
+        "lon": -121.87482,
+        "confidence": 0.79,
         "probs": {
-          "in_vehicle": 0.676,
-          "emergency": 0.118,
-          "human": 0.084,
-          "traffic": 0.079,
-          "environmental": 0.043
+          "emergency": 0.79,
+          "in_vehicle": 0.021,
+          "human": 0.027,
+          "traffic": 0.094,
+          "environmental": 0.067
         },
-        "is_anomaly": true,
+        "is_anomaly": false,
         "severity": "high",
         "status": "new",
         "model_version": "cnn-v3",
-        "s3_object_key": "audio/1/2026/11/02/1edd74d0-cfc1-45a0-a48c-48098abdd3d6.wav",
-        "timestamp": "2026-11-02T16:55:00.000Z",
+        "s3_object_key": "audio/1/2026/11/02/541edd74-d0cf-4c15-aa04-8c48098abdd3.wav",
+        "timestamp": "2026-11-02T16:47:00.000Z",
         "acknowledged_by": null,
         "acknowledged_at": null,
         "resolved_by": null,
@@ -52,27 +52,27 @@
         "resolution_note": null
       },
       {
-        "id": "2bb6146b2ad7e1b1f8b49bf1",
-        "record_id": "d942202b-12a2-4202-adb5-6a6ada600058",
-        "car_id": 1,
-        "device_id": 1,
+        "id": "15fa3b4be418ca3cf203273c",
+        "record_id": "1da7cad5-271e-45b8-a118-7f0fe9987833",
+        "car_id": 2,
+        "device_id": 3,
         "sound_type": "human",
-        "lat": 37.32652,
-        "lon": -121.88045,
-        "confidence": 0.848,
+        "lat": 37.34484,
+        "lon": -121.94788,
+        "confidence": 0.663,
         "probs": {
-          "human": 0.848,
-          "emergency": 0.033,
-          "in_vehicle": 0.046,
-          "traffic": 0.037,
-          "environmental": 0.036
+          "human": 0.663,
+          "emergency": 0.015,
+          "in_vehicle": 0.144,
+          "traffic": 0.088,
+          "environmental": 0.09
         },
-        "is_anomaly": false,
+        "is_anomaly": true,
         "severity": "medium",
         "status": "new",
         "model_version": "cnn-v3",
-        "s3_object_key": "audio/1/2026/11/02/d942202b-12a2-4202-adb5-6a6ada600058.wav",
-        "timestamp": "2026-11-02T15:26:00.000Z",
+        "s3_object_key": "audio/2/2026/11/02/1da7cad5-271e-45b8-a118-7f0fe9987833.wav",
+        "timestamp": "2026-11-02T15:35:00.000Z",
         "acknowledged_by": null,
         "acknowledged_at": null,
         "resolved_by": null,
@@ -80,27 +80,55 @@
         "resolution_note": null
       },
       {
-        "id": "4064bce3443d24f46da59f3a",
-        "record_id": "4a8a833a-99bb-4ef2-ae2f-2d64048e5546",
+        "id": "d169d41efda155eefa53519b",
+        "record_id": "f7e20556-1c7d-4dce-a05f-c4e7760ab6ac",
+        "car_id": 2,
+        "device_id": 3,
+        "sound_type": "traffic",
+        "lat": 37.35951,
+        "lon": -121.94109,
+        "confidence": 0.847,
+        "probs": {
+          "traffic": 0.847,
+          "emergency": 0.034,
+          "in_vehicle": 0.04,
+          "human": 0.046,
+          "environmental": 0.034
+        },
+        "is_anomaly": false,
+        "severity": "low",
+        "status": "new",
+        "model_version": "cnn-v3",
+        "s3_object_key": "audio/2/2026/11/02/f7e20556-1c7d-4dce-a05f-c4e7760ab6ac.wav",
+        "timestamp": "2026-11-02T11:10:00.000Z",
+        "acknowledged_by": null,
+        "acknowledged_at": null,
+        "resolved_by": null,
+        "resolved_at": null,
+        "resolution_note": null
+      },
+      {
+        "id": "dcb021ec6ed95e0dccd879ba",
+        "record_id": "3e6d7cc4-edc8-4a8e-acdd-4242ee28073a",
         "car_id": 1,
         "device_id": 1,
-        "sound_type": "traffic",
-        "lat": 37.32779,
-        "lon": -121.87575,
-        "confidence": 0.976,
+        "sound_type": "in_vehicle",
+        "lat": 37.34028,
+        "lon": -121.87203,
+        "confidence": 0.84,
         "probs": {
-          "traffic": 0.976,
-          "emergency": 0.001,
-          "in_vehicle": 0.004,
-          "human": 0.017,
-          "environmental": 0.002
+          "in_vehicle": 0.84,
+          "emergency": 0.028,
+          "human": 0.011,
+          "traffic": 0.022,
+          "environmental": 0.099
         },
         "is_anomaly": false,
-        "severity": "low",
+        "severity": "high",
         "status": "new",
         "model_version": "cnn-v3",
-        "s3_object_key": "audio/1/2026/11/02/4a8a833a-99bb-4ef2-ae2f-2d64048e5546.wav",
-        "timestamp": "2026-11-02T14:21:00.000Z",
+        "s3_object_key": "audio/1/2026/11/02/3e6d7cc4-edc8-4a8e-acdd-4242ee28073a.wav",
+        "timestamp": "2026-11-02T10:05:00.000Z",
         "acknowledged_by": null,
         "acknowledged_at": null,
         "resolved_by": null,
@@ -108,55 +136,27 @@
         "resolution_note": null
       },
       {
-        "id": "5e0dccd879bacfcced3a5f8f",
-        "record_id": "a8ecdd42-42ee-4280-a73a-dcb021ec6ed9",
-        "car_id": 2,
-        "device_id": 3,
-        "sound_type": "traffic",
-        "lat": 37.34145,
-        "lon": -121.94191,
-        "confidence": 0.883,
+        "id": "db8206c1e13a606f0b15ec8e",
+        "record_id": "d2cd2d0b-ce4c-4c6f-aea7-96a9c41d4238",
+        "car_id": 1,
+        "device_id": 1,
+        "sound_type": "human",
+        "lat": 37.33508,
+        "lon": -121.89044,
+        "confidence": 0.593,
         "probs": {
-          "traffic": 0.883,
-          "emergency": 0.011,
-          "in_vehicle": 0.039,
-          "human": 0.035,
-          "environmental": 0.032
+          "human": 0.593,
+          "emergency": 0.129,
+          "in_vehicle": 0.114,
+          "traffic": 0.106,
+          "environmental": 0.058
         },
-        "is_anomaly": false,
-        "severity": "low",
+        "is_anomaly": true,
+        "severity": "medium",
         "status": "new",
         "model_version": "cnn-v3",
-        "s3_object_key": "audio/2/2026/11/02/a8ecdd42-42ee-4280-a73a-dcb021ec6ed9.wav",
-        "timestamp": "2026-11-02T12:55:00.000Z",
-        "acknowledged_by": null,
-        "acknowledged_at": null,
-        "resolved_by": null,
-        "resolved_at": null,
-        "resolution_note": null
-      },
-      {
-        "id": "15ec8e707ccf9ff1c5ff540c",
-        "record_id": "96a9c41d-4238-4db8-a206-c1e13a606f0b",
-        "car_id": 2,
-        "device_id": 3,
-        "sound_type": "traffic",
-        "lat": 37.35162,
-        "lon": -121.93028,
-        "confidence": 0.885,
-        "probs": {
-          "traffic": 0.885,
-          "emergency": 0.016,
-          "in_vehicle": 0.038,
-          "human": 0.036,
-          "environmental": 0.025
-        },
-        "is_anomaly": false,
-        "severity": "low",
-        "status": "new",
-        "model_version": "cnn-v3",
-        "s3_object_key": "audio/2/2026/11/02/96a9c41d-4238-4db8-a206-c1e13a606f0b.wav",
-        "timestamp": "2026-11-02T10:35:00.000Z",
+        "s3_object_key": "audio/1/2026/11/02/d2cd2d0b-ce4c-4c6f-aea7-96a9c41d4238.wav",
+        "timestamp": "2026-11-02T05:43:00.000Z",
         "acknowledged_by": null,
         "acknowledged_at": null,
         "resolved_by": null,
@@ -172,43 +172,43 @@
       "offline": 3,
       "registered": 1
     },
-    "alerts_today": 22,
-    "anomalies_today": 10,
+    "alerts_today": 13,
+    "anomalies_today": 2,
     "alerts_by_type": {
-      "emergency": 3,
+      "emergency": 2,
       "in_vehicle": 3,
-      "human": 6,
-      "traffic": 6,
-      "environmental": 4
+      "human": 3,
+      "traffic": 2,
+      "environmental": 3
     },
     "alerts_per_day": [
       {
         "date": "2026-10-27",
-        "count": 26
+        "count": 8
       },
       {
         "date": "2026-10-28",
-        "count": 15
-      },
-      {
-        "date": "2026-10-29",
-        "count": 23
-      },
-      {
-        "date": "2026-10-30",
-        "count": 10
-      },
-      {
-        "date": "2026-10-31",
-        "count": 26
-      },
-      {
-        "date": "2026-11-01",
         "count": 24
       },
       {
+        "date": "2026-10-29",
+        "count": 8
+      },
+      {
+        "date": "2026-10-30",
+        "count": 14
+      },
+      {
+        "date": "2026-10-31",
+        "count": 13
+      },
+      {
+        "date": "2026-11-01",
+        "count": 12
+      },
+      {
         "date": "2026-11-02",
-        "count": 22
+        "count": 13
       }
     ]
   },
@@ -217,33 +217,33 @@
     "rows": [
       {
         "key": "emergency",
-        "count": 9,
-        "anomalies": 4,
-        "avg_confidence": 0.797
+        "count": 5,
+        "anomalies": 1,
+        "avg_confidence": 0.85
       },
       {
         "key": "in_vehicle",
-        "count": 9,
-        "anomalies": 4,
-        "avg_confidence": 0.788
+        "count": 5,
+        "anomalies": 0,
+        "avg_confidence": 0.887
       },
       {
         "key": "human",
-        "count": 12,
-        "anomalies": 3,
-        "avg_confidence": 0.798
+        "count": 5,
+        "anomalies": 2,
+        "avg_confidence": 0.784
       },
       {
         "key": "traffic",
-        "count": 11,
-        "anomalies": 5,
-        "avg_confidence": 0.8
+        "count": 5,
+        "anomalies": 0,
+        "avg_confidence": 0.857
       },
       {
         "key": "environmental",
         "count": 5,
-        "anomalies": 5,
-        "avg_confidence": 0.624
+        "anomalies": 0,
+        "avg_confidence": 0.922
       }
     ]
   }

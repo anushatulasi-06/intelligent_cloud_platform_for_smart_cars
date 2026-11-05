@@ -10,8 +10,8 @@
         "speed_kmh": 42,
         "position_at": "2026-11-02T17:00:00.000Z",
         "status": "urgent",
-        "open_alerts": 6,
-        "top_severity": "high"
+        "open_alerts": 5,
+        "top_severity": "critical"
       },
       {
         "car_id": 2,
@@ -22,7 +22,7 @@
         "speed_kmh": 0,
         "position_at": "2026-11-02T16:59:30.000Z",
         "status": "urgent",
-        "open_alerts": 6,
+        "open_alerts": 3,
         "top_severity": "high"
       },
       {
@@ -34,7 +34,7 @@
         "speed_kmh": 61,
         "position_at": "2026-11-02T16:59:00.000Z",
         "status": "urgent",
-        "open_alerts": 7,
+        "open_alerts": 3,
         "top_severity": "high"
       },
       {
@@ -47,7 +47,7 @@
         "position_at": "2026-11-02T16:50:00.000Z",
         "status": "offline",
         "open_alerts": 5,
-        "top_severity": "high"
+        "top_severity": "critical"
       }
     ]
   },
@@ -59,101 +59,101 @@
           "ts": "2026-11-02T16:05:00.000Z",
           "lat": 37.3352,
           "lon": -121.8811,
-          "speed_kmh": 32
+          "speed_kmh": 65
         },
         {
           "ts": "2026-11-02T16:10:00.000Z",
           "lat": 37.3364,
           "lon": -121.88014,
-          "speed_kmh": 62
+          "speed_kmh": 24
         },
         {
           "ts": "2026-11-02T16:15:00.000Z",
           "lat": 37.3376,
           "lon": -121.87942,
-          "speed_kmh": 52
+          "speed_kmh": 56
         },
         {
           "ts": "2026-11-02T16:20:00.000Z",
           "lat": 37.3388,
           "lon": -121.87911,
-          "speed_kmh": 69
+          "speed_kmh": 65
         },
         {
           "ts": "2026-11-02T16:25:00.000Z",
           "lat": 37.34,
           "lon": -121.87928,
-          "speed_kmh": 22
+          "speed_kmh": 58
         },
         {
           "ts": "2026-11-02T16:30:00.000Z",
           "lat": 37.3412,
           "lon": -121.8799,
-          "speed_kmh": 53
+          "speed_kmh": 62
         },
         {
           "ts": "2026-11-02T16:35:00.000Z",
           "lat": 37.3424,
           "lon": -121.88082,
-          "speed_kmh": 53
+          "speed_kmh": 67
         },
         {
           "ts": "2026-11-02T16:40:00.000Z",
           "lat": 37.3436,
           "lon": -121.8818,
-          "speed_kmh": 33
+          "speed_kmh": 34
         },
         {
           "ts": "2026-11-02T16:45:00.000Z",
           "lat": 37.3448,
           "lon": -121.88261,
-          "speed_kmh": 34
+          "speed_kmh": 31
         },
         {
           "ts": "2026-11-02T16:50:00.000Z",
           "lat": 37.346,
           "lon": -121.88306,
-          "speed_kmh": 47
+          "speed_kmh": 46
         },
         {
           "ts": "2026-11-02T16:55:00.000Z",
           "lat": 37.3472,
           "lon": -121.88302,
-          "speed_kmh": 41
+          "speed_kmh": 46
         },
         {
           "ts": "2026-11-02T17:00:00.000Z",
           "lat": 37.3484,
           "lon": -121.88251,
-          "speed_kmh": 66
+          "speed_kmh": 64
         }
       ],
       "alerts": [
         {
-          "id": "e2d40702e359b9c99141ef3d",
-          "ts": "2026-11-02T16:55:00.000Z",
-          "lat": 37.32963,
-          "lon": -121.88266,
+          "id": "d6e2d40702e359b9c99141ef",
+          "ts": "2026-11-02T16:47:00.000Z",
+          "lat": 37.32998,
+          "lon": -121.87482,
+          "sound_type": "emergency",
+          "severity": "high",
+          "status": "new"
+        },
+        {
+          "id": "dcb021ec6ed95e0dccd879ba",
+          "ts": "2026-11-02T10:05:00.000Z",
+          "lat": 37.34028,
+          "lon": -121.87203,
           "sound_type": "in_vehicle",
           "severity": "high",
           "status": "new"
         },
         {
-          "id": "2bb6146b2ad7e1b1f8b49bf1",
-          "ts": "2026-11-02T15:26:00.000Z",
-          "lat": 37.32652,
-          "lon": -121.88045,
+          "id": "db8206c1e13a606f0b15ec8e",
+          "ts": "2026-11-02T05:43:00.000Z",
+          "lat": 37.33508,
+          "lon": -121.89044,
           "sound_type": "human",
           "severity": "medium",
-          "status": "new"
-        },
-        {
-          "id": "4064bce3443d24f46da59f3a",
-          "ts": "2026-11-02T14:21:00.000Z",
-          "lat": 37.32779,
-          "lon": -121.87575,
-          "sound_type": "traffic",
-          "severity": "low",
           "status": "new"
         }
       ]
@@ -165,100 +165,100 @@
           "ts": "2026-11-02T16:05:00.000Z",
           "lat": 37.3496,
           "lon": -121.939,
-          "speed_kmh": 22
+          "speed_kmh": 68
         },
         {
           "ts": "2026-11-02T16:10:00.000Z",
           "lat": 37.3508,
           "lon": -121.93804,
-          "speed_kmh": 42
+          "speed_kmh": 23
         },
         {
           "ts": "2026-11-02T16:15:00.000Z",
           "lat": 37.352,
           "lon": -121.93732,
-          "speed_kmh": 33
+          "speed_kmh": 69
         },
         {
           "ts": "2026-11-02T16:20:00.000Z",
           "lat": 37.3532,
           "lon": -121.93701,
-          "speed_kmh": 47
+          "speed_kmh": 24
         },
         {
           "ts": "2026-11-02T16:25:00.000Z",
           "lat": 37.3544,
           "lon": -121.93718,
-          "speed_kmh": 69
+          "speed_kmh": 23
         },
         {
           "ts": "2026-11-02T16:30:00.000Z",
           "lat": 37.3556,
           "lon": -121.9378,
-          "speed_kmh": 49
+          "speed_kmh": 48
         },
         {
           "ts": "2026-11-02T16:35:00.000Z",
           "lat": 37.3568,
           "lon": -121.93872,
-          "speed_kmh": 34
+          "speed_kmh": 45
         },
         {
           "ts": "2026-11-02T16:40:00.000Z",
           "lat": 37.358,
           "lon": -121.9397,
-          "speed_kmh": 33
+          "speed_kmh": 57
         },
         {
           "ts": "2026-11-02T16:45:00.000Z",
           "lat": 37.3592,
           "lon": -121.94051,
-          "speed_kmh": 62
+          "speed_kmh": 20
         },
         {
           "ts": "2026-11-02T16:50:00.000Z",
           "lat": 37.3604,
           "lon": -121.94096,
-          "speed_kmh": 68
+          "speed_kmh": 25
         },
         {
           "ts": "2026-11-02T16:55:00.000Z",
           "lat": 37.3616,
           "lon": -121.94092,
-          "speed_kmh": 59
+          "speed_kmh": 32
         },
         {
           "ts": "2026-11-02T17:00:00.000Z",
           "lat": 37.3628,
           "lon": -121.94041,
-          "speed_kmh": 25
+          "speed_kmh": 53
         }
       ],
       "alerts": [
         {
-          "id": "5e0dccd879bacfcced3a5f8f",
-          "ts": "2026-11-02T12:55:00.000Z",
-          "lat": 37.34145,
-          "lon": -121.94191,
+          "id": "15fa3b4be418ca3cf203273c",
+          "ts": "2026-11-02T15:35:00.000Z",
+          "lat": 37.34484,
+          "lon": -121.94788,
+          "sound_type": "human",
+          "severity": "medium",
+          "status": "new"
+        },
+        {
+          "id": "d169d41efda155eefa53519b",
+          "ts": "2026-11-02T11:10:00.000Z",
+          "lat": 37.35951,
+          "lon": -121.94109,
           "sound_type": "traffic",
           "severity": "low",
           "status": "new"
         },
         {
-          "id": "15ec8e707ccf9ff1c5ff540c",
-          "ts": "2026-11-02T10:35:00.000Z",
-          "lat": 37.35162,
-          "lon": -121.93028,
-          "sound_type": "traffic",
-          "severity": "low",
-          "status": "new"
-        },
-        {
-          "id": "6a23c0793b13880e6b4c458c",
-          "ts": "2026-11-02T08:05:00.000Z",
-          "lat": 37.34638,
-          "lon": -121.93024,
-          "sound_type": "traffic",
+          "id": "184634f752132172f1914345",
+          "ts": "2026-11-02T04:14:00.000Z",
+          "lat": 37.34057,
+          "lon": -121.93583,
+          "sound_type": "environmental",
           "severity": "low",
           "status": "resolved"
         }
@@ -277,96 +277,96 @@
           "ts": "2026-11-02T16:10:00.000Z",
           "lat": 37.3242,
           "lon": -121.91404,
-          "speed_kmh": 23
+          "speed_kmh": 49
         },
         {
           "ts": "2026-11-02T16:15:00.000Z",
           "lat": 37.3254,
           "lon": -121.91332,
-          "speed_kmh": 20
+          "speed_kmh": 26
         },
         {
           "ts": "2026-11-02T16:20:00.000Z",
           "lat": 37.3266,
           "lon": -121.91301,
-          "speed_kmh": 66
+          "speed_kmh": 65
         },
         {
           "ts": "2026-11-02T16:25:00.000Z",
           "lat": 37.3278,
           "lon": -121.91318,
-          "speed_kmh": 53
+          "speed_kmh": 43
         },
         {
           "ts": "2026-11-02T16:30:00.000Z",
           "lat": 37.329,
           "lon": -121.9138,
-          "speed_kmh": 62
+          "speed_kmh": 54
         },
         {
           "ts": "2026-11-02T16:35:00.000Z",
           "lat": 37.3302,
           "lon": -121.91472,
-          "speed_kmh": 32
+          "speed_kmh": 61
         },
         {
           "ts": "2026-11-02T16:40:00.000Z",
           "lat": 37.3314,
           "lon": -121.9157,
-          "speed_kmh": 53
+          "speed_kmh": 69
         },
         {
           "ts": "2026-11-02T16:45:00.000Z",
           "lat": 37.3326,
           "lon": -121.91651,
-          "speed_kmh": 25
+          "speed_kmh": 45
         },
         {
           "ts": "2026-11-02T16:50:00.000Z",
           "lat": 37.3338,
           "lon": -121.91696,
-          "speed_kmh": 37
+          "speed_kmh": 58
         },
         {
           "ts": "2026-11-02T16:55:00.000Z",
           "lat": 37.335,
           "lon": -121.91692,
-          "speed_kmh": 57
+          "speed_kmh": 58
         },
         {
           "ts": "2026-11-02T17:00:00.000Z",
           "lat": 37.3362,
           "lon": -121.91641,
-          "speed_kmh": 68
+          "speed_kmh": 60
         }
       ],
       "alerts": [
         {
-          "id": "2f2b7da15288e7480ac3d3de",
-          "ts": "2026-11-02T12:11:00.000Z",
-          "lat": 37.31863,
-          "lon": -121.91974,
-          "sound_type": "human",
-          "severity": "medium",
+          "id": "6000582bb6146b2ad7e1b1f8",
+          "ts": "2026-11-02T14:05:00.000Z",
+          "lat": 37.32785,
+          "lon": -121.91891,
+          "sound_type": "environmental",
+          "severity": "low",
           "status": "new"
         },
         {
-          "id": "59fbbd021a152f1ba9bba571",
-          "ts": "2026-11-02T09:09:00.000Z",
-          "lat": 37.32368,
-          "lon": -121.924,
+          "id": "3ef5f7d25f251c79b2ce2116",
+          "ts": "2026-11-02T07:10:00.000Z",
+          "lat": 37.32356,
+          "lon": -121.91359,
           "sound_type": "emergency",
           "severity": "high",
           "status": "new"
         },
         {
-          "id": "c42ebfeee1bc4417ab77eeac",
-          "ts": "2026-11-02T01:14:00.000Z",
-          "lat": 37.31466,
-          "lon": -121.92054,
+          "id": "9494678438f949920b3481f3",
+          "ts": "2026-11-02T02:56:00.000Z",
+          "lat": 37.32031,
+          "lon": -121.91288,
           "sound_type": "human",
           "severity": "medium",
-          "status": "new"
+          "status": "acknowledged"
         }
       ]
     },
@@ -377,101 +377,101 @@
           "ts": "2026-11-02T16:05:00.000Z",
           "lat": 37.3688,
           "lon": -121.913,
-          "speed_kmh": 35
+          "speed_kmh": 54
         },
         {
           "ts": "2026-11-02T16:10:00.000Z",
           "lat": 37.37,
           "lon": -121.91204,
-          "speed_kmh": 58
+          "speed_kmh": 28
         },
         {
           "ts": "2026-11-02T16:15:00.000Z",
           "lat": 37.3712,
           "lon": -121.91132,
-          "speed_kmh": 57
+          "speed_kmh": 31
         },
         {
           "ts": "2026-11-02T16:20:00.000Z",
           "lat": 37.3724,
           "lon": -121.91101,
-          "speed_kmh": 37
+          "speed_kmh": 45
         },
         {
           "ts": "2026-11-02T16:25:00.000Z",
           "lat": 37.3736,
           "lon": -121.91118,
-          "speed_kmh": 40
+          "speed_kmh": 58
         },
         {
           "ts": "2026-11-02T16:30:00.000Z",
           "lat": 37.3748,
           "lon": -121.9118,
-          "speed_kmh": 25
+          "speed_kmh": 67
         },
         {
           "ts": "2026-11-02T16:35:00.000Z",
           "lat": 37.376,
           "lon": -121.91272,
-          "speed_kmh": 50
+          "speed_kmh": 45
         },
         {
           "ts": "2026-11-02T16:40:00.000Z",
           "lat": 37.3772,
           "lon": -121.9137,
-          "speed_kmh": 33
+          "speed_kmh": 54
         },
         {
           "ts": "2026-11-02T16:45:00.000Z",
           "lat": 37.3784,
           "lon": -121.91451,
-          "speed_kmh": 37
+          "speed_kmh": 20
         },
         {
           "ts": "2026-11-02T16:50:00.000Z",
           "lat": 37.3796,
           "lon": -121.91496,
-          "speed_kmh": 28
+          "speed_kmh": 38
         },
         {
           "ts": "2026-11-02T16:55:00.000Z",
           "lat": 37.3808,
           "lon": -121.91492,
-          "speed_kmh": 37
+          "speed_kmh": 53
         },
         {
           "ts": "2026-11-02T17:00:00.000Z",
           "lat": 37.382,
           "lon": -121.91441,
-          "speed_kmh": 54
+          "speed_kmh": 21
         }
       ],
       "alerts": [
         {
-          "id": "3b4be418ca3cf203273c4035",
-          "ts": "2026-11-02T16:04:00.000Z",
-          "lat": 37.35969,
-          "lon": -121.90664,
-          "sound_type": "human",
-          "severity": "medium",
-          "status": "new"
-        },
-        {
-          "id": "a155eefa53519bf60ec5fd96",
-          "ts": "2026-11-02T13:37:00.000Z",
-          "lat": 37.36891,
-          "lon": -121.91939,
-          "sound_type": "emergency",
-          "severity": "high",
-          "status": "new"
-        },
-        {
-          "id": "b2ce211689c5e03186907046",
-          "ts": "2026-11-02T11:17:00.000Z",
-          "lat": 37.37425,
-          "lon": -121.91635,
+          "id": "048e55464064bce3443d24f4",
+          "ts": "2026-11-02T12:39:00.000Z",
+          "lat": 37.36658,
+          "lon": -121.9057,
           "sound_type": "in_vehicle",
           "severity": "high",
+          "status": "new"
+        },
+        {
+          "id": "846c58e68b9b822f2b7da152",
+          "ts": "2026-11-02T08:40:00.000Z",
+          "lat": 37.36962,
+          "lon": -121.91238,
+          "sound_type": "traffic",
+          "severity": "low",
+          "status": "resolved"
+        },
+        {
+          "id": "2ad279a035b1cc8c7b604e5c",
+          "ts": "2026-11-02T01:28:00.000Z",
+          "lat": 37.37458,
+          "lon": -121.91198,
+          "sound_type": "environmental",
+          "severity": "low",
           "status": "new"
         }
       ]

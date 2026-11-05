@@ -1,6 +1,9 @@
 // One function per backend endpoint (Component Design, sections C1-C5).
-// Every function currently returns mock data from src/mocks/*.json after a
-// 200 ms delay; nothing is fetched. Names, parameters and response shapes
+// C4 (alerts) and C5 (config, database) call the real backend at
+// VITE_API_BASE_URL when VITE_USE_MOCK=false, sending the header role dropdown
+// as X-Role / X-User-Id (see http() below). Everything else, and C4/C5 when
+// VITE_USE_MOCK is unset or "true", returns mock data from src/mocks/*.json
+// after a 200 ms delay; nothing is fetched. Names, parameters and response shapes
 // follow the design document so each body can later be replaced with a real
 // HTTP call (e.g. `return http('GET', '/alerts', { params })`) without
 // touching the pages.
@@ -26,6 +29,39 @@ import configJson from '../mocks/config.json';
 import sessionJson from '../mocks/session.json';
 
 const DELAY_MS = 200;
+
+// ---- real backend (C4/C5 only for now) ----------------------------------------
+// VITE_USE_MOCK defaults to true so teammates without a running backend keep the mocks.
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
+
+// Demo auth (backend app/auth_stub.py): the role from the header dropdown plus a
+// seeded user id for that role (backend/app/db/seed.py). Replaced by the C1 JWT later.
+export const USER_ID_FOR_ROLE = { owner: 1, iot_staff: 3, cloud_staff: 4 };
+let currentRole = 'cloud_staff';
+export function setApiRole(role) { currentRole = role; }
+
+// Real HTTP call. Query params that are undefined, null or '' are left out (the
+// filter forms use '' for "any"). Errors become ApiError(status, detail).
+async function http(method, path, { params, body } = {}) {
+  const url = new URL(API_BASE_URL + path);
+  Object.entries(params || {}).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
+  });
+  const headers = { 'X-Role': currentRole, 'X-User-Id': String(USER_ID_FOR_ROLE[currentRole] ?? '') };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  let res;
+  try {
+    res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  } catch (e) {
+    throw new ApiError(0, `Backend not reachable at ${API_BASE_URL} (${e.message})`);
+  }
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!res.ok) throw new ApiError(res.status, (data && data.detail) || res.statusText || 'Request failed');
+  return data;
+}
 const SEVERITIES = ['low', 'medium', 'high', 'critical'];
 const SOUND_TYPES = ['emergency', 'in_vehicle', 'human', 'traffic', 'environmental'];
 
@@ -47,6 +83,7 @@ const db = {
   alertTypes: clone(configJson.alert_types),
   models: clone(configJson.models),
   backups: clone(configJson.backups),
+  stores: clone(configJson.db_stats.stores),
 };
 
 function respond(value) {
@@ -323,25 +360,30 @@ function filterAlerts({ car_id, severity, status, sound_type, is_anomaly, from, 
 
 // GET /alerts?car_id&severity&status&sound_type&is_anomaly&from&to&page&page_size -> { items: [alert], page, page_size, total }
 export function listAlerts({ page = 1, page_size = 20, ...filters } = {}) {
+  if (!USE_MOCK) return http('GET', '/alerts', { params: { ...filters, page, page_size } });
   return respond(paginate(filterAlerts(filters).sort(byNewest), page, page_size));
 }
 
 // GET /alerts/{id} -> alert (all fields, including probs and audit fields)
 export function getAlert(id) {
+  if (!USE_MOCK) return http('GET', `/alerts/${encodeURIComponent(id)}`);
   const a = db.alerts.find((x) => x.id === id);
   return a ? respond(a) : fail(404, 'Alert not found');
 }
 
-// Allowed status transitions per role (DT-C4-3). Alerts only move forward.
+// Allowed status transitions per role (DT-C4-3). Alerts only move forward,
+// one step at a time: new -> acknowledged -> resolved. Owners can only
+// acknowledge; only cloud staff can resolve. There is no reopen.
 export const ALERT_TRANSITIONS = {
   owner: { new: ['acknowledged'] },
-  cloud_staff: { new: ['acknowledged', 'resolved'], acknowledged: ['resolved'] },
+  cloud_staff: { new: ['acknowledged'], acknowledged: ['resolved'] },
 };
 
 // PUT /alerts/{id} body { status, note } -> updated alert
 // `role` is passed only because there is no token in this build; the real
 // backend reads the role from the JWT.
-export function updateAlertStatus(id, { status, note }, role = 'cloud_staff') {
+export function updateAlert(id, { status, note }, role = 'cloud_staff') {
+  if (!USE_MOCK) return http('PUT', `/alerts/${encodeURIComponent(id)}`, { body: { status, note } });
   const a = db.alerts.find((x) => x.id === id);
   if (!a) return fail(404, 'Alert not found');
   if (a.status === status || a.status === 'resolved') return fail(409, `Alert is already ${a.status}`);
@@ -354,13 +396,15 @@ export function updateAlertStatus(id, { status, note }, role = 'cloud_staff') {
 
 // GET /alerts/summary?from&to&car_id -> { total, by_status, by_severity, by_type }
 export function getAlertSummary(filters = {}) {
+  if (!USE_MOCK) return http('GET', '/alerts/summary', { params: filters });
   const rows = filterAlerts(filters);
   const count = (key) => rows.reduce((m, a) => ({ ...m, [a[key]]: (m[a[key]] || 0) + 1 }), {});
   return respond({ total: rows.length, by_status: count('status'), by_severity: count('severity'), by_type: count('sound_type') });
 }
 
 // GET /alerts/{id}/audio -> { url, expires_in: 300 }
-export function getAlertAudio(id) {
+export function alertAudio(id) {
+  if (!USE_MOCK) return http('GET', `/alerts/${encodeURIComponent(id)}/audio`);
   const a = db.alerts.find((x) => x.id === id);
   return a ? respond({ url: `https://mock-bucket.s3.amazonaws.com/${a.s3_object_key}?mock=1`, expires_in: 300 })
     : fail(404, 'Alert not found');
@@ -373,11 +417,15 @@ export function getAlertAudio(id) {
 
 // GET /admin/alert-types -> [{ alert_type, default_severity, description, enabled }]
 export function listAlertTypes() {
+  if (!USE_MOCK) return http('GET', '/admin/alert-types');
   return respond(db.alertTypes);
 }
 
 // PUT /admin/alert-types/{alert_type} -> alert type
 export function updateAlertType(alert_type, { default_severity, description, enabled }) {
+  if (!USE_MOCK) {
+    return http('PUT', `/admin/alert-types/${encodeURIComponent(alert_type)}`, { body: { default_severity, description, enabled } });
+  }
   const t = db.alertTypes.find((x) => x.alert_type === alert_type);
   if (!t) return fail(404, 'Alert type not found');
   if (default_severity !== undefined && !SEVERITIES.includes(default_severity)) return fail(422, 'Invalid severity');
@@ -388,15 +436,18 @@ export function updateAlertType(alert_type, { default_severity, description, ena
 
 // GET /admin/models -> [{ id, version_label, trained_date, accuracy, confidence_threshold, is_active }]
 export function listModels() {
+  if (!USE_MOCK) return http('GET', '/admin/models');
   return respond(db.models);
 }
 
 // BR-CF-2: a confidence threshold must be between 0.50 and 0.95.
 export const THRESHOLD_MIN = 0.5;
 export const THRESHOLD_MAX = 0.95;
+export const THRESHOLD_DEFAULT = 0.75;
 
 // PUT /admin/models/{id} body { confidence_threshold } -> model
 export function updateModelThreshold(id, { confidence_threshold }) {
+  if (!USE_MOCK) return http('PUT', `/admin/models/${id}`, { body: { confidence_threshold: Number(confidence_threshold) } });
   const m = db.models.find((x) => x.id === id);
   if (!m) return fail(404, 'Model not found');
   const v = Number(confidence_threshold);
@@ -407,6 +458,7 @@ export function updateModelThreshold(id, { confidence_threshold }) {
 
 // PUT /admin/models/{id}/activate -> model (is_active = true); all others inactive
 export function activateModel(id) {
+  if (!USE_MOCK) return http('PUT', `/admin/models/${id}/activate`);
   const m = db.models.find((x) => x.id === id);
   if (!m) return fail(404, 'Model not found');
   if (m.is_active) return fail(409, 'Model is already active');     // DT-CF-1 R3 (R4 "weights missing" is server-side only)
@@ -416,15 +468,17 @@ export function activateModel(id) {
 
 // GET /admin/db/health -> { postgres: {...}, mongodb: {...}, s3: {...}, checked_at }
 export function getDbHealth() {
+  if (!USE_MOCK) return http('GET', '/admin/db/health');
   return respond({ ...configJson.db_health, checked_at: now() });
 }
 
 // GET /admin/db/stats -> { stores: [{ name, engine, count, size_bytes, oldest }] }
 export function getDbStats() {
-  return respond(configJson.db_stats);
+  if (!USE_MOCK) return http('GET', '/admin/db/stats');
+  return respond({ stores: db.stores });
 }
 
-// Mock jobs finish a few seconds after they start.
+// Mock jobs go queued -> running (after 1.5 s) -> succeeded (after 4 s).
 function settleBackups() {
   db.backups.forEach((b) => {
     if (b.status !== 'succeeded' && b.status !== 'failed' && Date.now() - Date.parse(b.started_at) > 4000) {
@@ -437,7 +491,8 @@ function settleBackups() {
 }
 
 // POST /admin/db/backup -> 202 { job_id, status: "queued" }
-export function startDbBackup() {
+export function startBackup() {
+  if (!USE_MOCK) return http('POST', '/admin/db/backup');
   settleBackups();
   if (db.backups.some((b) => b.status === 'queued' || b.status === 'running')) return fail(409, 'A backup is already running');
   const job_id = `bk-${String(db.backups.length + 1).padStart(4, '0')}`;
@@ -447,21 +502,49 @@ export function startDbBackup() {
 
 // GET /admin/db/backups?limit -> [{ job_id, status, started_at, finished_at, size_bytes, s3_prefix, error }]
 export function listDbBackups({ limit = 10 } = {}) {
+  if (!USE_MOCK) return http('GET', '/admin/db/backups', { params: { limit } });
   settleBackups();
   return respond(db.backups.slice(0, limit));
 }
 
+export const RETENTION_COLLECTIONS = ['device_data_records', 'car_positions', 'alerts'];
+export const RETENTION_MIN_DAYS = 30;
+
+// car_positions has no document-level mock data, only a count and an oldest
+// date; candidates are estimated assuming positions are spread evenly over time.
+function carPositionCandidates(cutoffMs) {
+  const store = db.stores.find((x) => x.name === 'car_positions');
+  const oldest = Date.parse(store.oldest);
+  if (cutoffMs <= oldest) return 0;
+  return Math.floor(store.count * Math.min(1, (cutoffMs - oldest) / (Date.now() - oldest)));
+}
+
 // POST /admin/db/retention/run body { collection, older_than_days, dry_run } -> { candidates, deleted, archive_key }
 export function runRetention({ collection, older_than_days, dry_run = true }) {
-  if (!['alerts', 'device_data_records'].includes(collection)) return fail(422, 'Collection not allowed');
-  if (!Number.isInteger(older_than_days) || older_than_days < 30) return fail(422, 'older_than_days must be 30 or more');
-  const cutoff = new Date(Date.now() - older_than_days * 86400000).toISOString();
-  const rows = collection === 'alerts' ? db.alerts : db.records;
-  const tsKey = collection === 'alerts' ? 'timestamp' : 'received_timestamp';
-  const candidates = rows.filter((r) => r[tsKey] < cutoff).length;
+  if (!USE_MOCK) return http('POST', '/admin/db/retention/run', { body: { collection, older_than_days, dry_run } });
+  if (!RETENTION_COLLECTIONS.includes(collection)) return fail(422, 'Collection not allowed');
+  if (!Number.isInteger(older_than_days) || older_than_days < RETENTION_MIN_DAYS) {
+    return fail(422, `older_than_days must be ${RETENTION_MIN_DAYS} or more`);
+  }
+  const cutoffMs = Date.now() - older_than_days * 86400000;
+  const cutoff = new Date(cutoffMs).toISOString();
+  let candidates;
+  if (collection === 'car_positions') candidates = carPositionCandidates(cutoffMs);
+  else {
+    const rows = collection === 'alerts' ? db.alerts : db.records;
+    const tsKey = collection === 'alerts' ? 'timestamp' : 'received_timestamp';
+    candidates = rows.filter((x) => x[tsKey] < cutoff).length;
+    if (!dry_run) {
+      const keep = rows.filter((x) => x[tsKey] >= cutoff);
+      if (collection === 'alerts') db.alerts = keep; else db.records = keep;
+    }
+  }
   if (dry_run) return respond({ candidates, deleted: 0, archive_key: null });
+  const store = db.stores.find((x) => x.name === collection);
+  if (store && candidates > 0) {
+    store.count -= candidates;
+    if (collection === 'car_positions') store.oldest = cutoff;
+  }
   const archive_key = `archive/${collection}/${now().slice(0, 10)}.jsonl.gz`;
-  if (collection === 'alerts') db.alerts = db.alerts.filter((r) => r[tsKey] >= cutoff);
-  else db.records = db.records.filter((r) => r[tsKey] >= cutoff);
   return respond({ candidates, deleted: candidates, archive_key });
 }

@@ -1,4 +1,6 @@
-// F8a: default severity, description and enabled flag per alert type, edited inline.
+// F8a Config: Alert types. Table of the five categories; Edit opens an inline
+// form below the table (severity, description, enabled). Save -> updateAlertType.
+// BR-CF-3: a change affects new alerts only.
 import { useState } from 'react';
 import { listAlertTypes, updateAlertType } from '../../api/endpoints.js';
 import { useAsync } from '../../utils/useAsync.js';
@@ -13,22 +15,26 @@ const SEVERITIES = ['low', 'medium', 'high', 'critical'];
 export default function AlertTypesTab() {
   const toast = useToast();
   const { data, loading, error, reload } = useAsync(listAlertTypes, []);
-  const [editing, setEditing] = useState(null); // { alert_type, default_severity, description, enabled }
+  const [form, setForm] = useState(null); // { alert_type, default_severity, description, enabled }
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState(null);
 
-  const isEditing = (row) => editing?.alert_type === row.alert_type;
-  const set = (k, v) => setEditing((e) => ({ ...e, [k]: v }));
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const open = (row) => { setForm({ ...row }); setFormError(null); };
 
-  async function save() {
+  async function save(e) {
+    e.preventDefault();
+    if (!form.description.trim()) { setFormError('Description is required.'); return; }
     setSaving(true);
+    setFormError(null);
     try {
-      const { alert_type, ...body } = editing;
-      await updateAlertType(alert_type, body);
+      const { alert_type, ...body } = form;
+      await updateAlertType(alert_type, { ...body, description: body.description.trim() });
       toast(`${humanize(alert_type)} saved. Applies to new alerts only.`);
-      setEditing(null);
+      setForm(null);
       reload();
-    } catch (e) {
-      toast(`Save failed: ${e.message}`, 'error');
+    } catch (err) {
+      setFormError(`${err.status ?? 'Error'}: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -36,43 +42,52 @@ export default function AlertTypesTab() {
 
   const columns = [
     { key: 'alert_type', header: 'Alert type', render: (r) => <SoundType value={r.alert_type} /> },
-    {
-      key: 'default_severity', header: 'Default severity',
-      render: (r) => isEditing(r) ? (
-        <select value={editing.default_severity} onChange={(e) => set('default_severity', e.target.value)}>
-          {SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-      ) : <StatusBadge value={r.default_severity} />,
-    },
-    {
-      key: 'description', header: 'Description',
-      render: (r) => isEditing(r) ? (
-        <input type="text" className="grow" value={editing.description} onChange={(e) => set('description', e.target.value)} />
-      ) : r.description,
-    },
-    {
-      key: 'enabled', header: 'Enabled',
-      render: (r) => isEditing(r) ? (
-        <label className="check">
-          <input type="checkbox" checked={editing.enabled} onChange={(e) => set('enabled', e.target.checked)} />
-          {editing.enabled ? 'enabled' : 'disabled'}
-        </label>
-      ) : <StatusBadge value={r.enabled ? 'enabled' : 'disabled'} />,
-    },
+    { key: 'default_severity', header: 'Default severity', render: (r) => <StatusBadge value={r.default_severity} /> },
+    { key: 'description', header: 'Description' },
+    { key: 'enabled', header: 'Enabled', render: (r) => <StatusBadge value={r.enabled ? 'enabled' : 'disabled'} label={r.enabled ? 'on' : 'off'} /> },
     {
       key: 'actions', header: '',
-      render: (r) => isEditing(r) ? (
-        <span className="cell-inline">
-          <button className="btn btn-sm btn-primary" disabled={saving} onClick={save}>Save</button>
-          <button className="btn btn-sm" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
-        </span>
-      ) : (
-        <button className="btn btn-sm" disabled={!!editing} onClick={() => setEditing({ ...r })}>Edit</button>
+      render: (r) => (
+        <button className="btn btn-sm" disabled={form?.alert_type === r.alert_type} onClick={() => open(r)}>Edit</button>
       ),
     },
   ];
 
   return (
-    <DataTable columns={columns} rows={data} loading={loading} error={error} rowKey="alert_type" empty="No alert types" />
+    <div className="stack">
+      <section>
+        <h2>Alert types</h2>
+        <DataTable columns={columns} rows={data} loading={loading && !data} error={error} rowKey="alert_type" empty="No alert types" />
+      </section>
+
+      {form && (
+        <form className="panel" onSubmit={save} aria-label="Edit alert type">
+          <h2>Edit alert type: <SoundType value={form.alert_type} /></h2>
+          <div className="action-row">
+            <label className="field">
+              <span>Severity</span>
+              <select value={form.default_severity} onChange={(e) => set('default_severity', e.target.value)}>
+                {SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
+            <label className="field grow">
+              <span>Description</span>
+              <input type="text" maxLength={120} value={form.description} onChange={(e) => set('description', e.target.value)} />
+            </label>
+            <label className="toggle">
+              <input type="checkbox" role="switch" checked={form.enabled} onChange={(e) => set('enabled', e.target.checked)} />
+              <span className="toggle-track" aria-hidden="true" />
+              Enabled
+            </label>
+            <div className="filter-actions">
+              <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+              <button type="button" className="btn" disabled={saving} onClick={() => setForm(null)}>Cancel</button>
+            </div>
+          </div>
+          {formError && <p className="state-error small">{formError}</p>}
+          <p className="muted small">Changes apply to new alerts only; existing alerts keep their severity.</p>
+        </form>
+      )}
+    </div>
   );
 }

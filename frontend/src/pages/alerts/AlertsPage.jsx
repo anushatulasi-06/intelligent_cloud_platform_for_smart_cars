@@ -1,20 +1,22 @@
-// F12 Alerts: filterable, paged list (20 rows). Owners can Ack; cloud staff can Ack and Resolve.
+// F12 Alerts list (/alerts): filters, paged table (20 rows), Ack / Resolve per role.
+// A row click opens F7 (/alerts/:id). No tab bar.
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listAlerts, updateAlertStatus, ALERT_TRANSITIONS } from '../api/endpoints.js';
-import { useAsync } from '../utils/useAsync.js';
-import { formatDateTime, formatPercent } from '../utils/format.js';
-import { useRole } from '../config/RoleContext.jsx';
-import { ALERTS_CHANGED } from '../layout/alertEvents.js';
-import DataTable from '../components/DataTable.jsx';
-import Pagination from '../components/Pagination.jsx';
-import FilterBar from '../components/FilterBar.jsx';
-import StatusBadge from '../components/StatusBadge.jsx';
-import SoundType, { SOUND_TYPES } from '../components/SoundType.jsx';
-import { useToast } from '../components/Toast.jsx';
+import { listAlerts, updateAlert } from '../../api/endpoints.js';
+import { useAsync } from '../../utils/useAsync.js';
+import { formatDateTime, formatPercent } from '../../utils/format.js';
+import { useRole } from '../../config/RoleContext.jsx';
+import { ALERTS_CHANGED } from '../../layout/alertEvents.js';
+import DataTable from '../../components/DataTable.jsx';
+import Pagination from '../../components/Pagination.jsx';
+import FilterBar from '../../components/FilterBar.jsx';
+import StatusBadge from '../../components/StatusBadge.jsx';
+import SoundType, { SOUND_TYPES } from '../../components/SoundType.jsx';
+import { useToast } from '../../components/Toast.jsx';
+import { alertActions } from './alertActions.js';
 
 const PAGE_SIZE = 20;
-export const SEVERITIES = ['critical', 'high', 'medium', 'low'];
+const SEVERITIES = ['low', 'medium', 'high', 'critical'];
 const STATUSES = ['new', 'acknowledged', 'resolved'];
 const CARS = [1, 2, 3, 4].map((id) => ({ value: String(id), label: `Car ${id}` }));
 
@@ -28,7 +30,7 @@ const FILTER_FIELDS = [
 ];
 const NO_FILTERS = Object.fromEntries(FILTER_FIELDS.map((f) => [f.name, '']));
 
-// Date inputs give YYYY-MM-DD; widen "to" to the end of that day.
+// Date inputs give YYYY-MM-DD; "to" covers the whole day.
 function toQuery(filters, page) {
   return {
     ...filters,
@@ -48,17 +50,15 @@ export default function AlertsPage() {
   const [busyId, setBusyId] = useState(null);
   const { data, loading, error, reload } = useAsync(() => listAlerts(toQuery(filters, page)), [filters, page]);
 
-  const allowed = (a) => ALERT_TRANSITIONS[role]?.[a.status] || [];
-
   async function change(alert, status) {
     setBusyId(alert.id);
     try {
-      await updateAlertStatus(alert.id, { status }, role);
+      await updateAlert(alert.id, { status }, role);
       toast(`Alert ${status}`);
       window.dispatchEvent(new Event(ALERTS_CHANGED));
       reload();
     } catch (e) {
-      toast(`Could not update alert: ${e.message}`, 'error');
+      toast(`Could not update alert (${e.status ?? 'error'}): ${e.message}`, 'error');
     } finally {
       setBusyId(null);
     }
@@ -83,12 +83,17 @@ export default function AlertsPage() {
       key: 'actions', header: 'Actions',
       render: (a) => (
         <span className="cell-inline" onClick={(e) => e.stopPropagation()}>
-          {allowed(a).includes('acknowledged') && (
-            <button className="btn btn-sm" disabled={busyId === a.id} onClick={() => change(a, 'acknowledged')}>Ack</button>
-          )}
-          {allowed(a).includes('resolved') && (
-            <button className="btn btn-sm btn-success" disabled={busyId === a.id} onClick={() => change(a, 'resolved')}>Resolve</button>
-          )}
+          {alertActions(role, a.status).map((act) => (
+            <button
+              key={act.status}
+              className={`btn btn-sm ${act.status === 'resolved' ? 'btn-success' : ''}`}
+              disabled={!act.enabled || busyId === a.id}
+              title={act.reason}
+              onClick={() => change(a, act.status)}
+            >
+              {act.short}
+            </button>
+          ))}
         </span>
       ),
     },
@@ -108,7 +113,7 @@ export default function AlertsPage() {
       <DataTable
         columns={columns}
         rows={data?.items}
-        loading={loading}
+        loading={loading && !data}
         error={error}
         empty="No alerts match the filters"
         onRowClick={(a) => navigate(`/alerts/${a.id}`)}

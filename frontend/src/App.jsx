@@ -5,9 +5,9 @@ import { ToastProvider } from './components/Toast.jsx';
 import AppLayout from './layout/AppLayout.jsx';
 import RequireAccess from './layout/RequireAccess.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
-import AlertsPage from './pages/AlertsPage.jsx';
-import AlertDetailPage from './pages/AlertDetailPage.jsx';
-import ConfigPage from './pages/ConfigPage.jsx';
+import AlertsPage from './pages/alerts/AlertsPage.jsx';
+import AlertDetailPage from './pages/alerts/AlertDetailPage.jsx';
+import ConfigPage from './pages/config/ConfigPage.jsx';
 
 // Opens the role's home page, like the role router after login.
 function RoleHome() {

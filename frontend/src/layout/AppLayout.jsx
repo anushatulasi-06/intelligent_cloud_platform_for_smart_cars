@@ -24,10 +24,11 @@ export default function AppLayout() {
   const [seen, setSeen] = useState(() => new Set());
 
   const refreshCount = useCallback(() => {
-    listAlerts({ status: 'new', page: 1, page_size: 1000 })
+    // 100 = the backend's maximum page_size (GET /alerts answers 422 above it).
+    listAlerts({ status: 'new', page: 1, page_size: 100 })
       .then((r) => setNewIds(r.items.map((a) => a.id)))
       .catch(() => setNewIds(null));
-  }, []);
+  }, [role]); // refetch when the role changes: owners only count their own cars' alerts
 
   useEffect(() => {
     refreshCount();
