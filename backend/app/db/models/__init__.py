@@ -4,9 +4,10 @@ from app.db.models.alert_type_config import AlertTypeConfig
 from app.db.models.base import Base
 from app.db.models.car import Car
 from app.db.models.device import Device
+from app.db.models.device_command import DeviceCommand
 from app.db.models.maintenance_job import MaintenanceJob
 from app.db.models.model_version import ModelVersion
 from app.db.models.subscription import Subscription
 from app.db.models.user import User
 
-__all__ = ["Base", "User", "Car", "Device", "Subscription", "AlertTypeConfig", "ModelVersion", "MaintenanceJob"]
+__all__ = ["Base", "User", "Car", "Device", "DeviceCommand", "Subscription", "AlertTypeConfig", "ModelVersion", "MaintenanceJob"]

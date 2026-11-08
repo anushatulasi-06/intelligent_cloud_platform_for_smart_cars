@@ -4,16 +4,19 @@ Run (from backend/):
     uvicorn app.main:app --reload
 """
 import logging
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pymongo.errors import PyMongoError
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import Settings, get_settings
 from app.db import mongo
-from app.routers import admin_config, admin_db, alerts, health, local_audio
+from app.routers import admin_config, admin_db, alerts, devices, device_data, health, local_audio, simulator
 from app.services.errors import ServiceError
 
 log = logging.getLogger(__name__)
@@ -40,11 +43,27 @@ def register_error_handlers(app: FastAPI) -> None:
     async def _validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
         return JSONResponse(status_code=422, content={"detail": _validation_message(exc)})
 
+    @app.exception_handler(SQLAlchemyError)
+    @app.exception_handler(PyMongoError)
+    async def _database_error(_: Request, exc: Exception) -> JSONResponse:
+        log.warning("Database request failed (%s)", type(exc).__name__)
+        return JSONResponse(status_code=503, content={"detail": "Database temporarily unavailable"})
+
 
 # What the frontend (CORS_ORIGINS, default http://localhost:5173) may send. X-Role / X-User-Id are the
 # auth stub's headers; Authorization is for the C1 JWT that replaces them.
 CORS_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-CORS_HEADERS = ["Authorization", "Content-Type", "X-Role", "X-User-Id"]
+CORS_HEADERS = ["Authorization", "Content-Type", "X-Role", "X-User-Id", "X-Device-Key"]
+
+
+def _sweep_loop(stop):
+    from app.services.device_service import sweep_devices
+    while not stop.is_set():
+        try:
+            sweep_devices()
+        except Exception:
+            log.warning("Device sweep failed; will retry", exc_info=True)
+        stop.wait(30)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -70,7 +89,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     log.warning("Marked %d unfinished maintenance job(s) as failed (server restarted)", n)
             except Exception as exc:  # noqa: BLE001 – PostgreSQL down: /health reports it
                 log.warning("Could not check unfinished maintenance jobs (%s)", type(exc).__name__)
-        yield
+        stop = threading.Event()
+        threads = []
+        if settings.PROCESSING_WORKER_ENABLED:
+            from app.services.processing_worker import ProcessingWorker
+            threads.append(threading.Thread(target=ProcessingWorker().run,
+                                            args=(stop, settings.PROCESSING_WORKER_POLL_SECONDS),
+                                            name="audio-worker", daemon=True))
+        if settings.DEVICE_SWEEPER_ENABLED:
+            threads.append(threading.Thread(target=_sweep_loop, args=(stop,), name="device-sweeper", daemon=True))
+        for thread in threads:
+            thread.start()
+        try:
+            yield
+        finally:
+            stop.set()
+            for thread in threads:
+                thread.join(timeout=5)
 
     app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION, lifespan=lifespan)
 
@@ -88,6 +123,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_db.router)
     app.include_router(alerts.router)
     app.include_router(local_audio.router)
+    app.include_router(devices.router)
+    app.include_router(device_data.router)
+    app.include_router(simulator.router)
     return app
 
 

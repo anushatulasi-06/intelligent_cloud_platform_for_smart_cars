@@ -1,7 +1,8 @@
 """devices (PostgreSQL). Owners may only read devices of their own cars (DT-C2-1)."""
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.db.models import Car, Device
 from app.db.repositories.base import SqlRepo
@@ -9,6 +10,15 @@ from app.db.repositories.base import SqlRepo
 
 class DeviceRepo(SqlRepo[Device]):
     model = Device
+
+    def get_locked(self, device_id: int) -> Device | None:
+        return self.session.scalar(select(Device).where(Device.id == device_id).with_for_update())
+
+    def sweep_offline(self, cutoff: datetime) -> int:
+        result = self.session.execute(update(Device).where(
+            Device.last_seen < cutoff, Device.status.in_(("online", "configuring"))
+        ).values(status="offline").execution_options(synchronize_session="fetch"))
+        return result.rowcount
 
     def search(self, *, owner_id: int | None = None, car_id: int | None = None, status: str | None = None,
                device_type: str | None = None, q: str | None = None,

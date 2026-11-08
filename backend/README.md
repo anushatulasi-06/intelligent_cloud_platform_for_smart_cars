@@ -17,7 +17,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env                                  # defaults match the docker-compose databases
 
-# 3. Tables: creates the 7 PostgreSQL tables
+# 3. Tables: creates the 8 PostgreSQL tables, including the device command queue
 alembic upgrade head
 
 # 4. Seed: 4 users, 4 cars, 5 devices, 5 alert types, model cnn-v1 (active), 25 alerts. Safe to rerun.
@@ -172,12 +172,83 @@ alembic revision --autogenerate -m "create users"   # after adding a model and i
 alembic upgrade head
 ```
 
-**Next migration (team decision, 2026-11-04):** Rishi (C2) adds the `device_commands` table as
+**Device command migration (C2):** `device_commands` is added as
 `0002_device_commands`, with `down_revision = "0001_initial_schema"`. Use the design doc's columns:
 `id`, `device_id` FK `devices(id)` ON DELETE CASCADE, `command`, `payload` JSONB, `status`,
 `created_at`, `delivered_at`, `acked_at`, `expires_at`, `detail`. Keep a single head:
 `alembic heads` must print one revision. Add the model in `app/db/models/` and the repository as
 `app/db/repositories/command_repo.py`.
+
+## Device Manager and Data Management (C2/C3)
+
+These use the existing repositories, role guard and C4 orchestrator. Device inventory, Wi-Fi,
+commands and Simulator are C2; audio upload, processing and the Device data monitor are C3.
+The frontend uses the real endpoints when `VITE_USE_MOCK=false`.
+
+Before configuring secured Wi-Fi, generate a Fernet key and put it in `backend/.env` as
+`WIFI_ENCRYPTION_KEY`. Keep the same private key across restarts:
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Only IoT staff can register, edit, delete or command devices. Cloud staff can read devices and
+commands, read Simulator state, and retry failed data records. Owners can read their devices
+through the API, with ownership applied in repository queries. C1's JWT replacement remains
+compatible because these routers import `require_role` and `CurrentUser` from the shared shim.
+
+Register a device using `POST /devices` with `car_id`, `name`, `device_type` (`microphone` or
+`camera`), and optional `wifi`. The response returns `device_key` once; store it on the edge client.
+Only its SHA-256 hash is saved. For seeded devices only, the dev key is
+`dev-device-key-<device name>` (see `app/db/seed.py`).
+
+Edge requests use `X-Device-Key`, independently of staff authentication:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /devices/{id}/heartbeat` | Liveness, firmware and optional lat/lon, speed and heading; receive queued commands |
+| `POST /devices/{id}/commands/{command_id}/ack` | Close a delivered command with `{ "ok": true }` or `{ "ok": false }` |
+| `POST /devices/{id}/frame` | Multipart `frame`, JPEG, at most 2 MiB; camera devices only |
+| `POST /device-data` | Multipart `audio_file`, `car_id`, `device_id`; optional UUID `clip_id`, UTC `captured_at`, `trigger`, lat/lon |
+
+Commands are delivered once on heartbeat, expire after ten minutes, and can be acknowledged only
+by the device that received them. Duplicate queued commands return 409. `simulate_event` takes
+`payload: { "scenario": "emergency" }`, with one of the five sound categories; the other simulator
+commands are `start_route` and `stop_route`. These three commands require a heartbeat within the
+last 90 seconds (409 otherwise). A Wi-Fi update supersedes earlier sync commands and starts a
+fresh ten-minute command lifetime. Firmware/hardware actions happen on the edge client,
+not on the API server. Heartbeats should run well within the 90-second offline threshold.
+
+Wi-Fi passwords are Fernet-encrypted in PostgreSQL and absent from staff responses and command
+history. On a `sync_config` heartbeat response, `payload.wifi.password_enc` is encrypted for the
+device too. To apply it on the edge, decrypt with
+`Fernet(base64.urlsafe_b64encode(hashlib.sha256(device_key.encode()).digest()))`. Open networks
+have no password token. The supplied `ssid`, `security`, and `ip_mode` are public configuration.
+Device-provided failure details are replaced with a generic failure message to avoid persisting
+credentials in command history.
+
+Audio must be valid WAV or MP3, non-empty, at most 10 MiB and 15 seconds. Upload requires real S3
+access (`s3:PutObject`); playback and inference also need `s3:GetObject`. The fake backup/audio
+switches do not fake ingestion. A storage failure returns 503 and creates no record. Keep the
+clip locally and resend it with the same `clip_id`; accepted repeats return the original receipt
+with HTTP 200. A new clip returns HTTP 202 before classification starts.
+
+The API starts one audio worker (poll every two seconds) and an offline/command sweeper (every
+30 seconds). Each record has a 120-second lease and at most three attempts. Exceptions from
+`get_orchestrator().handle_record(record)` requeue it; the final failure needs a cloud-staff retry.
+Use one API process as documented above. For an external worker, set `PROCESSING_WORKER_ENABLED=false`
+on the API process and run `python -m app.services.processing_worker` separately.
+`DEVICE_SWEEPER_ENABLED=false` disables its sweeper; tests disable both jobs.
+
+`app.services.edge_buffer.EdgeBuffer` is a persistent FIFO for up to 200 clips. It keeps the
+original clip UUID until the server accepts the upload. `flush(send)` removes a clip only when
+`send(metadata, audio)` returns `True` after HTTP 200/202. A full buffer raises `BufferError` so
+the capture client can pause instead of discarding clips.
+
+An optional runnable CARLA adapter is documented in [`edge/README.md`](edge/README.md). It attaches
+to an existing vehicle, sends telemetry and JPEG frames, applies route commands, and forwards
+configured scenario clips through the persistent buffer and normal upload path. CARLA itself and
+your scenario recordings are external inputs; they are not bundled with the API.
 
 ## Notifications (AWS SES)
 

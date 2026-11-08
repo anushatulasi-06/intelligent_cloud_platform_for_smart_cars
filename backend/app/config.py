@@ -8,7 +8,7 @@ Usage:
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/ — relative paths in .env (e.g. MODEL_DIR=../model/artifacts) resolve from here,
@@ -68,6 +68,12 @@ class Settings(BaseSettings):
 
     # Load the active model version's artifacts when the app starts (a failure is logged, not fatal).
     LOAD_MODEL_ON_STARTUP: bool = True
+
+    # Keep this Fernet key stable across restarts; encrypted Wi-Fi settings depend on it.
+    WIFI_ENCRYPTION_KEY: str = Field(default="", repr=False)
+    DEVICE_SWEEPER_ENABLED: bool = True
+    PROCESSING_WORKER_ENABLED: bool = True
+    PROCESSING_WORKER_POLL_SECONDS: float = Field(default=2.0, gt=0)
 
     @field_validator("MODEL_DIR", "LOCAL_BACKUP_DIR", "LOCAL_AUDIO_DIR")
     @classmethod

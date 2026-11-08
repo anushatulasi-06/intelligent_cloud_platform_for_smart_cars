@@ -1,7 +1,7 @@
 // One function per backend endpoint (Component Design, sections C1-C5).
-// C4 (alerts) and C5 (config, database) call the real backend at
+// C2-C5 call the real backend at
 // VITE_API_BASE_URL when VITE_USE_MOCK=false, sending the header role dropdown
-// as X-Role / X-User-Id (see http() below). Everything else, and C4/C5 when
+// as X-Role / X-User-Id (see http() below). C1, and the other components when
 // VITE_USE_MOCK is unset or "true", returns mock data from src/mocks/*.json
 // after a 200 ms delay; nothing is fetched. Names, parameters and response shapes
 // follow the design document so each body can later be replaced with a real
@@ -30,7 +30,7 @@ import sessionJson from '../mocks/session.json';
 
 const DELAY_MS = 200;
 
-// ---- real backend (C4/C5 only for now) ----------------------------------------
+// ---- real backend -----------------------------------------------------------
 // VITE_USE_MOCK defaults to true so teammates without a running backend keep the mocks.
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
@@ -206,6 +206,7 @@ function wifiError({ ssid, security, password }) {
 }
 
 export function createDevice({ car_id, name, device_type, wifi }) {
+  if (!USE_MOCK) return http('POST', '/devices', { body: { car_id, name, device_type, wifi } });
   if (!car_id || !name || !device_type) return fail(422, 'car_id, name and device_type are required');
   if (!['microphone', 'camera'].includes(device_type)) return fail(422, 'device_type must be microphone or camera');
   if (wifi && wifiError(wifi)) return fail(422, wifiError(wifi));
@@ -219,6 +220,7 @@ export function createDevice({ car_id, name, device_type, wifi }) {
 
 // GET /devices?car_id&status&device_type&q&page&page_size -> { items: [device], page, page_size, total }
 export function listDevices({ car_id, status, device_type, q, page = 1, page_size = 20 } = {}) {
+  if (!USE_MOCK) return http('GET', '/devices', { params: { car_id, status, device_type, q, page, page_size } });
   const items = db.devices.filter((d) =>
     (!car_id || d.car_id === Number(car_id)) &&
     (!status || d.status === status) &&
@@ -229,12 +231,14 @@ export function listDevices({ car_id, status, device_type, q, page = 1, page_siz
 
 // GET /devices/{id} -> device (Wi-Fi SSID and security, never the password)
 export function getDevice(id) {
+  if (!USE_MOCK) return http('GET', `/devices/${id}`);
   const d = db.devices.find((x) => x.id === Number(id));
   return d ? respond(d) : fail(404, 'Device not found');
 }
 
 // PUT /devices/{id} -> updated device
 export function updateDevice(id, { name, device_type, car_id }) {
+  if (!USE_MOCK) return http('PUT', `/devices/${id}`, { body: { name, device_type, car_id } });
   const d = db.devices.find((x) => x.id === Number(id));
   if (!d) return fail(404, 'Device not found');
   const targetCar = car_id !== undefined ? Number(car_id) : d.car_id;
@@ -247,6 +251,7 @@ export function updateDevice(id, { name, device_type, car_id }) {
 
 // DELETE /devices/{id} -> 204
 export function deleteDevice(id) {
+  if (!USE_MOCK) return http('DELETE', `/devices/${id}`);
   const i = db.devices.findIndex((x) => x.id === Number(id));
   if (i < 0) return fail(404, 'Device not found');
   db.devices.splice(i, 1);
@@ -262,6 +267,7 @@ function queueCommand(device_id, command) {
 
 // PUT /devices/{id}/wifi -> 202 { command_id, status: "queued" }
 export function updateDeviceWifi(id, { ssid, security, password, ip_mode }) {
+  if (!USE_MOCK) return http('PUT', `/devices/${id}/wifi`, { body: { ssid, security, password, ip_mode } });
   const d = db.devices.find((x) => x.id === Number(id));
   if (!d) return fail(404, 'Device not found');
   const err = wifiError({ ssid, security, password });
@@ -274,7 +280,8 @@ export function updateDeviceWifi(id, { ssid, security, password, ip_mode }) {
 // POST /devices/{id}/commands -> 202 { command_id, status: "queued" }
 export const DEVICE_COMMANDS = ['start_capture', 'stop_capture', 'reboot', 'sync_config', 'start_route', 'stop_route', 'simulate_event'];
 
-export function queueDeviceCommand(id, { command }) {
+export function queueDeviceCommand(id, { command, payload }) {
+  if (!USE_MOCK) return http('POST', `/devices/${id}/commands`, { body: { command, payload } });
   if (!DEVICE_COMMANDS.includes(command)) return fail(422, 'Unknown command');
   const d = db.devices.find((x) => x.id === Number(id));
   if (!d) return fail(404, 'Device not found');
@@ -286,6 +293,7 @@ export function queueDeviceCommand(id, { command }) {
 
 // GET /devices/{id}/commands?status&limit -> [{ command_id, command, status, created_at, acked_at }]
 export function listDeviceCommands(id, { status, limit = 20 } = {}) {
+  if (!USE_MOCK) return http('GET', `/devices/${id}/commands`, { params: { status, limit } });
   const rows = db.commands
     .filter((c) => c.device_id === Number(id) && (!status || c.status === status))
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
@@ -296,6 +304,7 @@ export function listDeviceCommands(id, { status, limit = 20 } = {}) {
 
 // GET /simulator/{car_id}/state -> { car_id, online, position, frame_url, events, last_alert }
 export function getSimulatorState(car_id) {
+  if (!USE_MOCK) return http('GET', `/simulator/${car_id}/state`);
   const s = devicesJson.simulator[car_id];
   return s ? respond(s) : fail(404, 'Car not found');
 }
@@ -306,6 +315,7 @@ export function getSimulatorState(car_id) {
 
 // GET /device-data?status&car_id&device_id&from&to&page&page_size -> { items: [record], page, page_size, total }
 export function listDeviceData({ status, car_id, device_id, from, to, page = 1, page_size = 20 } = {}) {
+  if (!USE_MOCK) return http('GET', '/device-data', { params: { status, car_id, device_id, from, to, page, page_size } });
   const items = db.records.filter((r) =>
     (!status || r.status === status) &&
     (!car_id || r.car_id === Number(car_id)) &&
@@ -316,12 +326,14 @@ export function listDeviceData({ status, car_id, device_id, from, to, page = 1, 
 
 // GET /device-data/{record_id} -> record
 export function getDeviceDataRecord(record_id) {
+  if (!USE_MOCK) return http('GET', `/device-data/${encodeURIComponent(record_id)}`);
   const r = db.records.find((x) => x.record_id === record_id);
   return r ? respond(r) : fail(404, 'Record not found');
 }
 
 // GET /device-data/{record_id}/audio -> { url, expires_in: 300 }
 export function getDeviceDataAudio(record_id) {
+  if (!USE_MOCK) return http('GET', `/device-data/${encodeURIComponent(record_id)}/audio`);
   const r = db.records.find((x) => x.record_id === record_id);
   return r ? respond({ url: `https://mock-bucket.s3.amazonaws.com/${r.s3_object_key}?mock=1`, expires_in: 300 })
     : fail(404, 'Record not found');
@@ -329,12 +341,14 @@ export function getDeviceDataAudio(record_id) {
 
 // GET /device-data/stats?window_hours -> { counts, per_hour: [{ hour, count }], avg_latency_s, bytes_stored }
 export function getDeviceDataStats({ window_hours = 12 } = {}) {
+  if (!USE_MOCK) return http('GET', '/device-data/stats', { params: { window_hours } });
   const s = deviceDataJson.stats;
   return respond({ ...s, per_hour: s.per_hour.slice(-window_hours) });
 }
 
 // POST /device-data/{record_id}/retry -> 202 { record_id, status: "pending" }
 export function retryDeviceData(record_id) {
+  if (!USE_MOCK) return http('POST', `/device-data/${encodeURIComponent(record_id)}/retry`);
   const r = db.records.find((x) => x.record_id === record_id);
   if (!r) return fail(404, 'Record not found');
   if (r.status !== 'failed') return fail(409, 'Record is not failed');

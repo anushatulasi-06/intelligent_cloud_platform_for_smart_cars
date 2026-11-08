@@ -16,6 +16,8 @@ os.environ.update({
     "MONGO_ENSURE_INDEXES_ON_STARTUP": "false",
     "FAIL_INTERRUPTED_JOBS_ON_STARTUP": "false",
     "LOAD_MODEL_ON_STARTUP": "false",
+    "DEVICE_SWEEPER_ENABLED": "false",
+    "PROCESSING_WORKER_ENABLED": "false",
 })
 
 import pytest  # noqa: E402

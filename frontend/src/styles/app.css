@@ -31,7 +31,7 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; word-break:
 
 /* ---------- Form controls ---------- */
 input, select, button { font: inherit; color: var(--text); }
-input[type='text'], input[type='number'], input[type='date'], select {
+input[type='text'], input[type='password'], input[type='number'], input[type='date'], select {
   height: 36px;
   padding: 0 10px;
   border: 1px solid var(--border);
@@ -451,6 +451,16 @@ a.drawer-item:hover { box-shadow: 0 0 0 2px var(--secondary-bg), var(--shadow); 
 
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .action-row-top { margin-top: 12px; }
+
+/* Device Manager and Simulator */
+.device-form-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.device-key { display: block; padding: 12px; background: var(--zebra); border-radius: var(--radius-btn); user-select: all; }
+.intake-chart { display: flex; gap: 8px; height: 156px; overflow-x: auto; }
+.intake-column { flex: 1; min-width: 32px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.intake-track { height: 100px; width: 100%; max-width: 40px; display: flex; align-items: flex-end; }
+.intake-bar { width: 100%; min-height: 1px; background: var(--sky); border-radius: 4px 4px 0 0; }
+.simulator-frame { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; border-radius: var(--radius-btn); background: var(--sidebar); }
+.simulator-empty { aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; color: var(--text-2); background: var(--zebra); border-radius: var(--radius-btn); }
 
 /* ---------- Toggle switch (checkbox with role="switch") ---------- */
 .toggle { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-2); font-weight: 500; }
