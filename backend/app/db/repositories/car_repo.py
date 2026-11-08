@@ -1,7 +1,7 @@
 """cars (PostgreSQL). Owner-scoped methods filter by owner_id in the query (BR-1.3)."""
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.db.models import Car
 from app.db.repositories.base import SqlRepo
@@ -12,6 +12,9 @@ class CarRepo(SqlRepo[Car]):
 
     def list_all(self) -> list[Car]:
         return list(self.session.scalars(select(Car).order_by(Car.id)))
+
+    def count_all(self) -> int:
+        return self.session.scalar(select(func.count()).select_from(Car)) or 0
 
     def list_for_owner(self, owner_id: int) -> list[Car]:
         return list(self.session.scalars(select(Car).where(Car.owner_id == owner_id).order_by(Car.id)))

@@ -13,7 +13,8 @@ from fastapi.responses import JSONResponse
 
 from app.config import Settings, get_settings
 from app.db import mongo
-from app.routers import admin_config, admin_db, alerts, health, local_audio
+from app.routers import (admin_config, admin_db, alerts, auth, dashboard, fleet, health,
+                         local_audio, subscriptions)
 from app.services.errors import ServiceError
 
 log = logging.getLogger(__name__)
@@ -41,10 +42,10 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(status_code=422, content={"detail": _validation_message(exc)})
 
 
-# What the frontend (CORS_ORIGINS, default http://localhost:5173) may send. X-Role / X-User-Id are the
-# auth stub's headers; Authorization is for the C1 JWT that replaces them.
+# What the frontend (CORS_ORIGINS, default http://localhost:5173) may send. Authorization carries
+# the JWT from POST /login; every endpoint except /health and /login needs it.
 CORS_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-CORS_HEADERS = ["Authorization", "Content-Type", "X-Role", "X-User-Id"]
+CORS_HEADERS = ["Authorization", "Content-Type"]
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -84,6 +85,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     register_error_handlers(app)
     app.include_router(health.router)
+    app.include_router(auth.router)
+    app.include_router(dashboard.router)
+    app.include_router(subscriptions.router)
+    app.include_router(fleet.router)
     app.include_router(admin_config.router)
     app.include_router(admin_db.router)
     app.include_router(alerts.router)
