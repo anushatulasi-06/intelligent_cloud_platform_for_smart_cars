@@ -1,0 +1,52 @@
+C2/C3 setup (Device Manager, Device data and Simulator) - Rishi
+
+Use feature/rishi-c2-c3. The attached guide is for this branch; C1 login is still
+separate, so choose IoT Staff from the role dropdown to edit/command devices.
+Cloud Staff can inspect devices/data and retry failed records.
+
+Install once: Python 3.12, Node 18+ (supported LTS preferred), Docker/Compose.
+Docker is needed for the app's databases, not for the automated tests.
+
+1. Repo root:
+git fetch origin
+git switch feature/rishi-c2-c3
+git pull --ff-only origin feature/rishi-c2-c3
+docker compose -f infra/docker-compose.yml up -d
+
+2. Backend, Terminal 1 (create the venv only the first time):
+cd backend
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+test -f .env || cp .env.example .env
+
+Generate a Fernet key once using the command in the guide and save it as
+WIFI_ENCRYPTION_KEY in backend/.env before testing password-protected Wi-Fi.
+
+alembic upgrade head
+python -m app.db.seed
+uvicorn app.main:app --reload
+
+3. Frontend, Terminal 2 from repo root:
+cd frontend
+npm ci
+test -f .env.local || cp .env.example .env.local
+npm run dev -- --port 5173 --strictPort
+
+Keep VITE_USE_MOCK=false and VITE_API_BASE_URL=http://localhost:8000.
+Open http://localhost:5173/devices, /devices?tab=data or /simulator?car_id=1.
+
+Real audio uploads and camera frames need the team's S3 bucket/credentials.
+Restart the backend after changing S3 settings or credentials/profile.
+For new S3 alert playback, remove/comment LOCAL_AUDIO_DIR=.local_audio and
+restart the API. The worker already starts with the API. CARLA is optional;
+matching server/client versions, device keys and scenario recordings are
+covered in the guide. No separate C1 demo_data.py process is needed here.
+
+Tests (no Docker/AWS/CARLA needed):
+cd backend
+source .venv/bin/activate
+python -m pytest
+
+Verified on this branch: 394 passed, 10 skipped. Those 10 need a throwaway
+PostgreSQL database. Live CARLA/AWS still need an environment smoke test.

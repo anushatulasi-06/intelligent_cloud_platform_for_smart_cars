@@ -1,0 +1,7 @@
+{
+  "emergency": "clips/emergency.wav",
+  "in_vehicle": "clips/in_vehicle.wav",
+  "human": "clips/human.wav",
+  "traffic": "clips/traffic.wav",
+  "environmental": "clips/environmental.wav"
+}
