@@ -203,7 +203,7 @@ Each frame lists what the design doc's GUI template asks for, and which mock API
 Done. Login and the session live in `src/api/session.js` and `src/config/RoleContext.jsx`; the
 pages are in `src/pages/login/`, `src/pages/dashboard/`, `src/pages/map/` and `src/pages/tracking/`.
 Two components came out of it that anyone can reuse: `BarChart` (plain bars, no chart library) and
-`MapCanvas` (an SVG map of latitude and longitude, no tile server and no dependency).
+`MapCanvas` (a Leaflet street map with OpenStreetMap tiles; the viewer's browser needs internet).
 
 ### Rishi – C2 IoT Device Manager + C3 Data Management (F4, F5, F11, F13)
 
@@ -346,7 +346,7 @@ If your page changes an alert, send `window.dispatchEvent(new Event(ALERTS_CHANG
 | `useToast` | Success and error messages. |
 | `PageTabs` / `useActiveTab` | Tabs (the layout renders the bar; you only read the active tab). |
 | `BarChart` | Simple bar charts (`data={[{ label, value }]}`), no chart library. |
-| `MapCanvas` | SVG map from latitude and longitude: car markers, a route, numbered pins and a playback cursor. |
+| `MapCanvas` | Leaflet street map (OpenStreetMap tiles): car markers, a route, numbered pins and a playback cursor. |
 
 **On/off toggle** (a CSS pattern rather than a component; useful for F3 subscription toggles):
 
@@ -413,7 +413,7 @@ Icons: `<Icon name="..." />` from `src/layout/icons.jsx`. Helpers: `formatDateTi
 
 | Question | Context |
 |---|---|
-| ~~Map library for F9/F10~~ | Settled: `MapCanvas` draws the map as an SVG from latitude and longitude. No dependency and no tile server, so it still works on EC2 without outbound internet. Swap in Leaflet later if real streets are wanted. |
+| ~~Map library for F9/F10~~ | Settled: `MapCanvas` uses Leaflet with OpenStreetMap tiles. No API key. The tiles load in the viewer's browser, so the viewer needs internet but the EC2 server does not. |
 | ~~Charts for F6/F13~~ | Settled: `BarChart`, plain elements, no library. |
 | Alerts tab bar | The doc lists "List, Detail" tabs for Alerts; the current UI uses a breadcrumb instead. |
 | Badge colours | The doc says teal/gold/coral; we use the agreed palette in `theme.css`. |

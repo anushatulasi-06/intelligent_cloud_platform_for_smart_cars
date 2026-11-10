@@ -13,6 +13,9 @@ Run it from the repo root after the seed:
     python scripts/demo_data.py --offline 3     # leave car 3 behind, so its marker stays grey
     python scripts/demo_data.py --keep-alerts   # positions only, do not touch alert times
 
+Running it again replaces the positions in the window it writes. Stop any --live run first, or
+the two will write different routes over the same minutes.
+
 A car counts as online while its last position is less than 90 seconds old (DT-MV-1), so the
 history alone turns every marker grey after a minute and a half. Use --live during a demo.
 """
@@ -105,6 +108,8 @@ def main():
         stale = car_id in args.offline
         until = now - timedelta(minutes=10) if stale else now
         points = args.minutes * 60 // STEP_SECONDS
+        # Replace, never add: two routes in the same window make the track zigzag between them.
+        repo.delete_between(car_id, until - timedelta(seconds=STEP_SECONDS * points), until)
         state[car_id] = drive(repo, car_id, lat, lon, until, points, random.uniform(0, 360))
         print(f"car {car_id}: {points} positions up to {until:%H:%M:%S}"
               + (" (left offline)" if stale else ""))

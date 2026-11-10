@@ -528,19 +528,20 @@ a.drawer-item:hover { box-shadow: 0 0 0 2px var(--secondary-bg), var(--shadow); 
 .map-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; }
 @media (max-width: 1100px) { .map-layout { grid-template-columns: 1fr; } }
 .map-panel { display: flex; flex-direction: column; gap: 12px; }
-.map-canvas { width: 100%; border-radius: var(--radius-card); display: block; }
-.map-bg { fill: var(--zebra); }
-.map-grid { stroke: var(--border); stroke-width: 2; }
+/* z-index 0 keeps Leaflet's own panes (up to 1000) underneath the drawer, modals and toasts. */
+.map-canvas { width: 100%; border-radius: var(--radius-card); z-index: 0; font-family: inherit; }
 .map-route { fill: none; stroke: var(--primary); stroke-width: 5; stroke-linejoin: round; stroke-linecap: round; }
-.map-start { fill: var(--sidebar); }
-.map-pin circle { fill: var(--warning); stroke: var(--card); stroke-width: 2; }
-.map-pin-text { fill: var(--on-dark); font-size: 13px; font-weight: 700; text-anchor: middle; }
-.map-cursor { fill: var(--primary); stroke: var(--card); stroke-width: 4; }
-.map-marker { stroke: var(--card); stroke-width: 3; }
-.map-marker-selected { stroke: var(--sidebar); stroke-width: 4; }
-.map-marker-label { fill: var(--text-2); font-size: 15px; font-weight: 600; text-anchor: middle; }
-.map-pulse { opacity: 0.25; animation: map-pulse 1.6s ease-out infinite; }
-@keyframes map-pulse { 0% { opacity: 0.35; r: 16; } 100% { opacity: 0; r: 32; } }
+/* Icons are zero-sized at the position; each part centres itself on that point. */
+.map-icon span { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 50%; transform: translate(-50%, -50%); }
+.map-car { width: 22px; height: 22px; border: 3px solid var(--card); box-shadow: var(--shadow); }
+.map-car-selected { width: 30px; height: 30px; border: 4px solid var(--sidebar); }
+.map-icon .map-car-label { top: -24px; padding: 1px 7px; border-radius: 10px; background: var(--card); color: var(--text); font-size: 12px; font-weight: 600; white-space: nowrap; box-shadow: var(--shadow); }
+.map-pulse { width: 52px; height: 52px; animation: map-pulse 1.6s ease-out infinite; pointer-events: none; }
+@keyframes map-pulse { 0% { opacity: 0.45; transform: translate(-50%, -50%) scale(0.5); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .map-pulse { animation: none; opacity: 0.25; } }
+.map-pin { width: 28px; height: 28px; background: var(--warning); border: 2px solid var(--card); color: var(--on-dark); font-size: 13px; font-weight: 700; box-shadow: var(--shadow); }
+.map-start { width: 24px; height: 24px; background: var(--sidebar); border: 2px solid var(--card); color: var(--on-dark); font-size: 12px; font-weight: 700; }
+.map-cursor { width: 20px; height: 20px; background: var(--primary); border: 4px solid var(--card); box-shadow: var(--shadow); }
 .map-empty { display: flex; align-items: center; justify-content: center; border-radius: var(--radius-card); background: var(--zebra); color: var(--text-2); }
 .map-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-2); }
 .map-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }

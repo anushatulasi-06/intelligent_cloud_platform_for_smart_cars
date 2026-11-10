@@ -18,7 +18,15 @@ OWNER_B = bearer("owner", 2)        # car 20
 STAFF = bearer("cloud_staff", 4)
 IOT = bearer("iot_staff", 3)
 
-NOW = datetime.now(timezone.utc)
+NOW = datetime.now(timezone.utc)     # reset before every test by _fresh_now
+
+
+@pytest.fixture(autouse=True)
+def _fresh_now():
+    """Take the clock per test, not once at import. "Online" means a position under 90 s old, so
+    a NOW captured when pytest collected the file goes stale during a long full run."""
+    global NOW
+    NOW = datetime.now(timezone.utc)
 
 # car -> how long ago its last position was recorded
 LAST_SEEN = {10: 5, 11: 20, 12: 600, 20: 10}
