@@ -4,18 +4,40 @@ Web UI for the Smart Car Intelligent Cloud Platform (CMPE 281, Group 8).
 React 18 + Vite + React Router v6, plain JavaScript and plain CSS, no UI library.
 
 > **TL;DR for teammates**
-> - The **shell** (sidebar, header, alerts drawer, tabs, role switching), **10 shared components** and a
+> - The **shell** (sidebar, header, alerts drawer, tabs), **12 shared components** and a
 >   **mock API** for every endpoint in the Component Design doc are done. You don't need the backend
 >   to build your pages.
-> - **Alerts (F12, F7)** and **Config (F8a, F8b, F14)** are finished. Every other frame is a
->   placeholder waiting for its owner. Find your frames in [What's left, by owner](#4-whats-left-by-owner).
+> - **There is a real login now.** The role comes from the token, not from a dropdown. Sign in with
+>   one of the seeded accounts; in mock mode any password works.
+> - **Login (F1), Dashboards (F2, F3, F6), Map (F9), Tracking (F10), Alerts (F12, F7)** and
+>   **Config (F8a, F8b, F14)** are finished. The Device Manager and Simulator frames are still
+>   placeholders. Find your frames in [What's left, by owner](#4-whats-left-by-owner).
 > - Build a page in 4 steps: [How to build your page](#5-how-to-build-your-page).
 > - Please read [Rules](#6-rules-please-follow) before opening a PR.
-> - Pulled before? Check [What changed recently](#what-changed-recently): some API functions were renamed.
+> - Pulled before? Check [What changed recently](#what-changed-recently): the role dropdown is gone.
 
 ---
 
 ## What changed recently
+
+**2026-11-08 – C1 finished: login, dashboards, map and tracking** (branch `feature/component-c1`)
+
+⚠️ **The demo Role dropdown is gone.** Open `/login` and sign in; the role comes from the JWT.
+`useRole()` still returns `{ role }` exactly as before, so pages need no changes, and it now also
+gives `{ user, signedIn, signIn, signOut }`. `setApiRole()` and `USER_ID_FOR_ROLE` were removed.
+
+**Behaviour changes**
+- Every request sends `Authorization: Bearer <token>`. A 401 from any call clears the session and
+  returns to F1 (BR-1.1).
+- With `VITE_USE_MOCK=false`, the C1 endpoints now call the real backend too. C2 and C3 still use
+  mock data, because those endpoints are not implemented on the backend yet.
+- The backend no longer accepts `X-Role` / `X-User-Id`, so pull the backend as well.
+
+**New files**
+- `src/api/session.js` (token storage, `SESSION_EXPIRED` event)
+- `src/pages/login/`, `src/pages/dashboard/`, `src/pages/map/`, `src/pages/tracking/`
+- `src/components/BarChart.jsx` and `src/components/MapCanvas.jsx`
+
 
 **2026-11-03 – Alerts and Config pages finished to spec** (branch `feature/component-c4c5`)
 
@@ -72,9 +94,19 @@ npm run build     # must pass before you open a PR
 
 Requires Node 18+ (tested on Node 24).
 
-There's no login yet. Use the **Role** dropdown in the header to act as `owner`, `iot_staff` or
-`cloud_staff`. Switching role opens that role's home page, like the doc's role router:
-owner → F2, iot_staff → F4, cloud_staff → F6.
+Sign in at `/login` with one of the seeded accounts; the role router then opens that role's home
+page (owner → F2, iot_staff → F4, cloud_staff → F6). In mock mode any password works, and the
+login page lists the accounts while you run `npm run dev`.
+
+| Email | Role | Password (backend seed) |
+|---|---|---|
+| `owner@autosound.dev` | owner | `owner-dev-pass` |
+| `owner2@autosound.dev` | owner | `owner2-dev-pass` |
+| `iot@autosound.dev` | iot_staff | `iot-dev-pass` |
+| `cloud@autosound.dev` | cloud_staff | `cloud-dev-pass` |
+
+To run against the real backend, copy `.env.example` to `.env.local` (`VITE_USE_MOCK=false`), start
+the API, and run `python scripts/demo_data.py --live` from the repo root so the map has positions.
 
 ---
 
@@ -83,12 +115,12 @@ owner → F2, iot_staff → F4, cloud_staff → F6.
 | Frame | Page | Route / tab | Owner (design doc) | Status |
 |---|---|---|---|---|
 | Shell | Header, sidebar, alerts drawer, tabs | all pages | Anusha (built for C1) | ✅ Done |
-| F1 | Login | – (not routed yet) | Pavan | ⬜ To do |
-| F2 | Owner dashboard | `/dashboard?tab=overview` (owner) | Pavan | ⬜ Placeholder |
-| F3 | Subscriptions | `/dashboard?tab=subscriptions` (owner) | Pavan | ⬜ Placeholder |
-| F6 | Cloud dashboard | `/dashboard?tab=overview` (cloud staff) | Pavan | ⬜ Placeholder |
-| F9 | Map View | `/map` | Pavan | ⬜ Placeholder |
-| F10 | Tracking | `/tracking` | Pavan | ⬜ Placeholder |
+| F1 | Login | `/login` | Pavan | ✅ Done |
+| F2 | Owner dashboard | `/dashboard?tab=overview` (owner) | Pavan | ✅ Done |
+| F3 | Subscriptions | `/dashboard?tab=subscriptions` (owner) | Pavan | ✅ Done |
+| F6 | Cloud dashboard | `/dashboard?tab=overview` (cloud staff) | Pavan | ✅ Done |
+| F9 | Map View | `/map` | Pavan | ✅ Done |
+| F10 | Tracking | `/tracking` | Pavan | ✅ Done |
 | F4 | Device Manager: Devices | `/devices?tab=devices` | Rishi | ⬜ Placeholder |
 | F5 | Device detail + Wi-Fi | `/devices/:id` (route not added yet) | Rishi | ⬜ To do |
 | F11 | Simulator | `/simulator` | Rishi | ⬜ Placeholder |
@@ -110,7 +142,7 @@ A placeholder page shows only its title and frame id, so you can see where your 
 - **Header:**
   - page title, shown as a breadcrumb on sub-pages, e.g. "Alerts > Alert detail"
   - **Alerts** pill with the unread count, polled every 5 s
-  - `<Role>: XXXXX` and the Role dropdown
+  - the signed-in user's role and name, and a **Log out** button
 - **Alerts drawer:**
   - the 5 newest alerts, polled every 5 s, with unread dots
   - **Mark all as seen**, and links to F7 and F12
@@ -168,50 +200,10 @@ Each frame lists what the design doc's GUI template asks for, and which mock API
 
 ### Pavan – C1 System Dashboard (F1, F2, F3, F6, F9, F10)
 
-**F1 Login** (the shared login and auth work is also C1's job)
-- Email + password inputs with errors under each field, and a **Sign In** button.
-- On success, store the token and open F2/F4/F6 by role (`ROLE_HOME` in `access.js`).
-- Use one generic error message for wrong email or password (BR-1.2).
-- When any API call returns 401, go back to F1 (token expired, BR-1.1).
-- Add the **Logout** button to the header (shown in every doc template).
-- Replace the demo Role dropdown with the role from the token. You could keep the dropdown behind
-  a dev flag for demos.
-- API: `login()`, `getMe()`.
-
-**F2 Owner dashboard** (`/dashboard`, overview tab, owner)
-- KPI cards: cars online, alerts today, unresolved.
-- My cars table with a status badge. **On map** opens F9 with the car selected (`/map?car_id=`).
-- Recent alerts: the 5 newest. A row opens F7 (`/alerts/:id`); **All alerts** opens `/alerts`.
-- API: `getOwnerDashboard()`.
-
-**F3 Subscriptions** (`/dashboard?tab=subscriptions`, owner)
-- Selects for the car and the notify method (email / in-app).
-- One toggle per alert category for the chosen car. A missing row means disabled.
-- **Save** saves the changed toggles and shows a toast.
-- API: `listSubscriptions({ car_id })`, `upsertSubscription(...)`, `deleteSubscription(id)`.
-
-**F6 Cloud dashboard** (`/dashboard`, overview tab, cloud staff)
-- KPI cards: cars, devices online, alerts today, anomalies.
-- Bar charts: alerts by type, and alerts per day for the window.
-- Latest alerts table with Ack/Resolve; a row opens F7. Reuse `alertActions()` from `src/pages/alerts/alertActions.js` for the buttons.
-- API: `getFleetSummary({ window_days })`, `listAlerts()`, `updateAlert(id, { status, note })`, `getAlertReport()`.
-
-**F9 Map View** (`/map`)
-- Filters: status, alert type, car. Auto-refresh every 5 s.
-- Markers coloured by status (DT-MV-1): online, alert, urgent (pulsing), offline (grey).
-  The mock already returns these four statuses.
-- Cars list: click selects and centres the car.
-- Selected car panel: speed, last position time, open alerts. **Track car** opens F10,
-  **Alerts** opens F12.
-- **Read `?car_id=` from the URL:** F7 and F2 link here with it.
-- API: `getFleetMap({ status, sound_type, car_id })`.
-
-**F10 Tracking** (`/tracking`)
-- Car select, From/To (max 24 h) and **Show**.
-- Route map with a start marker, numbered alert markers and the current position.
-- Playback bar at 1x–8x.
-- Table of alerts on the route; a row or marker opens F7.
-- API: `getCarTrack(car_id, { from, to })`, which returns 422 for ranges over 24 h.
+Done. Login and the session live in `src/api/session.js` and `src/config/RoleContext.jsx`; the
+pages are in `src/pages/login/`, `src/pages/dashboard/`, `src/pages/map/` and `src/pages/tracking/`.
+Two components came out of it that anyone can reuse: `BarChart` (plain bars, no chart library) and
+`MapCanvas` (a Leaflet street map with OpenStreetMap tiles; the viewer's browser needs internet).
 
 ### Rishi – C2 IoT Device Manager + C3 Data Management (F4, F5, F11, F13)
 
@@ -353,6 +345,8 @@ If your page changes an alert, send `window.dispatchEvent(new Event(ALERTS_CHANG
 | `ConfirmDialog` | Delete, purge, activate. Use `danger` for destructive actions. |
 | `useToast` | Success and error messages. |
 | `PageTabs` / `useActiveTab` | Tabs (the layout renders the bar; you only read the active tab). |
+| `BarChart` | Simple bar charts (`data={[{ label, value }]}`), no chart library. |
+| `MapCanvas` | Leaflet street map (OpenStreetMap tiles): car markers, a route, numbered pins and a playback cursor. |
 
 **On/off toggle** (a CSS pattern rather than a component; useful for F3 subscription toggles):
 
@@ -419,8 +413,8 @@ Icons: `<Icon name="..." />` from `src/layout/icons.jsx`. Helpers: `formatDateTi
 
 | Question | Context |
 |---|---|
-| Map library for F9/F10 | Leaflet + OpenStreetMap tiles (free, no key) is the usual choice. Not installed yet. |
-| Charts for F6/F13 | Simple bar charts. Hand-written SVG avoids a dependency; a library like Recharts is faster to build with. |
+| ~~Map library for F9/F10~~ | Settled: `MapCanvas` uses Leaflet with OpenStreetMap tiles. No API key. The tiles load in the viewer's browser, so the viewer needs internet but the EC2 server does not. |
+| ~~Charts for F6/F13~~ | Settled: `BarChart`, plain elements, no library. |
 | Alerts tab bar | The doc lists "List, Detail" tabs for Alerts; the current UI uses a breadcrumb instead. |
 | Badge colours | The doc says teal/gold/coral; we use the agreed palette in `theme.css`. |
 | Wordmark position | The doc puts it in the header; it's currently at the top of the sidebar. |
@@ -436,7 +430,7 @@ frontend/
 ├── index.html, vite.config.js, package.json
 └── src/
     ├── main.jsx, App.jsx        # router + route table (swap placeholders here)
-    ├── api/endpoints.js         # one function per backend endpoint (mocked)
+    ├── api/endpoints.js         # one function per backend endpoint (real for C1/C4/C5, mock for C2/C3)
     ├── mocks/*.json             # mock data
     ├── config/
     │   ├── access.js            # role -> pages, ROLE_HOME, ROLE_LABELS
@@ -444,7 +438,9 @@ frontend/
     │   └── RoleContext.jsx      # useRole()
     ├── layout/                  # AppLayout, Sidebar, Header, AlertsDrawer, RequireAccess, icons, alertEvents
     ├── components/              # shared components
-    ├── pages/                   # alerts/ (F12, F7), config/ (Config page + F8a, F8b, F14 tabs), PlaceholderPage
+    ├── api/session.js           # token + signed-in user (sessionStorage), SESSION_EXPIRED event
+    ├── pages/                   # login/ (F1), dashboard/ (F2, F3, F6), map/ (F9), tracking/ (F10),
+    │                            #   alerts/ (F12, F7), config/ (F8a, F8b, F14), PlaceholderPage
     ├── styles/theme.css         # ALL colours (CSS variables)
     ├── styles/app.css           # layout + component styles
     └── utils/                   # format helpers, useAsync, usePolling

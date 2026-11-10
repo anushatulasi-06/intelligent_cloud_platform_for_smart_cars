@@ -17,8 +17,9 @@ from app.db.repositories import JobRepo
 from app.db.repositories.base import MongoRepo
 from app.main import create_app
 from app.services import maintenance_service as svc
+from tests.auth_headers import bearer
 
-STAFF = {"X-Role": "cloud_staff", "X-User-Id": "7"}
+STAFF = bearer("cloud_staff", 7)
 NOW = datetime.now(timezone.utc)
 
 
@@ -119,7 +120,7 @@ ROUTES = [("get", "/admin/db/health", None), ("get", "/admin/db/stats", None), (
 def test_roles(client, fake_s3, method, url, body):
     assert_error(client.request(method, url, json=body), 401)
     for role in ("owner", "iot_staff"):
-        assert_error(client.request(method, url, json=body, headers={"X-Role": role}), 403)
+        assert_error(client.request(method, url, json=body, headers=bearer(role)), 403)
     assert jobs() == []
 
 

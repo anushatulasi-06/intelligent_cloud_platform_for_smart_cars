@@ -9,6 +9,11 @@ from app.db import mongo
 from app.db.repositories.base import MongoRepo
 
 NEWEST_FIRST = [("timestamp", DESCENDING)]
+BY_DAY = {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}}
+
+# What GET /admin/reports/alerts may group by (C1).
+GROUP_KEYS = {"sound_type": "$sound_type", "severity": "$severity", "status": "$status",
+              "car": "$car_id", "day": BY_DAY}
 
 
 def build_filter(*, car_ids: list[int] | None = None, car_id: int | None = None, severity: str | None = None,
@@ -88,6 +93,38 @@ class AlertRepo(MongoRepo):
         by = lambda key: {r["_id"]: r["n"] for r in facet.get(key, []) if r["_id"] is not None}  # noqa: E731
         return {"total": count("total"), "by_status": by("by_status"), "by_severity": by("by_severity"),
                 "by_type": by("by_type"), "anomalies": count("anomalies")}
+
+    def per_day(self, **filters) -> list[dict[str, Any]]:
+        """Alerts per calendar day (UTC), oldest first. Days with no alerts are left out."""
+        rows = self.collection.aggregate([
+            {"$match": build_filter(**filters)},
+            {"$group": {"_id": BY_DAY, "count": {"$sum": 1}}},
+            {"$sort": {"_id": 1}},
+        ])
+        return [{"date": r["_id"], "count": r["count"]} for r in rows]
+
+    def report(self, group_by: str, **filters) -> list[dict[str, Any]]:
+        """GET /admin/reports/alerts: count, anomalies and average confidence per group."""
+        rows = self.collection.aggregate([
+            {"$match": build_filter(**filters)},
+            {"$group": {"_id": GROUP_KEYS[group_by], "count": {"$sum": 1},
+                        "anomalies": {"$sum": {"$cond": [{"$eq": ["$is_anomaly", True]}, 1, 0]}},
+                        "avg_confidence": {"$avg": "$confidence"}}},
+            {"$sort": {"count": -1, "_id": 1}},
+        ])
+        out = []
+        for r in rows:
+            avg = r["avg_confidence"]
+            out.append({"key": str(r["_id"]), "count": r["count"], "anomalies": r["anomalies"],
+                        "avg_confidence": round(avg, 3) if avg is not None else None})
+        return out
+
+    def cars_with_open_type(self, car_ids: list[int], sound_type: str) -> set[int]:
+        """Cars that have at least one unresolved alert of this category (F9 sound-type filter)."""
+        docs = self.collection.find(
+            {"car_id": {"$in": list(car_ids)}, "status": {"$ne": "resolved"}, "sound_type": sound_type},
+            {"car_id": 1})
+        return {d["car_id"] for d in docs}
 
     def open_counts(self, car_ids: list[int]) -> dict[int, dict[str, Any]]:
         """Per car: number of unresolved alerts and their highest severity (map markers, DT-MV-1)."""
