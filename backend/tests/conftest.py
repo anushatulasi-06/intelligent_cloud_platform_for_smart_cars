@@ -16,6 +16,7 @@ os.environ.update({
     "MONGO_ENSURE_INDEXES_ON_STARTUP": "false",
     "FAIL_INTERRUPTED_JOBS_ON_STARTUP": "false",
     "LOAD_MODEL_ON_STARTUP": "false",
+    "LOCAL_AUDIO_DIR": "",          # off: a dev .env may turn it on, and the audio tests expect S3 links
 })
 
 import pytest  # noqa: E402

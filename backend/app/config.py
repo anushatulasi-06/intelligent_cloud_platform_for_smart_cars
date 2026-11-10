@@ -69,6 +69,12 @@ class Settings(BaseSettings):
     # Load the active model version's artifacts when the app starts (a failure is logged, not fatal).
     LOAD_MODEL_ON_STARTUP: bool = True
 
+    @field_validator("LOCAL_AUDIO_DIR", mode="before")
+    @classmethod
+    def _blank_audio_dir_is_off(cls, v):
+        # LOCAL_AUDIO_DIR= (empty) means "off", the same as leaving it unset.
+        return None if isinstance(v, str) and not v.strip() else v
+
     @field_validator("MODEL_DIR", "LOCAL_BACKUP_DIR", "LOCAL_AUDIO_DIR")
     @classmethod
     def _resolve_model_dir(cls, v: Path | None) -> Path | None:

@@ -112,7 +112,7 @@ A placeholder page shows only its title and frame id, so you can see where your 
   - **Alerts** pill with the unread count, polled every 5 s
   - `<Role>: XXXXX` and the Role dropdown
 - **Alerts drawer:**
-  - the 5 newest alerts, polled every 5 s, with unread dots
+  - every `new` alert, newest first (scrolls, up to 100), polled every 5 s, with unread dots
   - **Mark all as seen**, and links to F7 and F12
 - **Tab bar:** appears automatically for pages with 2+ tabs. The active tab is in `?tab=`.
 - **Access guard:** opening a locked page by URL shows "No access".
@@ -143,7 +143,7 @@ Subscriptions has `roles: ['owner']`, and Overview shows F2 to owners and F6 to 
   - status and notes card: status badge, optional note, Acknowledge/Resolve, and
     **Show on map** (links to `/map?car_id=<id>`). Success shows a toast; a 403/409 shows an error line.
   - Code: [`AlertDetailPage.jsx`](src/pages/alerts/AlertDetailPage.jsx)
-- **Alerts drawer:** the 5 newest alerts, each with "new - click to open F7", and **Mark all as seen**.
+- **Alerts drawer:** every `new` alert, each with "new - click to open F7", and **Mark all as seen**.
 - **Config** (`cloud_staff` only). Code: [`pages/config/`](src/pages/config/), one file per tab.
   - **F8a Alert types:** table of the five categories. **Edit** opens a form below the table
     (severity, description, enabled toggle) that saves with `updateAlertType()`. Changes apply to

@@ -9,13 +9,14 @@ import StatusBadge from '../components/StatusBadge.jsx';
 import SoundType from '../components/SoundType.jsx';
 import { ALERTS_POLL_MS } from './alertEvents.js';
 
-// Right-side drawer with the 5 newest alerts. Polls every 5 s while open;
+// Right-side drawer with every `new` alert, newest first (scrolls). Polls every 5 s while open;
 // a click opens F7. "Mark all as seen" clears the header's unread count.
+// 100 = the backend's maximum page_size, the same list the header badge counts (AppLayout).
 export default function AlertsDrawer({ open, onClose, seen, onMarkAllSeen }) {
   const { role } = useRole();
   const linkable = canAccess(role, 'alerts');
   const { data, loading, error, reload } = useAsync(
-    () => (open ? listAlerts({ page: 1, page_size: 5 }) : Promise.resolve(null)),
+    () => (open ? listAlerts({ status: 'new', page: 1, page_size: 100 }) : Promise.resolve(null)),
     [open]
   );
 
@@ -30,9 +31,9 @@ export default function AlertsDrawer({ open, onClose, seen, onMarkAllSeen }) {
   return (
     <>
       <div className={`drawer-backdrop ${open ? 'open' : ''}`} onClick={onClose} />
-      <aside className={`drawer ${open ? 'open' : ''}`} aria-hidden={!open} aria-label="Newest alerts">
+      <aside className={`drawer ${open ? 'open' : ''}`} aria-hidden={!open} aria-label="New alerts">
         <div className="drawer-head">
-          <h2>Newest alerts</h2>
+          <h2>New alerts{data ? ` (${data.total})` : ''}</h2>
           <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="drawer-body">
@@ -42,7 +43,7 @@ export default function AlertsDrawer({ open, onClose, seen, onMarkAllSeen }) {
               Error: {error.message} <button className="btn btn-sm" onClick={reload}>Retry</button>
             </p>
           )}
-          {data && data.items.length === 0 && <p className="muted">No alerts</p>}
+          {data && data.items.length === 0 && <p className="muted">No new alerts</p>}
           {data && (
             <ul className="drawer-list">
               {data.items.map((a) => {
