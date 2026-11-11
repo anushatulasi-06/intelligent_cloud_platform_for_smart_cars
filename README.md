@@ -276,7 +276,10 @@ query, not applied afterwards. Interactive docs: http://localhost:8000/docs.
 
 The target from the design doc:
 
+## Deployment
+
 ```mermaid
+%%{init: {"flowchart": {"rankSpacing": 30, "nodeSpacing": 30, "subGraphTitleMargin": {"top": 4, "bottom": 14}}}}%%
 flowchart TB
     user["Owner / Cloud staff<br/>browser"]
     edge["Edge client<br/>CARLA car, C2/C3"]
@@ -285,7 +288,7 @@ flowchart TB
     alb["Application Load Balancer<br/>HTTPS · GET /health"]
 
     subgraph ec2["EC2 instance · IAM role"]
-        direction TB
+        direction LR
         api["FastAPI · uvicorn, 1 worker<br/>C4 Alerts API · C5 Config API"]
         orch["C4 ML Orchestrator<br/>CNN cnn-v1 on CPU"]
         artifacts[("model/artifacts<br/>weights · labels · config")]
@@ -293,26 +296,19 @@ flowchart TB
     end
 
     subgraph data["Data and services"]
-        direction TB
+        direction LR
         rds[("RDS PostgreSQL<br/>users, cars, devices,<br/>config, models, jobs")]
         atlas[("MongoDB Atlas<br/>alerts, records,<br/>positions")]
         s3[("Amazon S3<br/>audio, backups,<br/>archives")]
         ses["Amazon SES<br/>alert emails"]
-        rds ~~~ s3
-        atlas ~~~ ses
+        rds ~~~ atlas ~~~ s3 ~~~ ses
     end
 
-    artifacts ~~~ rds
-    artifacts ~~~ atlas
     user -->|loads UI| web
     user -->|REST| alb
     edge -.->|audio upload| alb
-    alb --> api
-    api --> rds
-    api --> atlas
-    api -->|audio links, backups| s3
-    orch -->|download clip| s3
-    orch -->|notify| ses
+    alb --> ec2
+    ec2 -->|"SQL · alerts · clips · backups · notify"| data
 ```
 
 ### 1. Managed services
