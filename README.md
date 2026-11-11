@@ -272,6 +272,126 @@ query, not applied afterwards. Interactive docs: http://localhost:8000/docs.
 
 ---
 
+## Deployment (AWS)
+
+The target from the design doc:
+
+```mermaid
+flowchart TB
+    user["Owner / Cloud staff<br/>browser"]
+    edge["Edge client<br/>CARLA car, C2/C3"]
+
+    web["S3 static website<br/>React build"]
+    alb["Application Load Balancer<br/>HTTPS · GET /health"]
+
+    subgraph ec2["EC2 instance · IAM role"]
+        direction TB
+        api["FastAPI · uvicorn, 1 worker<br/>C4 Alerts API · C5 Config API"]
+        orch["C4 ML Orchestrator<br/>CNN cnn-v1 on CPU"]
+        artifacts[("model/artifacts<br/>weights · labels · config")]
+        api --> orch --> artifacts
+    end
+
+    subgraph data["Data and services"]
+        direction TB
+        rds[("RDS PostgreSQL<br/>users, cars, devices,<br/>config, models, jobs")]
+        atlas[("MongoDB Atlas<br/>alerts, records,<br/>positions")]
+        s3[("Amazon S3<br/>audio, backups,<br/>archives")]
+        ses["Amazon SES<br/>alert emails"]
+        rds ~~~ s3
+        atlas ~~~ ses
+    end
+
+    artifacts ~~~ rds
+    artifacts ~~~ atlas
+    user -->|loads UI| web
+    user -->|REST| alb
+    edge -.->|audio upload| alb
+    alb --> api
+    api --> rds
+    api --> atlas
+    api -->|audio links, backups| s3
+    orch -->|download clip| s3
+    orch -->|notify| ses
+```
+
+### 1. Managed services
+- **RDS PostgreSQL 16:** database `autosound`. Allow port 5432 only from the EC2 security group.
+- **MongoDB Atlas:** cluster with database `autosound`. Add the EC2 address to the IP access list.
+- **S3:** a bucket for audio, backups and archives (`S3_BUCKET`).
+- **SES:** verify the sender `SES_FROM_EMAIL` and the demo recipients. SES stays in sandbox mode
+  for the demo.
+- **IAM role for the instance:** `s3:GetObject`, `s3:PutObject` and `s3:ListBucket`
+  on the bucket, plus `ses:SendEmail`. With an instance role, no AWS keys are
+  stored on the server.
+
+### 2. Backend on EC2 (Amazon Linux 2023)
+```bash
+sudo dnf install -y python3.12 git
+git clone <repo-url> autosound && cd autosound/backend
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu   # CPU-only torch
+pip install -r requirements.txt
+cp .env.example .env        # then edit it as below
+alembic upgrade head
+python -m app.db.seed       # first deploy only: demo data and the cnn-v1 model row
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+```
+
+Production values in `backend/.env`:
+```
+DATABASE_URL=postgresql+psycopg2://<user>:<password>@<rds-endpoint>:5432/autosound
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/autosound
+S3_BUCKET=<bucket>
+AWS_REGION=us-west-2
+MODEL_DIR=../model/artifacts
+CORS_ORIGINS=https://<frontend-domain>
+DEV_FAKE_EMAIL=false        # send real SES email
+DEV_FAKE_BACKUP=false       # real pg_dump/mongodump backups to S3
+# remove LOCAL_AUDIO_DIR: audio links become presigned S3 URLs
+```
+
+- **One uvicorn worker.** Backup jobs run in-process, and interrupted jobs are marked failed at
+  startup; both assume a single process.
+- **Keep it running** under systemd: `ExecStart=/home/ec2-user/autosound/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1`,
+  with `WorkingDirectory=/home/ec2-user/autosound/backend` and `Restart=always`.
+- **Load balancer:** forward HTTPS to port 8000. Use **`GET /health`** as the target-group health
+  check (every 30 s).
+- **Backups:** install `postgresql16` and the MongoDB database tools on the instance so
+  `pg_dump` and `mongodump` are available.
+
+### 3. Frontend
+```bash
+cd frontend
+echo "VITE_USE_MOCK=false"                          >  .env.production
+echo "VITE_API_BASE_URL=https://<api-domain>"       >> .env.production
+npm ci && npm run build      # -> frontend/dist/
+```
+Upload `dist/` to an S3 static-website bucket (or serve it with nginx). It is a single-page app,
+so send unknown paths to `index.html`. The frontend address must be listed in the backend's
+`CORS_ORIGINS`.
+
+### 4. Deploying a new model
+The model ships **with the code**: `model/artifacts/<version>/` is in git. To deploy a new
+version:
+1. Commit its folder.
+2. Pull on the instance.
+3. Register it ([step 3](#3-register-the-version-in-the-database)).
+4. Activate it in F8b.
+
+There is no restart needed: activation reloads the weights before the next clip, and a failed
+load switches back to the previous model.
+
+### 5. Check the deployment
+```bash
+curl https://<api-domain>/health                                      # {"status":"ok",...}
+curl -H "X-Role: cloud_staff" https://<api-domain>/admin/db/health    # postgres, mongodb, s3 healthy
+```
+Then open the frontend, go to F14 (all three cards should show Healthy) and play an alert's audio
+in F7, which checks the presigned S3 link.
+
+---
+
 ## Scope and dependencies
 
 - **C3's ingestion worker** (`POST /device-data`, the record queue) is not in this branch. C4
