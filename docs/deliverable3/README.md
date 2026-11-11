@@ -74,16 +74,16 @@ The generic deployment recipe above uses its committed default ports. This host'
 
 ```bash
 /home/rishi/Documents/Codex/2026-11-10/cme/work/docker-runtime/compose.sh ps
-/home/rishi/Documents/Codex/2026-11-10/cme/work/docker-runtime/compose.sh up --no-build -d
+python3 /home/rishi/Documents/Codex/2026-11-10/cme/outputs/start-docker-demo.py
 ```
 
-The task output `start-docker-demo.py` checks this runtime, starts its existing rootless daemon if necessary, and starts the already-built services without showing private configuration. The workspace must remain available when using that helper. [Docker's rootless documentation](https://docs.docker.com/engine/security/rootless/) describes the supported unprivileged setup; the required user namespaces and subordinate UID/GID mappings were available on this host.
+The task output `start-docker-demo.py` checks this runtime, starts its existing rootless daemon if necessary, and starts the already-built services without showing private configuration. It preserves a running owned CARLA edge rather than starting the lightweight edge on the same device IDs. The workspace must remain available when using that helper. [Docker's rootless documentation](https://docs.docker.com/engine/security/rootless/) describes the supported unprivileged setup; the required user namespaces and subordinate UID/GID mappings were available on this host.
 
 The first frontend container build exposed an `ETXTBSY` error during esbuild's install hook on the rootless `vfs` storage driver. The corrected Dockerfile completes `npm ci --ignore-scripts` in one layer and runs `npm rebuild` in the next. This preserves install hooks; the corrected rebuild and Vite build both passed inside Docker.
 
 The [Docker verification summary](evidence/docker-verification-summary.json) records actual image IDs, versions and service states. The [live Docker verification](evidence/docker-live-verification.json) passed all eight check groups, including the deployed CNN producing a linked alert, byte-identical signed MinIO audio download and deletion of only its temporary device. The [Docker browser evidence](evidence/docker-browser-verification.json) verifies JWT login, all five scenarios, moving/stopped telemetry, F13, raw audio playback, generated alerts, model administration and Cloud Staff read-only access with zero JavaScript errors. These checks used real HTTP and stores.
 
-The [complete backend and model suite also passed inside the built Docker image](evidence/docker-unit-verification.json): **508 passed, 14 skipped, zero failures** with Python 3.12.16, Torch 2.5.1 CPU and librosa 1.0.0. This used a pristine Git archive mounted read-only at `/workspace`, disabled container networking, temporary caches, and the non-root `autosound` account. The [containerized test transcript](evidence/docker-unit-tests.txt) preserves its actual output.
+The [full Docker test result](evidence/docker-unit-verification.json) records the tested source revision, exact counts, environment and skip reasons. **528 passed, 14 skipped, zero failures**, parsed from pytest JUnit XML for tested source `c6033bb` with Python 3.12.16, Torch 2.5.1 CPU and librosa 1.0.0. The container tests use an isolated source snapshot, disabled networking, temporary caches and the non-root `autosound` account. The [containerized transcript](evidence/docker-unit-tests.txt) preserves the output.
 
 Build and startup transcripts are retained in [backend build](evidence/docker-api-build.txt), [frontend build](evidence/docker-frontend-build.txt), [MinIO build](evidence/docker-minio-build.txt), [Compose startup](evidence/docker-startup.txt), [live checks](evidence/docker-live-tests.txt) and [browser checks](evidence/docker-browser-tests.txt). They exclude private environment values, device keys, JWTs and signed download URLs.
 
@@ -129,6 +129,13 @@ python -m pip install -r requirements.txt
 python -m pytest tests/test_devices.py tests/test_device_commands.py tests/test_device_data.py tests/test_edge_buffer.py tests/test_edge_client.py tests/test_demo_edge.py -q
 python -m pytest -q
 alembic heads
+```
+
+The captured full Docker count includes both backend and model tests. To run that same test scope on the host, return to the repository root:
+
+```bash
+cd ..
+PYTHONPATH="$PWD/backend:$PWD" backend/.venv/bin/python -m pytest -q backend/tests model/tests
 ```
 
 The tests cover device role/ownership rules; SSID/password validation and encryption; command delivery, duplicate detection, acknowledgement and expiry; audio type, size and duration validation; S3 failure without an accepted record; idempotent replay; lease recovery and stale-worker protection; automatic/manual retries; edge FIFO recovery; and five local scenarios through the packaged CNN. PostgreSQL-specific tests require a separate disposable database and may be skipped in the default isolated run.
@@ -188,25 +195,67 @@ Include the individual component source/commit, the actual test summary, a saved
 
 ## Verified on November 10, 2026
 
-The implementation was exercised on the local machine using PostgreSQL 16.15, MongoDB 7.0.16, a persistent MinIO S3-compatible server, real JWT login, the background worker and the shipped `cnn-v1` classifier. The browser checks used the real API; UI mock mode was disabled.
+The implementation was exercised on the local machine using PostgreSQL 16.15, MongoDB 7.0.45, a persistent MinIO S3-compatible server, real JWT login, the background worker and the shipped `cnn-v1` classifier. The browser checks used the real API; UI mock mode was disabled.
 
 | Check | Observed result |
 | --- | --- |
-| Complete automated suite | 508 passed, 14 skipped |
+| Complete automated suite | 528 passed, 14 skipped, zero failures in Docker; exact JUnit result and tested source are linked above |
 | Separate real PostgreSQL migrations, constraints and seed | 10 passed on an isolated throwaway database |
 | Remaining optional model tests | Four tests need an unavailable audio dataset; they are outside the packaged-model inference checks, which passed |
 | Browser | Device form/detail validation; all five scenarios; moving/stopped telemetry; raw audio playback; linked alert; model UI; Cloud read-only device view; no JavaScript errors |
 | Frontend production build | Passed with Vite 7.3.8 and React Router 7.18.5 |
 | Dependency audit | Zero npm vulnerabilities |
 | Docker deployment | Full backend, frontend and MinIO image builds passed on rootless Docker 29.9.3; all seven Compose services started or completed as intended; live model/S3 and browser verification passed |
-| CARLA | Adapter and protocol tests passed; no actual CARLA server run was available. The recorded demo uses the explicitly labeled local virtual vehicle with real sound recordings |
+| CARLA | Actual 0.9.16 vehicle/RGB smoke and full C2/C3 integration passed: two Start/Stop cycles, resumed GPS/camera updates, all five recordings processed into alerts, SHA-matching audio downloads and speed below 0.1 km/h after Stop. The recording is being refreshed below. |
 
 See [verification summary](evidence/verification-summary.json), [complete test transcript](evidence/unit-tests.txt), [PostgreSQL transcript](evidence/postgres-migrations.txt), and [dependency audit](evidence/npm-audit.json). The task output package includes the scenario recording and screenshots. The recording is silent with on-screen explanations; audio playback was verified in the live browser. Review it and upload it through the course submission page; no course submission was performed automatically.
 
-The captured scenario walkthrough is 3 minutes 27 seconds, with on-screen explanations, actual UI interactions, seven component checks executed inside the Docker backend container and a live HTTP verification run. The longer presenter script above is available if you want to record your own narration. See the [captured unit checks](evidence/recorded-unit-demo.txt), [captured live checks](evidence/recorded-live-demo.txt), [browser result](evidence/browser-verification.json), and [recording metadata](evidence/video-metadata.json).
+The scenario walkthrough includes on-screen explanations, actual UI interactions, component checks executed inside the Docker backend container and a live HTTP verification run. See the recording metadata for its final duration and audio mode. The final recording is **3 minutes 30 seconds** and shows actual CARLA 0.9.16 connected to the Docker application, **17 passing targeted unit cases**, eight live verification groups and zero browser JavaScript errors. It is captioned and silent; scenario previews and stored-audio playback were verified in the browser. The longer presenter script above is available if you want to record your own narration. See the [captured Docker unit checks](evidence/recorded-docker-unit-demo.txt), [captured Docker live checks](evidence/recorded-docker-live-demo.txt), [Docker browser result](evidence/docker-browser-verification.json), [Docker recording verification](evidence/docker-recording-verification.json), and [recording metadata](evidence/video-metadata.json).
 
-## Actual CARLA through an existing Google Colab account
+## Actual CARLA on this host
 
-The local CARLA archive download was deliberately skipped at the user's request. The supplied [CARLA Colab notebook](colab/CMPE281_Real_CARLA_Colab_Rishi_Sheth.ipynb) uses the existing SJSU Google account, with no additional cloud signup. A Tesla T4 allocation with 15,360 MiB VRAM was confirmed by the user on November 10, 2026. This confirms an allocated GPU; actual Vulkan rendering and CARLA execution still require the notebook's checks and evidence.
+CARLA client and server **0.9.16** have now run locally in **Town10HD_Opt with rendering enabled**. The real vehicle/camera smoke captured **49 RGB frames**, observed movement up to **36.51 km/h**, and destroyed only its owned vehicle and sensor on completion. The [smoke evidence](evidence/carla-smoke/smoke-evidence.json) records versions, map, telemetry, rendering state and cleanup. This is an actual CARLA run, separate from the earlier illustrated local-edge demonstration.
 
-Upload the notebook to Colab and run the first two code cells before the large download. They verify the GPU's Vulkan device, available memory and at least 25 GiB disk. The later cells install an isolated matching Python client, start the real simulator as a non-root Unix user in the disposable runtime, drive an owned vehicle, capture real camera frames and save evidence. This is an interactive notebook workflow; it does not use SSH, VNC or a public tunnel. No Colab server execution is claimed until its logs and captured frames are obtained.
+The owned CARLA demo connects its microphone/camera unit to the Docker API on port 8002. F11 receives its actual frames and telemetry; the five bundled recorded sound scenarios still use normal C3 upload, object storage, queue, inference and alert handling. The [portable actual-CARLA verification](evidence/carla-verification.json) passed matching SDK/server and advancing-world checks, fresh camera/telemetry, two complete Start/Stop cycles with resumed GPS motion, and all five recordings through upload, processing, alerts and SHA-256-matching audio downloads. Both Stop commands reduced actual vehicle speed below 0.1 km/h.
+
+The tested current-host profile keeps the packaged default Town10HD_Opt map and a 0.05-second physics timestep. The prepared helper scopes `INTEL_DEBUG=sync,noccs` and `ANV_QUEUE_OVERRIDE=c=0,b=0` to the Intel-rendered server process. These describe the profile that passed the recorded checks; no general driver root-cause conclusion is implied. Use the prepared launcher on this computer; it also starts/checks Docker and needs no additional platform account:
+
+```bash
+python3 /home/rishi/Documents/Codex/2026-11-10/cme/outputs/start-carla-demo.py
+```
+
+The CARLA launcher verifies fresh real camera/position updates and prevents concurrent lightweight/real edges on the same devices. To stop only this demonstration's owned edge/server and restore the lightweight mode:
+
+```bash
+python3 /home/rishi/Documents/Codex/2026-11-10/cme/outputs/start-carla-demo.py --stop
+```
+
+### Portable reproduction on another Linux host
+
+The [portable server launcher](../../infra/carla/launch.sh), [hardware probe](../../infra/carla/probe.py) and [matching client requirements](../../infra/carla/requirements-client.txt) are included in the repository. This separate setup is for another Linux x86-64 machine with Python 3.12, working hardware Vulkan and sufficient disk; the prepared current-machine launchers above remain the quick path here.
+
+From the repository root:
+
+```bash
+python3.12 -m venv .local_carla/client-env
+.local_carla/client-env/bin/python -m pip install -r infra/carla/requirements-client.txt
+export CARLA_CLIENT_PYTHON="$PWD/.local_carla/client-env/bin/python"
+export CARLA_TASK_ROOT="$PWD/.local_carla"
+"$CARLA_CLIENT_PYTHON" infra/carla/probe.py --work-dir "$CARLA_TASK_ROOT" --require-gpu
+bash infra/carla/launch.sh prepare
+bash infra/carla/launch.sh start camera
+```
+
+`prepare` downloads the official 0.9.16 server archive and checks its expected size; generated files stay under ignored `.local_carla/`. `start camera` runs the launcher as a regular user, keeps the packaged default map with low-quality offscreen rendering, and configures only that kit-owned server with a 0.05-second physics timestep. `CARLA_MAP` is an explicit optional override; the prepared current-host workflow leaves it unset and avoids runtime world travel. It checks the hardware Vulkan device before startup. The server uses RPC 2000 and the edge uses Traffic Manager 8001.
+
+Start the Docker application using the main recipe, stop its lightweight edge, then use the seeded or newly registered `EDGE_*` IDs/keys from the earlier example:
+
+```bash
+docker compose --env-file infra/.env.demo -f infra/demo-compose.yml stop edge-demo
+cd backend
+"$CARLA_CLIENT_PYTHON" -m edge.carla_demo --camera-width 320 --camera-height 180 --no-edge-audio
+```
+
+Set `EDGE_API_URL` to the reachable API address (`http://localhost:8000` for the committed Docker port mapping). Do not run both lightweight and CARLA edges on the same device IDs. Stop the foreground owned edge with Ctrl+C, then from the repository root run `bash infra/carla/launch.sh stop` to stop only its tracked server process group and wait for its RPC port to close.
+
+The repository's `edge.carla_demo` runner creates and cleans up its own vehicle/camera; the lower-level `edge.carla_client` example above attaches to an existing vehicle. Both use the shared component APIs. The physical operating system's Wi-Fi and reboot remain unchanged: the demo unit's configuration/reboot acknowledgements are explicit device simulations, while real hardware requires its own apply/reboot executor. See the [design verification checklist](design-verification.md) for the exact implementation and verification boundaries.

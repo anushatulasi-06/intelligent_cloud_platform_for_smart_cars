@@ -1,7 +1,7 @@
 {
   "author": "Rishi Sheth",
-  "recorded_at": "2026-11-11T02:54:30.042Z",
+  "recorded_at": "2026-11-11T05:28:46.268Z",
   "page_errors": [],
-  "mode": "Docker deployment with virtual edge, real recordings, API, stores and model",
+  "mode": "Docker application connected to actual CARLA 0.9.16 vehicle and RGB camera; real recordings, stores and model",
   "sound": "Silent screen recording; live browser playback verified"
 }

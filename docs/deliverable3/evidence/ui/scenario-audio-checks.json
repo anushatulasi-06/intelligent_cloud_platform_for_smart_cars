@@ -1,0 +1,33 @@
+{
+  "author": "Rishi Sheth",
+  "checked_at": "2026-11-11T05:03:03.639Z",
+  "base_url": "http://127.0.0.1:5174",
+  "scope": "Focused browser reliability; command POSTs intercepted, no vehicle or data mutations",
+  "checks": [
+    "real authenticated WAV download",
+    "real unmuted 5-second media playback",
+    "autoplay rejection exposes Play preview",
+    "audio failure preserves command attempt",
+    "preview retry creates no duplicate command",
+    "Bearer header, no token in audio URL"
+  ],
+  "audio_requests": [
+    {
+      "path": "/api/simulator/scenarios/emergency/audio",
+      "bearer_header": true,
+      "query": ""
+    },
+    {
+      "path": "/api/simulator/scenarios/traffic/audio",
+      "bearer_header": true,
+      "query": ""
+    },
+    {
+      "path": "/api/simulator/scenarios/traffic/audio",
+      "bearer_header": true,
+      "query": ""
+    }
+  ],
+  "command_attempts_intercepted": 2,
+  "page_errors": []
+}

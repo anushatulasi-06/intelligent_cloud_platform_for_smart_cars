@@ -1,0 +1,29 @@
+{
+  "author": "Rishi Sheth",
+  "checked_at": "2026-11-11T04:56:31.245Z",
+  "source": "Immutable production build preview against real Docker API8002",
+  "design_pages": [
+    22,
+    23
+  ],
+  "checks": [
+    "F4 exact columns; real car selector; full masked Wi-Fi form; registration201/key once",
+    "Edit shows Wi-Fi fields but rename-only needs no password and makes no Wi-Fi request",
+    "Real metadata save plus injected Wi-Fi failure clearly reported; retry sends only Wi-Fi and succeeds202",
+    "F5 car make/model facts; blank password; all four controls; exact Command/Created/Status history columns",
+    "Cloud Staff F5 reads full car/Wi-Fi facts/history without Edit/Save/control buttons"
+  ],
+  "page_errors": [],
+  "result": "PASS",
+  "source_checks": {
+    "focused_c2_and_repository_tests": 45,
+    "large_car_id_search_regression": "passed after adding 32-bit car ID guard",
+    "frontend_production_build": "passed",
+    "backend_search_scope": "Validated by source API tests; deployed image refresh is handled during final integration"
+  },
+  "screenshots": [
+    "f4-groundtruth-add.png",
+    "f4-groundtruth-edit.png",
+    "f5-groundtruth-detail.png"
+  ]
+}

@@ -9,11 +9,11 @@
   },
   {
     "Service": "edge-demo",
-    "Image": "autosound-demo-backend:local",
-    "State": "running",
+    "Image": "sha256:a715888be18796d52098db860fedda9eae69a78ed7834231a2f14b0c3a2fec74",
+    "State": "exited",
     "Health": "",
-    "ExitCode": 0,
-    "Ports": "8000/tcp"
+    "ExitCode": 137,
+    "Ports": ""
   },
   {
     "Service": "frontend",

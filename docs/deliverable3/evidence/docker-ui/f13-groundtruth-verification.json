@@ -1,0 +1,44 @@
+{
+  "author": "Rishi Sheth",
+  "checked_at": "2026-11-11T05:07:44.128Z",
+  "base_url": "http://127.0.0.1:5174",
+  "environment": "rebuilt production Docker frontend and actual API/stores",
+  "result": "PASS",
+  "roles": [
+    {
+      "role": "iot",
+      "checks": [
+        "exact PDF column order and labels; four state cards;12hourly bars; chart heading",
+        "real status/car/device filters and URL preservation",
+        "record detail, signed raw audio link and actual browser playback",
+        "No Retry action on the observed processed rows; failed-record retry guards covered by unit tests",
+        "10-second in-place records/stats refresh without document navigation",
+        "Reset clears only filters and preserves active tab/unrelated URL parameters"
+      ],
+      "audio_playback_verified": true,
+      "failed_records_observed": 0,
+      "retry_buttons_observed": 0,
+      "polling": {
+        "records_requests": 1,
+        "stats_requests": 1,
+        "document_navigations": 0,
+        "observation_ms": 11500
+      }
+    },
+    {
+      "role": "cloud",
+      "checks": [
+        "exact PDF column order and labels; four state cards;12hourly bars; chart heading",
+        "real status/car/device filters and URL preservation",
+        "record detail, signed raw audio link and actual browser playback",
+        "No Retry action on the observed processed rows; failed-record retry guards covered by unit tests",
+        "Reset clears only filters and preserves active tab/unrelated URL parameters"
+      ],
+      "audio_playback_verified": true,
+      "failed_records_observed": 0,
+      "retry_buttons_observed": 0
+    }
+  ],
+  "page_errors": [],
+  "finished_at": "2026-11-11T05:08:01.328Z"
+}

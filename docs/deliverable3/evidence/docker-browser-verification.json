@@ -1,10 +1,10 @@
 {
   "author": "Rishi Sheth",
-  "checked_at": "2026-11-11T02:49:02.512Z",
+  "checked_at": "2026-11-11T05:02:26.838Z",
   "base_url": "http://127.0.0.1:5174",
   "checks": [
     "JWT login",
-    "five scenarios",
+    "five scenarios and authenticated audible browser previews",
     "moving and stopped telemetry",
     "data monitor",
     "raw audio playback",

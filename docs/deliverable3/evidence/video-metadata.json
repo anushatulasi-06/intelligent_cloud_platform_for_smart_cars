@@ -1,10 +1,11 @@
 {
   "author": "Rishi Sheth",
-  "duration_seconds": 207.48,
-  "video": "CMPE281_Deliverable3_Rishi_Sheth_Demo.mp4",
-  "captions": true,
-  "audio_track": false,
-  "unit_checks_in_docker": 7,
-  "unit_checks_passed": 7,
-  "mode": "Actual full Docker deployment, virtual edge vehicle, real recordings, API, PostgreSQL, MongoDB, MinIO and model"
+  "file": "CMPE281_Deliverable3_Rishi_Sheth_Demo.mp4",
+  "duration_seconds": 210.16,
+  "width": 1440,
+  "height": 1080,
+  "sound": "Silent captioned screen recording; real scenario preview and stored audio playback verified in browser",
+  "mode": "Actual CARLA 0.9.16 vehicle and RGB camera connected to Docker application",
+  "source_ui": "http://127.0.0.1:5174",
+  "verification": "docker-recording-verification.json"
 }

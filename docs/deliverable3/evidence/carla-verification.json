@@ -1,0 +1,479 @@
+{
+  "author": "Rishi Sheth",
+  "observed_at": "2026-11-11T05:24:04.925834+00:00",
+  "mode": "Actual CARLA vehicle and RGB camera connected to C2/C3 APIs",
+  "car_id": 1,
+  "device_id": 1,
+  "checks": [
+    "Matching real CARLA SDK/server, actual town and advancing world frames (read-only SDK)",
+    "Real JWT login, fresh CARLA heartbeat/telemetry and signed RGB JPEG",
+    "First Start route: actual speed, GPS motion and changed camera image",
+    "emergency: real edge command \u2192 processed model alert \u2192 byte-identical audio download",
+    "in_vehicle: real edge command \u2192 processed model alert \u2192 byte-identical audio download",
+    "human: real edge command \u2192 processed model alert \u2192 byte-identical audio download",
+    "traffic: real edge command \u2192 processed model alert \u2192 byte-identical audio download",
+    "environmental: real edge command \u2192 processed model alert \u2192 byte-identical audio download",
+    "First Stop route acknowledged; actual speed below 0.1 km/h",
+    "Second Start route resumes actual GPS motion and camera updates",
+    "Second Stop route acknowledged; actual speed below 0.1 km/h"
+  ],
+  "scenarios": [
+    {
+      "scenario": "emergency",
+      "command_id": 57,
+      "acknowledgement": "acknowledged",
+      "record_id": "d4d340f1-0a1d-4a0e-8d8b-2050c86b688a",
+      "clip_id": "5ca168b1-8042-5fe7-a0c9-2bbb69c89c8a",
+      "status": "processed",
+      "audio_sha256": "b0ce84a3c012d144a1f97394cab2830512078d660e809eecb8abc4fa8ad0a9e1",
+      "alert_id": "6af3fc010f01d867bf93a2b9",
+      "model_prediction": "emergency",
+      "confidence": 0.9983042478561401,
+      "severity": "high",
+      "model_version": "cnn-v1"
+    },
+    {
+      "scenario": "in_vehicle",
+      "command_id": 58,
+      "acknowledgement": "acknowledged",
+      "record_id": "5e090986-b0d2-42e9-9f09-92f6b3d489d5",
+      "clip_id": "5c77317c-583d-5d05-81a6-2e230200b6c6",
+      "status": "processed",
+      "audio_sha256": "db6946133c37fbd4513fe932dbb71e0b077bf7d240beaed339eb6c88e48c903b",
+      "alert_id": "6af3fc050f01d867bf93a2db",
+      "model_prediction": "in_vehicle",
+      "confidence": 0.9980625510215759,
+      "severity": "high",
+      "model_version": "cnn-v1"
+    },
+    {
+      "scenario": "human",
+      "command_id": 59,
+      "acknowledgement": "acknowledged",
+      "record_id": "af3d8b55-7791-4edc-bc94-5a10f369ce2b",
+      "clip_id": "2dcb899c-0e2c-5655-aabc-0139072372cc",
+      "status": "processed",
+      "audio_sha256": "3cbcd59a0db21f0ed8c252c74ea1bc193117d2c13ed99821885c46c564010b3e",
+      "alert_id": "6af3fc090f01d867bf93a30a",
+      "model_prediction": "human",
+      "confidence": 0.9035640358924866,
+      "severity": "medium",
+      "model_version": "cnn-v1"
+    },
+    {
+      "scenario": "traffic",
+      "command_id": 60,
+      "acknowledgement": "acknowledged",
+      "record_id": "7da29aa9-f932-46a9-b791-ea68e44f1468",
+      "clip_id": "294cd1ad-5e17-5ef5-81ac-240058cdd62d",
+      "status": "processed",
+      "audio_sha256": "9d5e01e07a386ee36c2e73f40817d132a54d91c936eccc01414280abca5a4209",
+      "alert_id": "6af3fc0d0f01d867bf93a337",
+      "model_prediction": "in_vehicle",
+      "confidence": 0.5386938452720642,
+      "severity": "high",
+      "model_version": "cnn-v1"
+    },
+    {
+      "scenario": "environmental",
+      "command_id": 61,
+      "acknowledgement": "acknowledged",
+      "record_id": "ae42d48b-8449-4df9-91da-8a68be3658fe",
+      "clip_id": "e3377afd-b606-5b77-90a2-d4743143c52e",
+      "status": "processed",
+      "audio_sha256": "d732acd2e0c7c40405968010f49f250740c86998fc416eff2ed5330fc8c89dea",
+      "alert_id": "6af3fc110f01d867bf93a35f",
+      "model_prediction": "traffic",
+      "confidence": 0.6586222648620605,
+      "severity": "low",
+      "model_version": "cnn-v1"
+    }
+  ],
+  "route_cycles": [
+    {
+      "start_command_id": 56,
+      "telemetry_samples": [
+        {
+          "lat": 7.454287749960831e-05,
+          "lon": -0.00041097794783915735,
+          "speed_kmh": 1.4591528842675495e-05,
+          "heading": 352.53612518310547,
+          "ts": "2026-11-11T05:24:07.845000+00:00",
+          "town": "Town10HD_Opt"
+        },
+        {
+          "lat": 7.454287749960831e-05,
+          "lon": -0.00041097794783915735,
+          "speed_kmh": 9.613970662137662e-06,
+          "heading": 352.53612518310547,
+          "ts": "2026-11-11T05:24:10.354000+00:00",
+          "town": "Town10HD_Opt"
+        },
+        {
+          "lat": 7.454287749960831e-05,
+          "lon": -0.00041097794783915735,
+          "speed_kmh": 9.613970662137662e-06,
+          "heading": 352.53612518310547,
+          "ts": "2026-11-11T05:24:10.354000+00:00",
+          "town": "Town10HD_Opt"
+        },
+        {
+          "lat": 7.444463465688557e-05,
+          "lon": -0.00041098367288660816,
+          "speed_kmh": 0.8839405108490974,
+          "heading": 352.57894134521484,
+          "ts": "2026-11-11T05:24:11.880000+00:00",
+          "town": "Town10HD_Opt"
+        },
+        {
+          "lat": 7.444463465688557e-05,
+          "lon": -0.00041098367288660816,
+          "speed_kmh": 0.8839405108490974,
+          "heading": 352.57894134521484,
+          "ts": "2026-11-11T05:24:11.880000+00:00",
+          "town": "Town10HD_Opt"
+        },
+        {
+          "lat": 6.875344897537451e-05,
+          "lon": -0.0004109708172410817,
+          "speed_kmh": 9.588584320794386,
+          "heading": 355.45326232910156,
+          "ts": "2026-11-11T05:24:14.011000+00:00",
+          "town": "Town10HD_Opt"
+        }
+      ],
+      "max_speed_kmh": 9.588584320794386,
+      "camera_sha256": "a95b50ddefd82be0c608595f38539fc92a0d40c3cc0560bf78476fdc5b609901",
+      "camera_size_bytes": 23296,
+      "town": "Town10HD_Opt",
+      "stop_command_id": 62,
+      "stopped_speed_kmh": 0.00024885533293760053,
+      "final_frame_at": "2026-11-11T05:24:37+00:00"
+    },
+    {
+      "start_command_id": 63,
+      "telemetry_samples": [
+        {
+          "lat": -0.0002876212074333208,
+          "lon": -0.0004064341113802332,
+          "speed_kmh": 0.00024885533293760053,
+          "heading": 0.40704345703125,
+          "ts": "2026-11-11T05:24:37.853000+00:00",
+          "town": "Town10HD_Opt"
+        },
+        {
+          "lat": -0.00028762206447635244,
+          "lon": -0.0004064341113802332,
+          "speed_kmh": 9.265927821505767e-06,
+          "heading": 0.40704345703125,
+          "ts": "2026-11-11T05:24:39.926000+00:00",
+          "town": "Town10HD_Opt"
+        },
+        {
+          "lat": -0.00028762206447635244,
+          "lon": -0.0004064341113802332,
+          "speed_kmh": 9.265927821505767e-06,
+          "heading": 0.40704345703125,
+          "ts": "2026-11-11T05:24:39.926000+00:00",
+          "town": "Town10HD_Opt"
+        },
+        {
+          "lat": -0.00028789045607215694,
+          "lon": -0.0004064325344210645,
+          "speed_kmh": 1.6024540048544138,
+          "heading": 0.406829833984375,
+          "ts": "2026-11-11T05:24:41.757000+00:00",
+          "town": "Town10HD_Opt"
+        }
+      ],
+      "max_speed_kmh": 1.6024540048544138,
+      "camera_sha256": "4f639cc2c89c90a86cd30e774e8c0f6acc8d95cc73d4bc8416437df9b5f72e4c",
+      "camera_size_bytes": 22206,
+      "town": "Town10HD_Opt",
+      "stop_command_id": 64,
+      "stopped_speed_kmh": 0.0004147967367470426,
+      "final_frame_at": "2026-11-11T05:24:47+00:00"
+    }
+  ],
+  "status": "passed",
+  "boundaries": [
+    "Wi-Fi and reboot target simulated CARLA units; no physical OS hook is claimed",
+    "Five licensed clips demonstrate integration, not held-out model accuracy"
+  ],
+  "carla": {
+    "server_version": "0.9.16",
+    "client_version": "0.9.16",
+    "map": "Carla/Maps/Town10HD_Opt",
+    "frames": [
+      1474,
+      1475
+    ]
+  },
+  "smoke": {
+    "started_at": "2026-11-11T05:00:42.385667+00:00",
+    "status": "passed",
+    "server_host": "127.0.0.1",
+    "server_port": 2000,
+    "camera_requested": true,
+    "camera_frames": 49,
+    "telemetry": [
+      {
+        "observed_at": "2026-11-11T05:00:45.288082+00:00",
+        "frame": 133,
+        "simulation_seconds": 21.69923351527541,
+        "lat": 0.00021991479078309228,
+        "lon": -0.0005809468932945188,
+        "speed_kmh": 0.2641808509843367,
+        "heading": 90.15919795632362,
+        "route_stopped": false
+      },
+      {
+        "observed_at": "2026-11-11T05:00:46.258517+00:00",
+        "frame": 140,
+        "simulation_seconds": 22.711537318391493,
+        "lat": 0.00021991479078309228,
+        "lon": -0.0005809468932945188,
+        "speed_kmh": 0.004008567660966472,
+        "heading": 90.15919795632362,
+        "route_stopped": false
+      },
+      {
+        "observed_at": "2026-11-11T05:00:47.265837+00:00",
+        "frame": 147,
+        "simulation_seconds": 23.715972660196712,
+        "lat": 0.0002195676540737559,
+        "lon": -0.0005754993220948495,
+        "speed_kmh": 11.797117927340967,
+        "heading": 88.71389758586884,
+        "route_stopped": false
+      },
+      {
+        "observed_at": "2026-11-11T05:00:48.275256+00:00",
+        "frame": 155,
+        "simulation_seconds": 24.735675552947214,
+        "lat": 0.00021469075354816573,
+        "lon": -0.00054937644479881,
+        "speed_kmh": 22.078802737410136,
+        "heading": 77.6569013595581,
+        "route_stopped": false
+      },
+      {
+        "observed_at": "2026-11-11T05:00:49.306318+00:00",
+        "frame": 161,
+        "simulation_seconds": 25.766667412681272,
+        "lat": 0.00020567092414835937,
+        "lon": -0.0005190682149981777,
+        "speed_kmh": 30.943557237432426,
+        "heading": 73.97773742675781,
+        "route_stopped": false
+      },
+      {
+        "observed_at": "2026-11-11T05:00:50.347369+00:00",
+        "frame": 169,
+        "simulation_seconds": 26.807370783848455,
+        "lat": 0.00018561582581398838,
+        "lon": -0.0004646668257720562,
+        "speed_kmh": 34.17247600673581,
+        "heading": 62.22993278503418,
+        "route_stopped": false
+      },
+      {
+        "observed_at": "2026-11-11T05:00:51.393617+00:00",
+        "frame": 177,
+        "simulation_seconds": 27.852340342564275,
+        "lat": 0.00015280854423807991,
+        "lon": -0.00043500658906605916,
+        "speed_kmh": 21.469462446073088,
+        "heading": 26.839920043945312,
+        "route_stopped": false
+      },
+      {
+        "observed_at": "2026-11-11T05:00:52.450920+00:00",
+        "frame": 185,
+        "simulation_seconds": 28.910406483424595,
+        "lat": 0.00011428433997770977,
+        "lon": -0.00043316432364617837,
+        "speed_kmh": 27.278084413846713,
+        "heading": 356.8485565185547,
+        "route_stopped": false
+      },
+      {
+        "observed_at": "2026-11-11T05:00:53.499720+00:00",
+        "frame": 193,
+        "simulation_seconds": 29.95713951261132,
+        "lat": 5.917721009708544e-05,
+        "lon": -0.0004436258365527082,
+        "speed_kmh": 36.512226365264596,
+        "heading": 349.78231048583984,
+        "route_stopped": false
+      },
+      {
+        "observed_at": "2026-11-11T05:00:54.502771+00:00",
+        "frame": 201,
+        "simulation_seconds": 30.962312551302603,
+        "lat": 8.77418961939499e-06,
+        "lon": -0.0004425881288497101,
+        "speed_kmh": 23.751782322222102,
+        "heading": 12.748504638671875,
+        "route_stopped": false
+      },
+      {
+        "observed_at": "2026-11-11T05:00:55.521293+00:00",
+        "frame": 209,
+        "simulation_seconds": 31.98015702338307,
+        "lat": -1.5428456517354022e-05,
+        "lon": -0.0004245354772754057,
+        "speed_kmh": 21.235177722112333,
+        "heading": 42.1037483215332,
+        "route_stopped": false
+      },
+      {
+        "observed_at": "2026-11-11T05:00:56.712861+00:00",
+        "frame": 217,
+        "simulation_seconds": 33.16667843805044,
+        "lat": -4.002310395962971e-05,
+        "lon": -0.00038456494433551533,
+        "speed_kmh": 33.92575870618257,
+        "heading": 61.71430015563965,
+        "route_stopped": false
+      },
+      {
+        "observed_at": "2026-11-11T05:00:57.792977+00:00",
+        "frame": 225,
+        "simulation_seconds": 34.24505381853669,
+        "lat": -6.803822942515088e-05,
+        "lon": -0.00033564482524130364,
+        "speed_kmh": 25.02762657508585,
+        "heading": 57.30635070800781,
+        "route_stopped": true
+      },
+      {
+        "observed_at": "2026-11-11T05:00:58.832345+00:00",
+        "frame": 234,
+        "simulation_seconds": 35.292930802417686,
+        "lat": -7.347483047421177e-05,
+        "lon": -0.0003266241730789403,
+        "speed_kmh": 0.004136847259045198,
+        "heading": 55.50652313232422,
+        "route_stopped": true
+      },
+      {
+        "observed_at": "2026-11-11T05:00:59.838203+00:00",
+        "frame": 242,
+        "simulation_seconds": 36.29883477659314,
+        "lat": -7.347587606671045e-05,
+        "lon": -0.00032662321319074485,
+        "speed_kmh": 0.0,
+        "heading": 55.50590515136719,
+        "route_stopped": true
+      },
+      {
+        "observed_at": "2026-11-11T05:01:00.861685+00:00",
+        "frame": 250,
+        "simulation_seconds": 37.32191084520309,
+        "lat": -7.347587606671045e-05,
+        "lon": -0.00032662321319074485,
+        "speed_kmh": 0.0,
+        "heading": 55.50590515136719,
+        "route_stopped": true
+      },
+      {
+        "observed_at": "2026-11-11T05:01:01.909289+00:00",
+        "frame": 258,
+        "simulation_seconds": 38.369914608163526,
+        "lat": -7.347587606671045e-05,
+        "lon": -0.00032662321319074485,
+        "speed_kmh": 0.0,
+        "heading": 55.50590515136719,
+        "route_stopped": true
+      },
+      {
+        "observed_at": "2026-11-11T05:01:02.929154+00:00",
+        "frame": 266,
+        "simulation_seconds": 39.38970650182455,
+        "lat": -7.347587606671045e-05,
+        "lon": -0.00032662321319074485,
+        "speed_kmh": 0.0,
+        "heading": 55.50590515136719,
+        "route_stopped": true
+      },
+      {
+        "observed_at": "2026-11-11T05:01:04.144795+00:00",
+        "frame": 274,
+        "simulation_seconds": 40.604252779943636,
+        "lat": -7.347587606671045e-05,
+        "lon": -0.00032662321319074485,
+        "speed_kmh": 0.0,
+        "heading": 55.50590515136719,
+        "route_stopped": true
+      },
+      {
+        "observed_at": "2026-11-11T05:01:05.247212+00:00",
+        "frame": 283,
+        "simulation_seconds": 41.706830274401,
+        "lat": -7.347587606671045e-05,
+        "lon": -0.00032662321319074485,
+        "speed_kmh": 0.0,
+        "heading": 55.50590515136719,
+        "route_stopped": true
+      },
+      {
+        "observed_at": "2026-11-11T05:01:06.318020+00:00",
+        "frame": 292,
+        "simulation_seconds": 42.77919958168059,
+        "lat": -7.347587606671045e-05,
+        "lon": -0.00032662321319074485,
+        "speed_kmh": 0.0,
+        "heading": 55.50590515136719,
+        "route_stopped": true
+      },
+      {
+        "observed_at": "2026-11-11T05:01:07.363015+00:00",
+        "frame": 300,
+        "simulation_seconds": 43.823123533366015,
+        "lat": -7.347587606671045e-05,
+        "lon": -0.00032662321319074485,
+        "speed_kmh": 0.0,
+        "heading": 55.50590515136719,
+        "route_stopped": true
+      },
+      {
+        "observed_at": "2026-11-11T05:01:08.377696+00:00",
+        "frame": 308,
+        "simulation_seconds": 44.83864349880605,
+        "lat": -7.347587606671045e-05,
+        "lon": -0.00032662321319074485,
+        "speed_kmh": 0.0,
+        "heading": 55.50590515136719,
+        "route_stopped": true
+      }
+    ],
+    "owned_actor_ids": [
+      24,
+      25
+    ],
+    "cleanup": [
+      {
+        "actor_id": 25,
+        "destroyed": true
+      },
+      {
+        "actor_id": 24,
+        "destroyed": true
+      }
+    ],
+    "client_version": "0.9.16",
+    "server_version": "0.9.16",
+    "town": "Carla/Maps/Town10HD_Opt",
+    "synchronous_mode": false,
+    "no_rendering_mode": false,
+    "vehicle_id": 24,
+    "vehicle_type": "vehicle.tesla.model3",
+    "camera_id": 25,
+    "last_camera_frame": 312,
+    "max_speed_kmh": 36.512226365264596,
+    "motion_observed": true,
+    "finished_at": "2026-11-11T05:01:09.471955+00:00"
+  },
+  "finished_at": "2026-11-11T05:24:48.070814+00:00"
+}

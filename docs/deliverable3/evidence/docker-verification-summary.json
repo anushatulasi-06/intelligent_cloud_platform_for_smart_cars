@@ -2,7 +2,7 @@
   "author": "Rishi Sheth",
   "date_local": "2026-11-10",
   "timezone": "America/Los_Angeles",
-  "captured_at": "2026-11-10T18:51:48.024426-08:00",
+  "captured_at": "2026-11-11T05:27:01.614817+00:00",
   "result": "PASS",
   "engine": {
     "version": "29.9.3",
@@ -38,14 +38,14 @@
   "images": [
     {
       "tag": "autosound-demo-backend:local",
-      "id": "sha256:bab1e4bd1648599e336f657baf53de954a126990889ce30fab15d26eb7a61857",
-      "size_bytes": 1610703840,
+      "id": "sha256:93a8aa8b717891596bd4c39a9c233b4e1d641eeba5043dd5c88f85586f9fa203",
+      "size_bytes": 1610765622,
       "architecture": "amd64"
     },
     {
       "tag": "autosound-demo-frontend:local",
-      "id": "sha256:c206c38af039007cfb5c084765eaefb75382a572d2fd0ca8eb2ff790d65f8743",
-      "size_bytes": 62580658,
+      "id": "sha256:b342a2ca114cd53bc5c16b43a5a5f4c26a409eb6443e1fcefd0523a1afd2296f",
+      "size_bytes": 62588737,
       "architecture": "amd64"
     },
     {
@@ -78,11 +78,11 @@
     },
     {
       "Service": "edge-demo",
-      "Image": "autosound-demo-backend:local",
-      "State": "running",
+      "Image": "sha256:a715888be18796d52098db860fedda9eae69a78ed7834231a2f14b0c3a2fec74",
+      "State": "exited",
       "Health": "",
-      "ExitCode": 0,
-      "Ports": "8000/tcp"
+      "ExitCode": 137,
+      "Ports": ""
     },
     {
       "Service": "frontend",
@@ -145,7 +145,7 @@
     ],
     "browser_javascript_errors": 0,
     "containerized_full_suite": {
-      "passed": 508,
+      "passed": 528,
       "skipped": 14,
       "failed": 0,
       "errors": 0
@@ -171,5 +171,17 @@
     "docker-unit-verification.json",
     "docker-unit-tests.txt"
   ],
-  "updated_at": "2026-11-10T18:59:06.065797-08:00"
+  "updated_at": "2026-11-10T18:59:06.065797-08:00",
+  "native_carla": {
+    "server": "0.9.16",
+    "sdk_python": "3.12.16",
+    "mode": "Off-screen Vulkan on Intel UHD620",
+    "map": "Town10HD_Opt",
+    "fixed_delta_seconds": 0.05,
+    "camera": "320x180 real RGB",
+    "edge_firmware": "carla-demo-v1",
+    "verification": "carla-verification.json",
+    "virtual_edge_service": "Intentionally stopped while real CARLA uses the same device keys",
+    "startup_profile": "Default packaged map, no world travel; INTEL_DEBUG=sync,noccs; ANV_QUEUE_OVERRIDE=c=0,b=0"
+  }
 }

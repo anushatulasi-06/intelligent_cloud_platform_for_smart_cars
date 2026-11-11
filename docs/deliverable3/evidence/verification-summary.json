@@ -7,9 +7,12 @@
     "C3 Data Management"
   ],
   "full_suite": {
-    "passed": 508,
+    "passed": 528,
     "skipped": 14,
-    "reason": "10 PostgreSQL checks run separately below; 4 optional model-dataset tests require unavailable audio dataset"
+    "reason": "10 PostgreSQL checks run separately below; 4 optional model-dataset tests require unavailable audio dataset",
+    "failed": 0,
+    "tested_source_commit": "c6033bbac6bf4fc55cdcdadf13f833658b7d1ba5",
+    "count_method": "pytest JUnit XML"
   },
   "separate_real_postgresql_migrations": {
     "passed": 10,
@@ -19,17 +22,21 @@
   "npm_audit_vulnerabilities": 0,
   "live_stack": {
     "postgresql": "16.15",
-    "mongodb": "7.0.16",
+    "mongodb": "7.0.45",
     "s3_compatible_storage": "MinIO RELEASE.2025-10-15T17-29-55Z",
     "model": "cnn-v1",
     "api": "FastAPI with JWT and device-key auth",
-    "ui": "React; real backend mode"
+    "ui": "React; real backend mode",
+    "mode": "Docker application and stores with actual host CARLA edge"
   },
   "runtime_limits": {
     "full_docker_build_and_start_verified": true,
-    "reason": "Verified November 10, 2026 with isolated rootless Docker 29.9.3: full image builds, seven Compose services, live C2/C3 model and S3 checks, and real browser checks all passed.",
-    "actual_carla_server_verified": false,
-    "carla_reason": "No running CARLA server supplied; local virtual edge uses actual HTTP, stores and model"
+    "reason": "Full Docker builds/startup, live C2/C3 model/storage checks and production browser checks passed. The actual host CARLA edge replaces the lightweight Compose edge on the current demo.",
+    "actual_carla_server_verified": true,
+    "carla_reason": "Actual matching 0.9.16 SDK/server, advancing world, fresh RGB, two Start/Stop cycles and all five recorded scenarios through durable upload/model alerts/SHA-matching playback passed.",
+    "actual_carla_integration_verified": true,
+    "physical_os_wifi_or_reboot_verified": false,
+    "hardware_boundary": "Wi-Fi/reboot acknowledgements target simulated device units; no physical host network/reboot hook is claimed."
   },
   "docker_verification": {
     "result": "PASS",
@@ -39,11 +46,32 @@
     "ui": "http://127.0.0.1:5174",
     "api": "http://127.0.0.1:8002",
     "containerized_full_suite": {
-      "passed": 508,
+      "passed": 528,
       "skipped": 14,
       "failed": 0,
       "python": "3.12.16",
-      "proof": "docker-unit-verification.json"
+      "proof": "docker-unit-verification.json",
+      "tested_source_commit": "c6033bbac6bf4fc55cdcdadf13f833658b7d1ba5"
     }
+  },
+  "carla_verification": {
+    "result": "PASS",
+    "proof": "carla-verification.json",
+    "server_version": "0.9.16",
+    "client_version": "0.9.16",
+    "map": "Carla/Maps/Town10HD_Opt",
+    "route_cycles": 2,
+    "processed_scenarios": 5,
+    "physical_os_commands": "simulated device unit only"
+  },
+  "recorded_demo": {
+    "file": "CMPE281_Deliverable3_Rishi_Sheth_Demo.mp4",
+    "duration_seconds": 210.16,
+    "mode": "Actual CARLA 0.9.16 vehicle and RGB camera connected to Docker application",
+    "targeted_unit_cases_passed": 17,
+    "live_verification_groups": 8,
+    "page_errors": [],
+    "sound": "Silent captioned screen recording; real scenario preview and stored audio playback verified in browser",
+    "proof": "docker-recording-verification.json"
   }
 }

@@ -1,6 +1,6 @@
 {
   "author": "Rishi Sheth",
-  "started_at": "2026-11-11T02:53:59.731092+00:00",
+  "started_at": "2026-11-11T05:28:14.210741+00:00",
   "api_url": "http://127.0.0.1:8002",
   "checks": [
     "API health and real JWT staff login",
@@ -13,10 +13,10 @@
     "Deleted only the temporary device; accepted audio and alert retained as evidence"
   ],
   "retained_record_ids": [
-    "08280bfd-da70-4653-ae23-d70b903ae544"
+    "bbd309dd-8b6d-4dc0-8689-ac350d020b5b"
   ],
-  "temporary_device_id": 9,
-  "alert_id": "6af3d8c90f01d867bf9368d2",
+  "temporary_device_id": 15,
+  "alert_id": "6af3fcf00f01d867bf93a80d",
   "model_version": "cnn-v1",
   "classification": "in_vehicle",
   "confidence": 0.778229832649231,
@@ -26,5 +26,5 @@
   ],
   "temporary_device_deleted": true,
   "result": "PASS",
-  "finished_at": "2026-11-11T02:54:01.646275+00:00"
+  "finished_at": "2026-11-11T05:28:17.471781+00:00"
 }

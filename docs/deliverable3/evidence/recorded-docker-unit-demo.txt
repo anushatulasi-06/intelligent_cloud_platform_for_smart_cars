@@ -1,17 +1,18 @@
-$ /home/rishi/Documents/Codex/2026-11-10/cme/work/docker-runtime/compose.sh exec -T api python -m pytest -v tests/test_devices.py::test_creation_hashes_key_encrypts_wifi_and_hides_secrets tests/test_device_commands.py::test_delivery_duplicates_ack_and_isolation tests/test_device_data.py::test_upload_replay_and_staff_monitor tests/test_device_data.py::test_worker_retries_three_times_then_manual_retry tests/test_edge_buffer.py::test_buffer_survives_restart_and_drains_fifo tests/test_demo_edge.py::test_local_edge_real_routes_five_uploads_and_packaged_model
+$ /home/rishi/Documents/Codex/2026-11-10/cme/work/docker-runtime/compose.sh exec -T api python -m pytest -v tests/test_devices.py::test_creation_hashes_key_encrypts_wifi_and_hides_secrets tests/test_device_commands.py::test_delivery_duplicates_ack_and_isolation tests/test_device_data.py::test_upload_replay_and_staff_monitor tests/test_device_data.py::test_worker_retries_three_times_then_manual_retry tests/test_edge_buffer.py::test_buffer_survives_restart_and_drains_fifo tests/test_demo_edge.py::test_local_edge_real_routes_five_uploads_and_packaged_model tests/test_carla_demo.py
 
 ============================= test session starts ==============================
 platform linux -- Python 3.12.16, pytest-8.4.2, pluggy-1.7.0
 rootdir: /app/backend
 configfile: pytest.ini
 plugins: platformdirs-4.14.5, anyio-4.16.0
-collected 7 items
+collected 17 items
 
-tests/test_devices.py .                                                  [ 14%]
-tests/test_device_commands.py .                                          [ 28%]
-tests/test_device_data.py ..                                             [ 57%]
-tests/test_edge_buffer.py .                                              [ 71%]
-tests/test_demo_edge.py ..                                               [100%]
+tests/test_devices.py .                                                  [  5%]
+tests/test_device_commands.py .                                          [ 11%]
+tests/test_device_data.py ..                                             [ 23%]
+tests/test_edge_buffer.py .                                              [ 29%]
+tests/test_demo_edge.py ..                                               [ 41%]
+tests/test_carla_demo.py ..........                                      [100%]
 
 =============================== warnings summary ===============================
 ../../usr/local/lib/python3.12/site-packages/fastapi/testclient.py:1
@@ -19,4 +20,4 @@ tests/test_demo_edge.py ..                                               [100%]
     from starlette.testclient import TestClient as TestClient  # noqa
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-========================= 7 passed, 1 warning in 6.69s =========================
+======================== 17 passed, 1 warning in 9.97s =========================
