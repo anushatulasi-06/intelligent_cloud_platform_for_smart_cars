@@ -1,0 +1,137 @@
+# From the repository root:
+#   python3 infra/init_demo_env.py
+#   docker compose --env-file infra/.env.demo -f infra/demo-compose.yml up --build -d
+name: autosound-c2-c3-demo
+
+x-backend: &backend
+  image: autosound-demo-backend:local
+  build:
+    context: ..
+    dockerfile: backend/Dockerfile
+
+x-storage-env: &storage-env
+  S3_BUCKET: ${S3_BUCKET:-autosound-audio-demo}
+  AWS_REGION: ${AWS_REGION:-us-west-2}
+  AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?Run python3 infra/init_demo_env.py first}
+  AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?Run python3 infra/init_demo_env.py first}
+  S3_ENDPOINT_URL: http://minio:9000
+  S3_PUBLIC_ENDPOINT_URL: ${S3_PUBLIC_ENDPOINT_URL:-http://127.0.0.1:9000}
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: autosound
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run python3 infra/init_demo_env.py first}
+      POSTGRES_DB: autosound
+    volumes:
+      - demo-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7.0
+    volumes:
+      - demo-mongo:/data/db
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "if (!db.adminCommand('ping').ok) quit(1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  minio:
+    image: autosound-demo-minio:2025-10-15
+    platform: linux/amd64
+    build:
+      context: ..
+      dockerfile: infra/Minio.Dockerfile
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Run python3 infra/init_demo_env.py first}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Run python3 infra/init_demo_env.py first}
+    command: [server, /data, --console-address, ":9001"]
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - demo-objects:/data
+    restart: unless-stopped
+
+  storage-init:
+    <<: *backend
+    environment: *storage-env
+    command: [python, /app/infra/init_demo_storage.py]
+    healthcheck:
+      disable: true
+    depends_on:
+      minio:
+        condition: service_started
+    restart: "no"
+
+  api:
+    <<: *backend
+    env_file: .env.demo
+    environment:
+      <<: *storage-env
+      DATABASE_URL: postgresql+psycopg2://autosound:${POSTGRES_PASSWORD:?Run python3 infra/init_demo_env.py first}@postgres:5432/autosound
+      MONGO_URI: mongodb://mongo:27017/autosound
+      MODEL_DIR: /app/model/artifacts
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      LOCAL_AUDIO_DIR: ""
+      DEV_FAKE_EMAIL: "true"
+      DEV_FAKE_BACKUP: "true"
+      LOAD_MODEL_ON_STARTUP: "true"
+      MONGO_ENSURE_INDEXES_ON_STARTUP: "true"
+      DEVICE_SWEEPER_ENABLED: "true"
+      PROCESSING_WORKER_ENABLED: "true"
+      PROCESSING_WORKER_POLL_SECONDS: "2"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - demo-backups:/app/backend/.local_backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    image: autosound-demo-frontend:local
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "127.0.0.1:5173:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  edge-demo:
+    <<: *backend
+    env_file: .env.demo
+    environment:
+      EDGE_API_URL: http://api:8000
+    command: [python, -m, edge.demo_client, --buffer-dir, /app/backend/.local_edge/demo]
+    volumes:
+      - demo-edge:/app/backend/.local_edge/demo
+    healthcheck:
+      disable: true
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  demo-postgres:
+  demo-mongo:
+  demo-objects:
+  demo-backups:
+  demo-edge:

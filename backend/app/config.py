@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     MONGO_URI: str = "mongodb://localhost:27017/autosound"
     S3_BUCKET: str = "autosound-audio-dev"
     AWS_REGION: str = "us-west-2"
+    # Optional S3-compatible service; unset uses AWS. Public endpoint is used only for browser links.
+    S3_ENDPOINT_URL: str | None = None
+    S3_PUBLIC_ENDPOINT_URL: str | None = None
 
     # ML
     MODEL_DIR: Path = Path("../model/artifacts")
@@ -80,7 +83,7 @@ class Settings(BaseSettings):
     DEVICE_SWEEPER_ENABLED: bool = True
     PROCESSING_WORKER_ENABLED: bool = True
     PROCESSING_WORKER_POLL_SECONDS: float = Field(default=2.0, gt=0)
-    @field_validator("LOCAL_AUDIO_DIR", mode="before")
+    @field_validator("LOCAL_AUDIO_DIR", "S3_ENDPOINT_URL", "S3_PUBLIC_ENDPOINT_URL", mode="before")
     @classmethod
     def _blank_means_off(cls, v):
         # `LOCAL_AUDIO_DIR=` (empty) turns local audio off, like leaving the line out.

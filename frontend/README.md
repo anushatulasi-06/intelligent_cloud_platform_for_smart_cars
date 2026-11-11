@@ -1,17 +1,17 @@
 # Frontend – Smart Car Platform UI
 
 Web UI for the Smart Car Intelligent Cloud Platform (CMPE 281, Group 8).
-React 18 + Vite + React Router v6, plain JavaScript and plain CSS, no UI library.
+React 18 + Vite 7 + React Router 7, plain JavaScript and plain CSS, no UI library.
 
 > **TL;DR for teammates**
 > - The **shell** (sidebar, header, alerts drawer, tabs), **12 shared components** and a
->   **mock API** for every endpoint in the Component Design doc are done. You don't need the backend
->   to build your pages.
+>   API integration for every component are implemented. The real backend is the default.
+>   Set `VITE_USE_MOCK=true` only for a UI prototype without a backend.
 > - **There is a real login now.** The role comes from the token, not from a dropdown. Sign in with
 >   one of the seeded accounts; in mock mode any password works.
 > - **Login (F1), Dashboards (F2, F3, F6), Map (F9), Tracking (F10), Alerts (F12, F7)** and
->   **Config (F8a, F8b, F14)** are finished. The Device Manager and Simulator frames are still
->   placeholders. Find your frames in [What's left, by owner](#4-whats-left-by-owner).
+>   **Config (F8a, F8b, F14)** are implemented alongside **Devices (F4/F5), Simulator (F11)** and
+>   **Device data (F13)**. See the [individual C2/C3 demo guide](../docs/deliverable3/README.md).
 > - Build a page in 4 steps: [How to build your page](#5-how-to-build-your-page).
 > - Please read [Rules](#6-rules-please-follow) before opening a PR.
 > - Pulled before? Check [What changed recently](#what-changed-recently): the role dropdown is gone.
@@ -19,6 +19,14 @@ React 18 + Vite + React Router v6, plain JavaScript and plain CSS, no UI library
 ---
 
 ## What changed recently
+
+**2026-11-10 – C2 and C3 implemented and C1 integrated**
+
+F4 includes complete Wi-Fi registration and a one-time device key; F5 provides configuration and
+control history; F11 supports the connected local edge or CARLA client; F13 monitors real ingestion,
+processing, playback and retries. All C1-C5 endpoints use the backend by default. Set
+`VITE_USE_MOCK=true` only for a UI prototype. Follow [the current runbook](../docs/deliverable3/README.md)
+for deployment, tests and the individual scenario demo.
 
 **2026-11-08 – C1 finished: login, dashboards, map and tracking** (branch `feature/component-c1`)
 
@@ -29,8 +37,7 @@ gives `{ user, signedIn, signIn, signOut }`. `setApiRole()` and `USER_ID_FOR_ROL
 **Behaviour changes**
 - Every request sends `Authorization: Bearer <token>`. A 401 from any call clears the session and
   returns to F1 (BR-1.1).
-- With `VITE_USE_MOCK=false`, the C1 endpoints now call the real backend too. C2 and C3 still use
-  mock data, because those endpoints are not implemented on the backend yet.
+- All C1-C5 endpoints now use the real backend unless `VITE_USE_MOCK=true` is explicitly selected.
 - The backend no longer accepts `X-Role` / `X-User-Id`, so pull the backend as well.
 
 **New files**
@@ -92,7 +99,7 @@ npm run dev       # http://localhost:5173
 npm run build     # must pass before you open a PR
 ```
 
-Requires Node 18+ (tested on Node 24).
+Requires Node 22.12+ or Node 24 (tested on Node 24).
 
 Sign in at `/login` with one of the seeded accounts; the role router then opens that role's home
 page (owner → F2, iot_staff → F4, cloud_staff → F6). In mock mode any password works, and the
@@ -105,8 +112,30 @@ login page lists the accounts while you run `npm run dev`.
 | `iot@autosound.dev` | iot_staff | `iot-dev-pass` |
 | `cloud@autosound.dev` | cloud_staff | `cloud-dev-pass` |
 
-To run against the real backend, copy `.env.example` to `.env.local` (`VITE_USE_MOCK=false`), start
-the API, and run `python scripts/demo_data.py --live` from the repo root so the map has positions.
+The real backend is the default. Copy `.env.example` to `.env.local` when customizing its URL and
+keep `VITE_USE_MOCK=false`. The [current runbook](../docs/deliverable3/README.md) starts the API, stores
+and connected edge client. `scripts/demo_data.py --live` remains an optional map-history fixture;
+the edge client supplies current positions for the component demo.
+
+---
+
+## Browser component verification
+
+Start the real backend, data stores and connected edge demo using the
+[Deliverable 3 runbook](../docs/deliverable3/README.md), then run from `frontend/`:
+
+```bash
+npm ci
+npx playwright install chromium
+UI_BASE_URL=http://localhost:5173 npm run test:components
+```
+
+The browser check signs in through JWT login, starts/stops the route, submits all five sound
+scenarios, inspects F13, plays the stored audio, follows the generated alert and model administration,
+and verifies Cloud Staff has read-only device access. It writes screenshots and a result JSON under
+`docs/deliverable3/evidence/ui/`; it requires a running deployment and creates real audio/alert records.
+`UI_EVIDENCE_DIR` can select another output directory. The generated scenario tones demonstrate
+pipeline execution; model accuracy needs labeled real recordings.
 
 ---
 
@@ -121,17 +150,17 @@ the API, and run `python scripts/demo_data.py --live` from the repo root so the 
 | F6 | Cloud dashboard | `/dashboard?tab=overview` (cloud staff) | Pavan | ✅ Done |
 | F9 | Map View | `/map` | Pavan | ✅ Done |
 | F10 | Tracking | `/tracking` | Pavan | ✅ Done |
-| F4 | Device Manager: Devices | `/devices?tab=devices` | Rishi | ⬜ Placeholder |
-| F5 | Device detail + Wi-Fi | `/devices/:id` (route not added yet) | Rishi | ⬜ To do |
-| F11 | Simulator | `/simulator` | Rishi | ⬜ Placeholder |
-| F13 | Device Manager: Device data | `/devices?tab=data` | Rishi | ⬜ Placeholder |
+| F4 | Device Manager: Devices | `/devices?tab=devices` | Rishi Sheth | ✅ Implemented |
+| F5 | Device detail + Wi-Fi | `/devices?tab=devices&device_id=<id>` | Rishi Sheth | ✅ Implemented |
+| F11 | Simulator | `/simulator?car_id=1` | Rishi Sheth | ✅ Implemented |
+| F13 | Device Manager: Device data | `/devices?tab=data` | Rishi Sheth | ✅ Implemented |
 | F12 | Alerts list | `/alerts` | Anusha | ✅ Done |
 | F7 | Alert detail | `/alerts/:id` | Anusha | ✅ Done |
 | F8a | Config: Alert types | `/config?tab=alert-types` | Anusha | ✅ Done |
 | F8b | Config: Models | `/config?tab=models` | Anusha | ✅ Done |
 | F14 | Config: Database | `/config?tab=database` | Anusha | ✅ Done |
 
-A placeholder page shows only its title and frame id, so you can see where your page will go.
+F5 is selected from a device row or its Wi-Fi button and preserves its selection in the URL.
 
 ---
 
@@ -193,10 +222,10 @@ Subscriptions has `roles: ['owner']`, and Overview shows F2 to owners and F6 to 
 
 ---
 
-## 4. What's left, by owner
+## 4. Component implementation by owner
 
-Each frame lists what the design doc's GUI template asks for, and which mock API functions are
-**already written** for it. All functions are in [`src/api/endpoints.js`](src/api/endpoints.js).
+The sections below map component frames to their UI and API functions. All HTTP functions are in
+[`src/api/endpoints.js`](src/api/endpoints.js); prototype data requires `VITE_USE_MOCK=true`.
 
 ### Pavan – C1 System Dashboard (F1, F2, F3, F6, F9, F10)
 
@@ -205,61 +234,35 @@ pages are in `src/pages/login/`, `src/pages/dashboard/`, `src/pages/map/` and `s
 Two components came out of it that anyone can reuse: `BarChart` (plain bars, no chart library) and
 `MapCanvas` (a Leaflet street map with OpenStreetMap tiles; the viewer's browser needs internet).
 
-### Rishi – C2 IoT Device Manager + C3 Data Management (F4, F5, F11, F13)
+### Rishi Sheth – C2 IoT Device Manager + C3 Data Management
 
-**F4 Devices** (`/devices?tab=devices`)
-- Search and filters: name, status, type.
-- **+ Add Device** opens a modal (`Modal`). The password is masked and never pre-filled.
-  After creating, show the device key **once**.
-- Device table with a status badge and last seen, refreshed every 15 s.
-- Row buttons:
-  - **Edit** opens the modal.
-  - **Wi-Fi** opens F5.
-  - **Del** asks for confirmation (`ConfirmDialog danger`) and says queued commands are removed too.
-- Only `iot_staff` may create/edit/delete. `cloud_staff` sees the list read-only (DT-C2-1).
-- API: `listDevices()`, `createDevice()`, `updateDevice()`, `deleteDevice()`.
-  The mock returns 409 for duplicate names and 422 for bad input.
+Implemented against F4, F5, F11 and F13. The [Deliverable 3 runbook](../docs/deliverable3/README.md)
+contains the deployment, seven-minute recording script and unit/live verification commands.
 
-**F5 Device detail + Wi-Fi** (new route `/devices/:id`; see step 1 of the recipe)
-- Device facts: car, type, status, last seen, firmware.
-- Wi-Fi form: SSID, security, password, IP mode, with inline validation (DT-C2-2):
-  - SSID 1–32 bytes
-  - `open` takes no password
-  - `wpa2`/`wpa3` need 8–63 characters
-- **Save and push** queues `sync_config`; the status becomes `configuring`.
-- Control buttons: start capture, stop capture, reboot, sync. Show a 409 when the same command is
-  already queued.
-- Command history, newest first, with a status badge.
-- API: `getDevice()`, `updateDeviceWifi()`, `queueDeviceCommand()`, `listDeviceCommands()`,
-  `DEVICE_COMMANDS`.
+- **F4 Devices** (`/devices?tab=devices`): searchable/filterable inventory, status and last seen,
+  edit/delete actions, and a registration modal with car, name, type, SSID, security, masked password
+  and IP mode. The device key is shown once. IoT Staff can mutate; Cloud Staff can inspect.
+- **F5 Detail and Wi-Fi** (`/devices?tab=devices&device_id=<id>`): device facts, inline validation,
+  Save and push, capture/reboot/sync controls and newest-first command history. A saved configuration
+  queues `sync_config`; a connected edge client delivers the acknowledgement.
+- **F11 Simulator** (`/simulator?car_id=1`): current frame/telemetry, route controls, five scenario
+  categories, classification and recent event state. It polls every two seconds and labels the
+  synthetic local edge mode separately from CARLA.
+- **F13 Device data** (`/devices?tab=data`): state cards, twelve-hour intake, status/car/device/date
+  search, pagination, record detail, raw audio and Cloud Staff retry for failed records. It refreshes
+  every ten seconds and supports manual refresh and audio-link recovery.
 
-**F11 Simulator** (`/simulator`)
-- Camera frame refreshed every 2 s, with a LIVE tag and a line showing speed, heading and position.
-  `frame_url` is `null` in the mock, so show a placeholder box.
-- Start / Stop route, and scenario buttons that queue `simulate_event` with a category.
-- Last classification (type, confidence, severity) with links to F7 and the map.
-- Event log: recent commands and their status.
-- Poll every 2 s.
-- API: `getSimulatorState(car_id)`, `queueDeviceCommand()`.
-
-**F13 Device data** (`/devices?tab=data`)
-- Status cards: pending, processing, processed (24 h), failed. Use `KpiCard` with
-  `color="warning" | "sky" | "success" | "danger"`.
-- Clips-per-hour bar chart for the last 12 h.
-- Filters: status, car, device.
-- Records table with a status badge and attempts. A click shows the detail and the audio link.
-- **Retry** shows only for `failed` records and only for `cloud_staff`.
-- Refresh every 10 s.
-- API: `getDeviceDataStats()`, `listDeviceData()`, `getDeviceDataRecord()`,
-  `getDeviceDataAudio()`, `retryDeviceData()`.
+The UI calls the actual C2/C3 endpoints. Device keys authenticate the edge-only heartbeat, frame,
+acknowledgement and audio upload routes; staff calls use JWTs. A UI prototype cannot demonstrate
+real edge execution or backend persistence.
 
 ### Shared / anyone
 | Task | Notes |
 |---|---|
-| Connect to the real backend | Add `src/api/http.js` (base URL from `import.meta.env.VITE_API_URL`, JWT header, 401 → F1). Then swap each mock body in `endpoints.js` for an HTTP call. Keep the function signatures so pages don't change. |
-| Map library for F9/F10 | Decide as a team (see open decisions). |
-| Charts for F6/F13 | Decide as a team (see open decisions). |
-| Automated tests | None in the repo yet. |
+| Backend connection | Implemented in `endpoints.js`; use `VITE_API_BASE_URL`, JWT headers and 401 session expiry. |
+| Map library for F9/F10 | Leaflet; see the settled decision below. |
+| Charts for F6/F13 | Plain elements; see the settled decision below. |
+| Automated tests | Backend tests and `scripts/verify_components.py`; see the C2/C3 runbook for commands. |
 
 ---
 
@@ -270,14 +273,14 @@ Two components came out of it that anyone can reuse: `BarChart` (plain bars, no 
 page uses. For example: `pages/dashboard/`, `pages/map/`, `pages/tracking/`, `pages/devices/`,
 `pages/simulator/`.
 
-Your route is already in [`src/App.jsx`](src/App.jsx) and renders `PlaceholderPage`. Swap in your
-component and keep the `guard`:
+Existing frames already have routes in [`src/App.jsx`](src/App.jsx). When adding a new frame,
+register its component and keep the `guard`:
 
 ```jsx
 <Route path="/map" element={guard('map', <MapViewPage />)} />
 ```
 
-For a new sub-route such as F5, add it next to the parent route:
+For a future sub-route, add it next to its parent. F5 currently uses the `device_id` query on `/devices`:
 
 ```jsx
 <Route path="/devices/:id" element={guard('devices', <DeviceDetailPage />)} />
@@ -383,6 +386,9 @@ Icons: `<Icon name="..." />` from `src/layout/icons.jsx`. Helpers: `formatDateTi
 
 ## 7. Mock API details
 
+This section describes the explicitly selected `VITE_USE_MOCK=true` UI prototype only. Default
+operation uses real API requests and persistent stores.
+
 - Every function returns data from `src/mocks/*.json` after a **200 ms** delay. Writes (create,
   update, ack, …) stay in memory until you reload the page.
 - Errors are thrown as `ApiError` with the HTTP status the backend would return, so
@@ -429,8 +435,8 @@ Icons: `<Icon name="..." />` from `src/layout/icons.jsx`. Helpers: `formatDateTi
 frontend/
 ├── index.html, vite.config.js, package.json
 └── src/
-    ├── main.jsx, App.jsx        # router + route table (swap placeholders here)
-    ├── api/endpoints.js         # one function per backend endpoint (real for C1/C4/C5, mock for C2/C3)
+    ├── main.jsx, App.jsx        # router + route table
+    ├── api/endpoints.js         # real backend for all C1-C5; optional prototype data
     ├── mocks/*.json             # mock data
     ├── config/
     │   ├── access.js            # role -> pages, ROLE_HOME, ROLE_LABELS
@@ -440,7 +446,7 @@ frontend/
     ├── components/              # shared components
     ├── api/session.js           # token + signed-in user (sessionStorage), SESSION_EXPIRED event
     ├── pages/                   # login/ (F1), dashboard/ (F2, F3, F6), map/ (F9), tracking/ (F10),
-    │                            #   alerts/ (F12, F7), config/ (F8a, F8b, F14), PlaceholderPage
+    │                            #   alerts/ (F12, F7), config/ (F8a, F8b, F14), devices/ (F4, F5, F13), simulator/ (F11)
     ├── styles/theme.css         # ALL colours (CSS variables)
     ├── styles/app.css           # layout + component styles
     └── utils/                   # format helpers, useAsync, usePolling

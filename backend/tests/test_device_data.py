@@ -19,9 +19,10 @@ from app.db.models import AlertTypeConfig, Car, Device, ModelVersion, User
 from app.db.repositories.record_repo import RecordRepo
 from app.main import create_app
 from app.services.processing_worker import ProcessingWorker
+from tests.auth_headers import bearer
 
-IOT = {"X-Role": "iot_staff"}
-CLOUD = {"X-Role": "cloud_staff"}
+IOT = bearer("iot_staff")
+CLOUD = bearer("cloud_staff")
 EDGE = {"X-Device-Key": "device-secret"}
 
 
@@ -167,7 +168,7 @@ def test_staff_roles_validation_missing_and_manual_retry(client, stores):
     urls = ["/device-data", "/device-data/stats", f"/device-data/{record_id}", f"/device-data/{record_id}/audio"]
     for url in urls:
         assert_error(client.get(url), 401)
-        assert_error(client.get(url, headers={"X-Role": "owner"}), 403)
+        assert_error(client.get(url, headers=bearer("owner")), 403)
         assert client.get(url, headers=IOT).status_code == 200
     retry = f"/device-data/{record_id}/retry"
     assert_error(client.post(retry, headers=IOT), 403)

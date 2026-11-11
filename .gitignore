@@ -28,3 +28,5 @@ backend/.local_backups/
 # Dev audio clips for alerts when S3 is not configured (backend LOCAL_AUDIO_DIR)
 backend/.local_audio/
 backend/.local_edge/
+# Private Docker demo credentials (generated once; retain across restarts).
+infra/.env.demo

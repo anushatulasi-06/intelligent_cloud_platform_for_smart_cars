@@ -1,4 +1,5 @@
 import io
+from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -68,3 +69,42 @@ def test_presigned_url_default_300s(stub):
 def test_presigned_url_custom_expiry(stub):
     url = s3.presigned_url("k", expires=60)
     assert parse_qs(urlparse(url).query)["X-Amz-Expires"] == ["60"]
+
+
+def test_private_storage_and_browser_signing_use_distinct_hosts(monkeypatch):
+    from app.config import get_settings
+    monkeypatch.setattr(get_settings(), "S3_ENDPOINT_URL", "http://minio:9000")
+    monkeypatch.setattr(get_settings(), "S3_PUBLIC_ENDPOINT_URL", "http://localhost:9000")
+    client = s3.make_client(aws_access_key_id="testing", aws_secret_access_key="testing")
+    s3.configure(client)
+    try:
+        assert client.meta.endpoint_url == "http://minio:9000"
+        parsed = urlparse(s3.presigned_url("audio/1/a clip.wav"))
+        assert parsed.netloc == "localhost:9000"
+        assert parsed.path == "/test-bucket/audio/1/a%20clip.wav"
+        assert parse_qs(parsed.query)["X-Amz-Expires"] == ["300"]
+    finally:
+        client.close()
+        s3.configure(None)
+
+
+def test_object_last_modified_uses_object_timestamp(stub):
+    modified = datetime(2026, 11, 10, 18, 30, tzinfo=timezone.utc)
+    stub.add_response("head_object", {"LastModified": modified},
+                      {"Bucket": "test-bucket", "Key": "frames/1/latest.jpg"})
+    assert s3.object_last_modified("frames/1/latest.jpg") == modified
+
+
+@pytest.mark.parametrize("code", ["404", "NoSuchKey", "NotFound"])
+def test_object_last_modified_returns_none_for_missing_key(stub, code):
+    stub.add_client_error("head_object", service_error_code=code, http_status_code=404,
+                          expected_params={"Bucket": "test-bucket", "Key": "missing"})
+    assert s3.object_last_modified("missing") is None
+
+
+def test_object_last_modified_does_not_hide_storage_permission_errors(stub):
+    from botocore.exceptions import ClientError
+    stub.add_client_error("head_object", service_error_code="AccessDenied", http_status_code=403,
+                          expected_params={"Bucket": "test-bucket", "Key": "private"})
+    with pytest.raises(ClientError):
+        s3.object_last_modified("private")

@@ -39,6 +39,7 @@ def test_seed_inserts_expected_rows(sql_db, mongo_db):
         devices = list(s.scalars(select(Device)))
         assert sorted(d.device_type for d in devices) == ["camera"] + ["microphone"] * 4
         assert all(len(d.device_key_hash) == 64 for d in devices)
+        assert all(d.status == "registered" and d.last_seen is None for d in devices)
 
 
 def test_seed_is_idempotent(sql_db, mongo_db):

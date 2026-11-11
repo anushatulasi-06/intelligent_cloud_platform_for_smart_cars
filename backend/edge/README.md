@@ -1,4 +1,69 @@
-# CARLA edge client
+# Edge clients for C2/C3
+
+## Runnable local component demo
+
+`edge.demo_client` is the local alternative when a CARLA server is unavailable. It
+connects a **virtual** vehicle to the actual API, sends illustrated JPEG camera
+frames and GPS heartbeats, executes queued commands, and uploads audio through the
+normal C3 pipeline. It uses the real databases, object storage, processing worker
+and active model. The Simulator labels this mode **Local edge demo** using the
+`local-demo-real-v1` or `local-demo-synth-v1` firmware heartbeat; the camera itself is visibly labeled as an
+illustration. This mode does not claim to be CARLA.
+
+Start the API and its stores first. From `backend/`, with backend dependencies
+installed and registered devices on the same car:
+
+```bash
+export EDGE_API_URL=http://localhost:8000
+export EDGE_CAR_ID=1
+export EDGE_DEVICE_ID=1
+export EDGE_DEVICE_KEY=dev-device-key-mic-1
+export EDGE_CAMERA_DEVICE_ID=5
+export EDGE_CAMERA_DEVICE_KEY=dev-device-key-cam-1
+python -m edge.demo_client
+```
+
+Those ids and keys are for a **fresh development seed only**. For devices created
+through the UI, replace them with the actual ids and the one-time keys shown at
+registration. The client stops with an error if a device key is rejected or its
+device was deleted. `--no-camera` runs position and audio only. The client starts
+with the route stopped; open Simulator as IoT Staff and click **Start route** to see
+the position, speed and illustrated road change. **Stop route** halts movement.
+`--heartbeat-seconds 2` is the default; valid values are 0.2 to 30 seconds.
+
+Five attributed, unchanged 5-second **ESC-50 recordings** are bundled in
+`demo_clips/`: a siren, glass breaking, a crying baby, a car horn, and rain. The
+default client needs no runtime download. See [the recording credits and
+license](demo_clips/README.md) for the CC BY-NC 3.0 educational-use terms and original
+creators. Selecting a scenario sends that category as `trigger` metadata; the CNN
+predicts independently. These few clips do not establish model accuracy, and no
+claim is made that they were excluded from model training.
+
+To use your own recordings, supply a five-category JSON mapping as described below:
+
+```bash
+python -m edge.demo_client --scenarios .local_edge/scenarios.json
+```
+
+For a purely synthetic ingestion fixture, use `--synthetic-audio`. It generates
+five distinct valid 3-second WAV test tones in `.local_edge/demo/synthetic-clips/`.
+The camera and firmware explicitly identify this mode. The tones are not genuine
+sirens, speech or model accuracy evidence. `--synthetic-audio` and `--scenarios`
+are mutually exclusive.
+
+The local virtual device accepts Wi-Fi changes and acknowledges virtual reboot;
+neither action changes the host network or reboots the machine. Their command
+details explicitly say this. Saved Wi-Fi configuration remains encrypted, and the
+normal edge buffer retains pending audio across restarts. `--buffer-dir` selects a
+separate persistent buffer for a different car/device pair. Do not share one
+buffer between concurrently running clients.
+
+The integration test in `tests/test_demo_edge.py` drives real HTTP routes for
+registration, encrypted configuration, movement, camera frames, all five uploads,
+queue processing and the shipped `cnn-v1` model. Stores are isolated in that test;
+the runnable client always uses the configured API and its actual services.
+
+## CARLA client
 
 This optional client connects an **existing** CARLA vehicle to the platform. It sends
 position heartbeats every two seconds, executes the device command queue, forwards
@@ -40,12 +105,12 @@ and stops/destroys only that sensor on exit.
 
 ## Audio scenarios and buffering
 
-Edit `edge_scenarios.json`, or pass `--scenarios /path/to/scenarios.json`, to map each
-of the five categories to a local WAV/MP3 recording. Paths are relative to the JSON
-file. Supply your own clips: they must be non-empty, at most 10 MiB, and at most 15
-seconds. A `simulate_event` payload uses `{"scenario": "emergency"}` (or another
-category). The client forwards the selected recording; it does not synthesize sound
-or record a physical microphone.
+`edge_scenarios.json` defaults to the same five bundled, attributed ESC-50
+recordings. Edit it, or pass `--scenarios /path/to/scenarios.json`, to use your own
+WAV/MP3 recordings. Paths are relative to the JSON file. Clips must be non-empty,
+at most 10 MiB, and at most 15 seconds. A `simulate_event` payload uses
+`{"scenario": "emergency"}` (or another category). The CARLA client forwards the
+selected recording; it does not synthesize sound or record a physical microphone.
 
 On the microphone, `start_capture` and `stop_capture` enable/disable accepting these
 explicit scenario captures. On the camera, they toggle frame forwarding. Both start

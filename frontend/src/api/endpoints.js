@@ -26,8 +26,8 @@ import { getToken, sessionExpired } from './session.js';
 const DELAY_MS = 200;
 
 // ---- real backend -----------------------------------------------------------
-// VITE_USE_MOCK defaults to true so teammates without a running backend keep the mocks.
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
+// Use the real implementation by default. UI prototype data requires an explicit opt-in.
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 // Real HTTP call. Query params that are undefined, null or '' are left out (the
@@ -35,7 +35,7 @@ export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localh
 // `anonymous` is for POST /login, where a 401 means wrong credentials rather than
 // an expired session.
 async function http(method, path, { params, body, anonymous = false } = {}) {
-  const url = new URL(API_BASE_URL + path);
+  const url = new URL(API_BASE_URL + path, window.location.origin);
   Object.entries(params || {}).forEach(([k, v]) => {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
   });
@@ -327,6 +327,11 @@ export function getSimulatorState(car_id) {
   if (!USE_MOCK) return http('GET', `/simulator/${car_id}/state`);
   const s = devicesJson.simulator[car_id];
   return s ? respond(s) : fail(404, 'Car not found');
+}
+
+export function getSimulatorCars() {
+  if (!USE_MOCK) return http('GET', '/simulator/cars');
+  return respond(fleetJson.map.cars.map((c) => ({ car_id: c.car_id, make: c.name, model: '', plate: '' })));
 }
 
 /* ------------------------------------------------------------------ */

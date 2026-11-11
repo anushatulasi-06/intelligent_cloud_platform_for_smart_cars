@@ -33,9 +33,10 @@ class DeviceCredentials:
 
 
 class CloudTransport:
-    def __init__(self, base_url: str, client: httpx.Client | None = None):
+    def __init__(self, base_url: str, client: httpx.Client | None = None, *, firmware="carla-edge-v1"):
         self.base_url = base_url.rstrip("/")
         self.client = client or httpx.Client(timeout=10)
+        self.firmware = firmware
 
     def request(self, method, path, device, **kwargs):
         response = self.client.request(method, self.base_url + path,
@@ -45,7 +46,7 @@ class CloudTransport:
 
     def heartbeat(self, device, position):
         response = self.request("POST", f"/devices/{device.id}/heartbeat", device,
-                                json={"firmware": "carla-edge-v1", **position})
+                                json={"firmware": self.firmware, **position})
         return response.json()["commands"]
 
     def acknowledge(self, device, command_id, ok, detail):
@@ -106,6 +107,7 @@ class CarlaEdgeClient:
         geo = self.map.transform_to_geolocation(self.vehicle.get_location())
         velocity = self.vehicle.get_velocity()
         return {"lat": geo.latitude, "lon": geo.longitude,
+                **({"town": self.map.name.rsplit('/', 1)[-1]} if getattr(self.map, 'name', None) else {}),
                 "speed_kmh": 3.6 * math.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2),
                 "heading": (self.vehicle.get_transform().rotation.yaw + 90) % 360}
 

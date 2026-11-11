@@ -14,7 +14,7 @@
 // `options` may be strings or { value, label } objects. Selects get an "All" option.
 import { useEffect, useState } from 'react';
 
-export default function FilterBar({ fields, values, onApply }) {
+export default function FilterBar({ fields, values, onApply, applyLabel = 'Apply' }) {
   const [draft, setDraft] = useState(values);
   useEffect(() => setDraft(values), [values]);
 
@@ -39,13 +39,16 @@ export default function FilterBar({ fields, values, onApply }) {
               type={f.type || 'text'}
               value={draft[f.name] ?? ''}
               placeholder={f.placeholder}
+              min={f.min}
+              max={f.max}
+              step={f.step}
               onChange={(e) => set(f.name, e.target.value)}
             />
           )}
         </label>
       ))}
       <div className="filter-actions">
-        <button type="submit" className="btn btn-primary">Apply</button>
+        <button type="submit" className="btn btn-primary">{applyLabel}</button>
         <button type="button" className="btn" onClick={() => { setDraft(empty); onApply(empty); }}>Reset</button>
       </div>
     </form>

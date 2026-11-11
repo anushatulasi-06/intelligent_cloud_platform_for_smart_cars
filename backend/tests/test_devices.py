@@ -12,10 +12,11 @@ from app.config import Settings, get_settings
 from app.db import mongo, postgres, s3
 from app.db.models import Car, Device, User
 from app.main import create_app
+from tests.auth_headers import bearer
 
-IOT = {"X-Role": "iot_staff"}
-CLOUD = {"X-Role": "cloud_staff"}
-OWNER = {"X-Role": "owner", "X-User-Id": "1"}
+IOT = bearer("iot_staff")
+CLOUD = bearer("cloud_staff")
+OWNER = bearer("owner", 1)
 WIFI = {"ssid": "Car network", "security": "wpa2", "password": "car-password", "ip_mode": "dhcp"}
 
 
@@ -26,11 +27,12 @@ def device_env(sql_db, monkeypatch):
     objects = {}
 
     def put(key, body, content_type=None):
-        objects[key] = {"body": body, "content_type": content_type}
+        objects[key] = {"body": body, "content_type": content_type, "modified_at": datetime.now(timezone.utc)}
         return key
 
     monkeypatch.setattr(s3, "put_object", put)
     monkeypatch.setattr(s3, "exists", lambda key: key in objects)
+    monkeypatch.setattr(s3, "object_last_modified", lambda key: objects.get(key, {}).get("modified_at"))
     monkeypatch.setattr(s3, "presigned_url", lambda key, expires=300: f"https://example.test/{key}?ttl={expires}")
     monkeypatch.setattr(get_settings(), "WIFI_ENCRYPTION_KEY", Fernet.generate_key().decode())
     with postgres.session_scope() as session:

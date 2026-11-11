@@ -77,6 +77,7 @@ class CommandCreate(BaseModel):
 
 class Heartbeat(BaseModel):
     firmware: str | None = Field(default=None, max_length=20)
+    town: str | None = Field(default=None, min_length=1, max_length=100)
     rssi: int | None = Field(default=None, ge=-127, le=0)
     lat: float | None = Field(default=None, ge=-90, le=90, allow_inf_nan=False)
     lon: float | None = Field(default=None, ge=-180, le=180, allow_inf_nan=False)

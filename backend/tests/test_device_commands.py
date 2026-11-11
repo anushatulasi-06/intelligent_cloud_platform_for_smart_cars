@@ -13,6 +13,7 @@ from app.config import BACKEND_DIR
 from app.db import postgres
 from app.db.models import Device
 from app.db.models.device_command import DeviceCommand
+from tests.auth_headers import bearer
 from tests.test_devices import CLOUD, IOT, WIFI, client, create, device_env, error
 
 
@@ -108,7 +109,7 @@ def test_simulator_requires_live_client_and_valid_category(client, device_env):
     state = client.get("/simulator/10/state", headers=CLOUD)
     assert state.status_code == 200 and state.json()["online"]
     assert state.json()["position"]["lat"] == 37.3 and state.json()["events"]
-    error(client.get("/simulator/10/state", headers={"X-Role": "owner"}), 403)
+    error(client.get("/simulator/10/state", headers=bearer("owner")), 403)
     error(client.get("/simulator/999/state", headers=CLOUD), 404)
     with postgres.session_scope() as session:
         session.get(Device, device_id).last_seen = datetime.now(timezone.utc) - timedelta(seconds=91)
@@ -173,3 +174,66 @@ def test_migration_upgrade_preserves_data_and_roundtrips(tmp_path):
     assert "device_commands" not in inspect(engine).get_table_names()
     migrate("upgrade", "head")
     engine.dispose()
+
+
+def test_simulator_reports_edge_mode_and_safe_command_events(client):
+    result = create(client, wifi=WIFI)
+    camera = create(client, name="Camera", device_type="camera")
+    device_id = result["device"]["id"]
+    commands = beat(client, result, firmware="local-demo-v1", lat=37.3352, lon=-121.8811)
+    beat(client, camera, firmware="local-demo-v1")
+    config_id = next(row["command_id"] for row in commands if row["command"] == "sync_config")
+    private_detail = f"Failed to apply {WIFI['password']}"
+    assert client.post(f"/devices/{device_id}/commands/{config_id}/ack", headers=edge(result),
+                       json={"ok": False, "detail": private_detail}).status_code == 200
+    response = client.get("/simulator/10/state", headers=CLOUD)
+    state = response.json()
+    assert state["edge_mode"] == "local_demo" and state["camera_last_seen"]
+    event = next(row for row in state["events"] if row["command_id"] == config_id)
+    assert event["device_id"] == device_id and event["status"] == "failed"
+    assert event["detail"] == "Device could not apply command"
+    assert WIFI["password"] not in response.text and private_detail not in response.text
+    beat(client, result, firmware="carla-edge-v1")
+    beat(client, camera, firmware="carla-edge-v1")
+    assert client.get("/simulator/10/state", headers=CLOUD).json()["edge_mode"] == "carla"
+
+
+def test_manual_sync_immediately_marks_configured_device_configuring(client):
+    result = create(client, wifi=WIFI)
+    device_id = result["device"]["id"]
+    initial = next(row for row in beat(client, result) if row["command"] == "sync_config")
+    assert client.post(f"/devices/{device_id}/commands/{initial['command_id']}/ack", headers=edge(result),
+                       json={"ok": True}).status_code == 200
+    assert client.get(f"/devices/{device_id}", headers=IOT).json()["status"] == "online"
+    response = client.post(f"/devices/{device_id}/commands", headers=IOT, json={"command": "sync_config"})
+    assert response.status_code == 202
+    assert client.get(f"/devices/{device_id}", headers=IOT).json()["status"] == "configuring"
+    beat(client, result)
+    assert client.post(f"/devices/{device_id}/commands/{response.json()['command_id']}/ack", headers=edge(result),
+                       json={"ok": True}).status_code == 200
+    assert client.get(f"/devices/{device_id}", headers=IOT).json()["status"] == "online"
+
+
+def test_simulator_frame_time_comes_from_object_and_not_live_heartbeat(client, device_env):
+    camera = create(client, name="Camera", device_type="camera")
+    beat(client, camera, firmware="local-demo-v1")
+    key = "frames/10/latest.jpg"
+    old_frame = datetime.now(timezone.utc) - timedelta(minutes=5)
+    device_env["objects"][key] = {"body": b"old frame", "content_type": "image/jpeg", "modified_at": old_frame}
+    state = client.get("/simulator/10/state", headers=IOT).json()
+    assert state["online"] and state["frame_url"]
+    assert datetime.fromisoformat(state["frame_at"].replace("Z", "+00:00")) == old_frame
+    assert state["camera_last_seen"] != state["frame_at"]
+    del device_env["objects"][key]
+    state = client.get("/simulator/10/state", headers=IOT).json()
+    assert state["online"] and state["frame_url"] is None and state["frame_at"] is None
+
+
+def test_simulator_car_inventory_includes_cars_without_devices_and_checks_roles(client):
+    for headers in (IOT, CLOUD):
+        response = client.get("/simulator/cars", headers=headers)
+        assert response.status_code == 200
+        assert [row["car_id"] for row in response.json()] == [10, 20]
+        assert response.json()[0]["make"] == "Toyota"
+    error(client.get("/simulator/cars", headers=bearer("owner")), 403)
+    error(client.get("/simulator/cars"), 401)

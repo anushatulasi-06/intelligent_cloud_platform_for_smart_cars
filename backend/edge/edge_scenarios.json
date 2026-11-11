@@ -1,7 +1,7 @@
 {
-  "emergency": "clips/emergency.wav",
-  "in_vehicle": "clips/in_vehicle.wav",
-  "human": "clips/human.wav",
-  "traffic": "clips/traffic.wav",
-  "environmental": "clips/environmental.wav"
+  "emergency": "demo_clips/1-54084-A-42.wav",
+  "in_vehicle": "demo_clips/1-20133-A-39.wav",
+  "human": "demo_clips/1-211527-A-20.wav",
+  "traffic": "demo_clips/1-17124-A-43.wav",
+  "environmental": "demo_clips/1-17367-A-10.wav"
 }

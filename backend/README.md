@@ -202,6 +202,9 @@ alembic upgrade head
 
 ## Device Manager and Data Management (C2/C3)
 
+See the current [Rishi Sheth Deliverable 3 guide](../docs/deliverable3/README.md) for the complete
+deployment, real-recording simulator, individual demo and verified test evidence.
+
 These use the existing repositories, role guard and C4 orchestrator. Device inventory, Wi-Fi,
 commands and Simulator are C2; audio upload, processing and the Device data monitor are C3.
 The frontend uses the real endpoints when `VITE_USE_MOCK=false`.
@@ -248,8 +251,8 @@ have no password token. The supplied `ssid`, `security`, and `ip_mode` are publi
 Device-provided failure details are replaced with a generic failure message to avoid persisting
 credentials in command history.
 
-Audio must be valid WAV or MP3, non-empty, at most 10 MiB and 15 seconds. Upload requires real S3
-access (`s3:PutObject`); playback and inference also need `s3:GetObject`. The fake backup/audio
+Audio must be valid WAV or MP3, non-empty, at most 10 MiB and 15 seconds. Upload requires an AWS S3
+or configured S3-compatible bucket (`s3:PutObject`); playback and inference also need `s3:GetObject`. The fake backup/audio
 switches do not fake ingestion. A storage failure returns 503 and creates no record. Keep the
 clip locally and resend it with the same `clip_id`; accepted repeats return the original receipt
 with HTTP 200. A new clip returns HTTP 202 before classification starts.

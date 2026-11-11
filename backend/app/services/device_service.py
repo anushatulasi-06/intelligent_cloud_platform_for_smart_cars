@@ -179,6 +179,8 @@ class DeviceService:
                 if repo.queued(device_id, command):
                     raise Conflict("Same command already queued")
                 row = repo.enqueue(device_id, command, {} if command == "sync_config" else payload, now)
+                if command == "sync_config" and device.wifi_ssid is not None:
+                    DeviceRepo(session).update(device_id, {"status": "configuring"})
                 return {"command_id": row.id, "status": "queued"}
         except IntegrityError:
             raise Conflict("Same command already queued") from None
@@ -204,7 +206,7 @@ def heartbeat(device_id: int, key: str | None, body: Heartbeat):
         devices.update(device_id, {"last_seen": now, "status": "configuring" if configuring else "online",
                                   **({"firmware": body.firmware} if body.firmware is not None else {})})
         if body.lat is not None:
-            PositionRepo().add_position(device.car_id, now, body.lat, body.lon, body.speed_kmh, body.heading)
+            PositionRepo().add_position(device.car_id, now, body.lat, body.lon, body.speed_kmh, body.heading, body.town)
             CarRepo(session).update_position(device.car_id, body.lat, body.lon, now)
         pending = commands.pending_for(device_id, now)
         result = []
@@ -280,24 +282,39 @@ def simulator_state(car_id):
         if CarRepo(session).get(car_id) is None:
             raise NotFound("Car not found")
         devices = DeviceRepo(session).list_for_car(car_id)
-        online = any(device.last_seen and _utc(device.last_seen) >= now - timedelta(seconds=90) for device in devices)
+        recent_devices = [device for device in devices
+                          if device.last_seen and _utc(device.last_seen) >= now - timedelta(seconds=90)]
+        online = bool(recent_devices)
+        edge_mode = ("local_demo" if any((device.firmware or "").startswith("local-demo") for device in recent_devices)
+                     else "carla" if any((device.firmware or "").startswith("carla") for device in recent_devices)
+                     else "edge")
+        audio_source = ("recordings" if any(device.firmware == "local-demo-real-v1" for device in recent_devices)
+                        else "synthetic" if any(device.firmware == "local-demo-synth-v1" for device in recent_devices)
+                        else None)
+        camera_seen = max((_utc(device.last_seen) for device in devices
+                           if device.device_type == "camera" and device.last_seen), default=None)
         repo = CommandRepo(session)
         repo.expire_stale(now)
-        events = [{"ts": _utc(row.created_at), "command": row.command, "status": row.status}
+        events = [{"command_id": row.id, "device_id": row.device_id,
+                   "ts": _utc(row.created_at), "command": row.command, "status": row.status,
+                   "detail": row.detail}
                   for row in repo.for_car(car_id)]
     position = PositionRepo().latest(car_id)
     alerts = AlertRepo().search(car_id=car_id, page_size=1)["items"]
     last_alert = {k: alerts[0].get(k) for k in ("id", "sound_type", "confidence", "severity")} if alerts else None
     frame_url = None
+    frame_at = None
     try:
         frame_key = f"frames/{car_id}/latest.jpg"
-        if s3.exists(frame_key):
+        frame_at = _utc(s3.object_last_modified(frame_key))
+        if frame_at is not None:
             frame_url = s3.presigned_url(frame_key)
     except (BotoCoreError, ClientError):
         pass  # A missing camera or unavailable S3 must not hide telemetry and commands.
-    return {"car_id": car_id, "online": online,
-            "position": {k: position.get(k) for k in ("lat", "lon", "speed_kmh", "heading", "ts")} if position else None,
-            "frame_url": frame_url, "events": events, "last_alert": last_alert}
+    return {"car_id": car_id, "online": online, "edge_mode": edge_mode, "audio_source": audio_source,
+            "camera_last_seen": camera_seen,
+            "position": {k: position.get(k) for k in ("lat", "lon", "speed_kmh", "heading", "ts", "town")} if position else None,
+            "frame_url": frame_url, "frame_at": frame_at, "events": events, "last_alert": last_alert}
 
 
 def sweep_devices(now=None):

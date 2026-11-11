@@ -42,7 +42,7 @@ BCRYPT_ROUNDS = 12          # cost 12, as in the design doc
 USERS = [
     {"name": "Olivia Owner", "email": "owner@autosound.dev", "role": "owner", "password": "owner-dev-pass"},
     {"name": "Oscar Owner", "email": "owner2@autosound.dev", "role": "owner", "password": "owner2-dev-pass"},
-    {"name": "Ian IoT", "email": "iot@autosound.dev", "role": "iot_staff", "password": "iot-dev-pass"},
+    {"name": "Rishi Sheth", "email": "iot@autosound.dev", "role": "iot_staff", "password": "iot-dev-pass"},
     {"name": "Chloe Cloud", "email": "cloud@autosound.dev", "role": "cloud_staff", "password": "cloud-dev-pass"},
 ]
 
@@ -59,13 +59,15 @@ CARS = [
      "last_lat": 37.3688, "last_lon": -121.9130},
 ]
 
-# Five devices: one microphone per car, plus a camera on car 1. "car" is the 1-based index into CARS.
+# Five devices: one microphone per car, plus a camera on car 1. A fresh seed has no heartbeat
+# evidence, so every device starts registered. Only a real edge heartbeat can make it online.
+# "car" is the 1-based index into CARS.
 DEVICES = [
-    {"car": 1, "name": "mic-1", "device_type": "microphone", "status": "online", "firmware": "1.2.1"},
+    {"car": 1, "name": "mic-1", "device_type": "microphone", "status": "registered", "firmware": "1.2.1"},
     {"car": 2, "name": "mic-2", "device_type": "microphone", "status": "registered", "firmware": None},
-    {"car": 3, "name": "mic-3", "device_type": "microphone", "status": "offline", "firmware": "1.2.0"},
-    {"car": 4, "name": "mic-4", "device_type": "microphone", "status": "online", "firmware": "1.2.1"},
-    {"car": 1, "name": "cam-1", "device_type": "camera", "status": "online", "firmware": "1.2.1"},
+    {"car": 3, "name": "mic-3", "device_type": "microphone", "status": "registered", "firmware": "1.2.0"},
+    {"car": 4, "name": "mic-4", "device_type": "microphone", "status": "registered", "firmware": "1.2.1"},
+    {"car": 1, "name": "cam-1", "device_type": "camera", "status": "registered", "firmware": "1.2.1"},
 ]
 
 ALERT_TYPES = [

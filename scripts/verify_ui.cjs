@@ -1,0 +1,53 @@
+// Live C2/C3 browser regression. Start the real stack and edge demo before running.
+const path = require('node:path');
+const fs = require('node:fs');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || require.resolve('playwright', { paths: [path.join(__dirname, '../frontend')] }));
+const BASE = process.env.UI_BASE_URL || 'http://localhost:5173';
+const OUTPUT = path.resolve(process.env.UI_EVIDENCE_DIR || path.join(__dirname, '../docs/deliverable3/evidence/ui'));
+fs.mkdirSync(OUTPUT, {recursive:true});
+const assert = require('node:assert/strict');
+(async()=>{
+ const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? {executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE} : {}), args:['--no-sandbox']});
+ const page=await browser.newPage({viewport:{width:1440,height:1080}}); const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(BASE+'/login');
+ await page.getByLabel('Email',{exact:true}).fill('iot@autosound.dev');
+ await page.getByLabel('Password',{exact:true}).fill('iot-dev-pass');
+ await page.getByRole('button',{name:'Sign in',exact:true}).click(); await page.waitForURL('**/devices');
+ await page.getByRole('link',{name:'Simulator',exact:true}).click();
+ await page.getByRole('button',{name:'Start route',exact:true}).waitFor({state:'visible'});
+ await page.waitForFunction(()=>!Array.from(document.querySelectorAll('button')).find(e=>e.textContent==='Start route').disabled);
+ await page.getByRole('button',{name:'Start route',exact:true}).click();
+ await page.waitForFunction(()=>parseFloat(document.querySelector('.sim-telemetry strong')?.textContent)>0);
+ assert(parseFloat(await page.locator('.sim-telemetry strong').innerText()) > 0);
+ for(const name of ['Siren','Glass / crash','Scream','Horn','Rain / wind']) {
+  await page.getByRole('button',{name:new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).click();
+  await page.waitForTimeout(3000);
+ }
+ await page.getByRole('button',{name:'Stop route',exact:true}).click();
+ await page.waitForFunction(()=>parseFloat(document.querySelector('.sim-telemetry strong')?.textContent)===0); assert.match(await page.locator('.sim-telemetry').innerText(), /0.0 km\/h/);
+ await page.screenshot({path:path.join(OUTPUT, 'simulator.png'),fullPage:true});
+ await page.getByRole('link',{name:'View audio processing',exact:true}).click();
+ await page.getByRole('button',{name:'Refresh records',exact:true}).click(); await page.waitForTimeout(1500);
+ await page.screenshot({path:path.join(OUTPUT, 'data-monitor.png'),fullPage:true});
+ await page.locator('.data-table tbody tr').first().getByRole('button').first().click();
+ const dlg=page.getByRole('dialog',{name:'Audio record'}); await dlg.waitFor();
+ const audio=dlg.locator('audio'); await audio.evaluate(async a=>{a.muted=true;await a.play()});
+ await page.waitForTimeout(1200); assert(await audio.evaluate(a=>a.currentTime)>0);
+ await page.screenshot({path:path.join(OUTPUT, 'audio-record.png'),fullPage:true});
+ await dlg.getByRole('button',{name:'Close',exact:true}).click();
+ await page.getByRole('button',{name:'Log out',exact:true}).click();
+ await page.getByLabel('Email',{exact:true}).fill('cloud@autosound.dev');await page.getByLabel('Password',{exact:true}).fill('cloud-dev-pass');
+ await page.getByRole('button',{name:'Sign in',exact:true}).click(); await page.waitForURL('**/dashboard');
+ await page.goto(BASE+'/devices?tab=data&car_id=1');
+ await page.locator('.data-table tbody tr').first().getByRole('button').first().click();
+ await page.getByRole('link',{name:'View generated alert',exact:true}).click();
+ await page.getByRole('heading',{name:/Alert/}).first().waitFor(); await page.waitForTimeout(1000);
+ await page.screenshot({path:path.join(OUTPUT, 'generated-alert.png'),fullPage:true});
+ await page.goto(BASE+'/config?tab=models'); await page.waitForTimeout(1500);
+ await page.screenshot({path:path.join(OUTPUT, 'models.png'),fullPage:true});
+ await page.goto(BASE+'/devices'); await page.waitForTimeout(1000);
+ assert.equal(await page.getByRole('button',{name:'+ Add Device',exact:true}).count(),0);
+ assert.equal(errors.length,0,errors.join('\n')); fs.writeFileSync(path.join(OUTPUT, 'browser-verification.json'), JSON.stringify({author:'Rishi Sheth', checked_at:new Date().toISOString(), base_url:BASE, checks:['JWT login','five scenarios','moving and stopped telemetry','data monitor','raw audio playback','generated alert','model administration','Cloud read-only device access'],page_errors:errors},null,2)); console.log('PASS real UI login, five scenarios, moving/stopped telemetry, F13, S3 audio playback, alert, model admin and read-only Cloud device view.');
+ await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});

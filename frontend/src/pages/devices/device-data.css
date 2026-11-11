@@ -1,0 +1,8 @@
+.device-data-monitor .section-head > p { margin: 0; }
+.record-detail .kv dd { overflow-wrap: anywhere; min-width: 0; }
+.record-detail .kv-row { align-items: start; }
+.record-detail > .btn { align-self: start; }
+@media (max-width: 640px) {
+  .device-data-monitor .section-head { flex-wrap: wrap; gap: 8px; }
+  .record-detail .kv-row { grid-template-columns: 105px minmax(0, 1fr); }
+}
