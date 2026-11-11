@@ -1,4 +1,4 @@
- Image autosound-demo-frontend:local Building 
+ Image autosound-demo-frontend:local Building
 #1 [internal] load local bake definitions
 #1 reading from stdin 2.37kB done
 #1 DONE 0.0s
@@ -40,7 +40,7 @@
 #11 CACHED
 
 #12 [build 4/7] RUN npm ci --ignore-scripts --no-audit --no-fund
-#12 16.67 
+#12 16.67
 #12 16.67 added 74 packages in 16s
 #12 16.67 npm notice
 #12 16.67 npm notice New major version of npm available! 10.9.9 -> 12.2.2
@@ -57,10 +57,10 @@
 #14 DONE 0.5s
 
 #15 [build 7/7] RUN npm run build
-#15 0.836 
+#15 0.836
 #15 0.836 > smart-car-platform-ui@0.1.0 build
 #15 0.836 > vite build
-#15 0.836 
+#15 0.836
 #15 1.137 vite v7.3.8 building client environment for production...
 #15 1.216 transforming...
 #15 3.462 ✓ 104 modules transformed.
@@ -84,4 +84,4 @@
 
 #18 resolving provenance for metadata file
 #18 DONE 0.0s
- Image autosound-demo-frontend:local Built 
+ Image autosound-demo-frontend:local Built

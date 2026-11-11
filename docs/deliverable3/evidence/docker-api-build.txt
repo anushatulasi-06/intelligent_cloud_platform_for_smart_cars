@@ -1,4 +1,4 @@
- Image autosound-demo-backend:local Building 
+ Image autosound-demo-backend:local Building
 #1 [internal] load local bake definitions
 #1 reading from stdin 1.81kB done
 #1 DONE 0.0s
@@ -56,7 +56,28 @@
 #7 68.22 debconf: delaying package configuration, since apt-utils is not installed
 #7 68.24 Fetched 2367 kB in 34s (68.9 kB/s)
 #7 68.26 Selecting previously unselected package fonts-dejavu-core.
-#7 68.26 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 6701 files and directories currently installed.)
+#7 68.26 (Reading database ...
+(Reading database ... 5%
+(Reading database ... 10%
+(Reading database ... 15%
+(Reading database ... 20%
+(Reading database ... 25%
+(Reading database ... 30%
+(Reading database ... 35%
+(Reading database ... 40%
+(Reading database ... 45%
+(Reading database ... 50%
+(Reading database ... 55%
+(Reading database ... 60%
+(Reading database ... 65%
+(Reading database ... 70%
+(Reading database ... 75%
+(Reading database ... 80%
+(Reading database ... 85%
+(Reading database ... 90%
+(Reading database ... 95%
+(Reading database ... 100%
+(Reading database ... 6701 files and directories currently installed.)
 #7 68.27 Preparing to unpack .../0-fonts-dejavu-core_2.37-6_all.deb ...
 #7 68.27 Unpacking fonts-dejavu-core (2.37-6) ...
 #7 68.39 Selecting previously unselected package libogg0:amd64.
@@ -153,7 +174,7 @@
 #10 234.9 Downloading setuptools-78.1.0-py3-none-any.whl (1.3 MB)
 #10 235.6    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 1.6 MB/s  0:00:00
 #10 235.9 Installing collected packages: mpmath, typing-extensions, sympy, setuptools, networkx, MarkupSafe, fsspec, filelock, jinja2, torch, torchaudio
-#10 254.0 
+#10 254.0
 #10 254.0 Successfully installed MarkupSafe-3.0.3 filelock-4.2.4 fsspec-2026.9.0 jinja2-3.1.6 mpmath-1.3.0 networkx-3.7 setuptools-78.1.0 sympy-1.13.1 torch-2.5.1+cpu torchaudio-2.5.1+cpu typing-extensions-4.16.0
 #10 254.0 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
 #10 255.3 Collecting fastapi<1.0,>=0.115 (from -r requirements.txt (line 2))
@@ -399,7 +420,7 @@
 #10 389.0 Downloading pytz-2026.6-py2.py3-none-any.whl (506 kB)
 #10 389.3 Downloading sentinels-1.1.1-py3-none-any.whl (3.7 kB)
 #10 390.3 Installing collected packages: pytz, websockets, uvloop, urllib3, typing-inspection, threadpoolctl, six, sentinels, pyyaml, python-multipart, python-dotenv, PyJWT, pygments, pydantic-core, pycparser, psycopg2-binary, pluggy, platformdirs, Pillow, packaging, opentelemetry-api, numpy, narwhals, msgpack, Mako, llvmlite, jmespath, iniconfig, idna, httptools, h11, greenlet, dnspython, decorator, cloudpickle, click, charset_normalizer, certifi, bcrypt, annotated-types, annotated-doc, uvicorn, sqlalchemy, soxr, scipy, requests, python-dateutil, pytest, pymongo, pydantic, numba, mongomock, lazy_loader, joblib, httpcore, cffi, anyio, watchfiles, starlette, soundfile, scikit-learn, pydantic-settings, pooch, httpx, cryptography, botocore, alembic, s3transfer, librosa, fastapi, boto3
-#10 412.9 
+#10 412.9
 #10 412.9 Successfully installed Mako-1.4.3 Pillow-13.0.0 PyJWT-2.15.1 alembic-1.20.1 annotated-doc-0.0.6 annotated-types-0.8.0 anyio-4.16.0 bcrypt-5.0.0 boto3-1.44.0 botocore-1.44.0 certifi-2026.10.23 cffi-2.1.1 charset_normalizer-3.5.2 click-8.5.1 cloudpickle-3.1.2 cryptography-50.0.2 decorator-5.3.1 dnspython-2.9.2 fastapi-0.162.4 greenlet-3.5.6 h11-0.16.0 httpcore-1.0.9 httptools-0.9.0 httpx-0.28.1 idna-3.20 iniconfig-2.3.1 jmespath-1.1.0 joblib-1.6.0 lazy_loader-0.6 librosa-1.0.0 llvmlite-0.50.0 mongomock-4.3.0 msgpack-1.2.4 narwhals-2.28.0 numba-0.68.1 numpy-2.5.4 opentelemetry-api-1.45.2 packaging-26.3 platformdirs-4.14.5 pluggy-1.7.0 pooch-1.9.0 psycopg2-binary-2.9.13 pycparser-3.12 pydantic-2.14.3 pydantic-core-2.50.4 pydantic-settings-2.16.2 pygments-2.21.0 pymongo-4.19.0 pytest-8.4.2 python-dateutil-2.9.0.post0 python-dotenv-1.2.4 python-multipart-0.0.33 pytz-2026.6 pyyaml-6.0.3 requests-2.34.2 s3transfer-0.19.3 scikit-learn-1.9.1 scipy-1.18.1 sentinels-1.1.1 six-1.17.0 soundfile-0.14.0 soxr-1.1.0 sqlalchemy-2.0.57 starlette-1.10.0 threadpoolctl-3.8.0 typing-inspection-0.4.5 urllib3-2.8.0 uvicorn-0.54.0 uvloop-0.23.0 watchfiles-1.3.0 websockets-17.4
 #10 413.0 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
 #10 414.2 No broken requirements found.
@@ -426,4 +447,4 @@
 
 #16 resolving provenance for metadata file
 #16 DONE 0.0s
- Image autosound-demo-backend:local Built 
+ Image autosound-demo-backend:local Built

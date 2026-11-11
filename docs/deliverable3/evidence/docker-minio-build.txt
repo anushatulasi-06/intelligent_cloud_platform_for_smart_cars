@@ -1,4 +1,4 @@
- Image autosound-demo-minio:2025-10-15 Building 
+ Image autosound-demo-minio:2025-10-15 Building
 #1 [internal] load local bake definitions
 #1 reading from stdin 709B done
 #1 DONE 0.0s
@@ -42,7 +42,7 @@
 #10 23.74 Installing collected packages: zstandard
 #10 23.88 Successfully installed zstandard-0.23.0
 #10 23.88 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
-#10 24.37 
+#10 24.37
 #10 24.37 [notice] A new release of pip is available: 25.0.1 -> 26.3
 #10 24.37 [notice] To update, run: pip install --upgrade pip
 #10 DONE 24.5s
@@ -87,7 +87,28 @@
 #9 132.6 debconf: delaying package configuration, since apt-utils is not installed
 #9 132.6 Fetched 3643 kB in 1min 35s (38.5 kB/s)
 #9 132.7 Selecting previously unselected package libssl3:amd64.
-#9 132.7 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 6096 files and directories currently installed.)
+#9 132.7 (Reading database ...
+(Reading database ... 5%
+(Reading database ... 10%
+(Reading database ... 15%
+(Reading database ... 20%
+(Reading database ... 25%
+(Reading database ... 30%
+(Reading database ... 35%
+(Reading database ... 40%
+(Reading database ... 45%
+(Reading database ... 50%
+(Reading database ... 55%
+(Reading database ... 60%
+(Reading database ... 65%
+(Reading database ... 70%
+(Reading database ... 75%
+(Reading database ... 80%
+(Reading database ... 85%
+(Reading database ... 90%
+(Reading database ... 95%
+(Reading database ... 100%
+(Reading database ... 6096 files and directories currently installed.)
 #9 132.7 Preparing to unpack .../libssl3_3.0.22-1~deb12u2_amd64.deb ...
 #9 132.7 Unpacking libssl3:amd64 (3.0.22-1~deb12u2) ...
 #9 132.8 Selecting previously unselected package openssl.
@@ -130,4 +151,4 @@
 
 #16 resolving provenance for metadata file
 #16 DONE 0.0s
- Image autosound-demo-minio:2025-10-15 Built 
+ Image autosound-demo-minio:2025-10-15 Built
