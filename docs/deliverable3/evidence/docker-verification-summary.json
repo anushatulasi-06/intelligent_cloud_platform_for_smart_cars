@@ -1,0 +1,175 @@
+{
+  "author": "Rishi Sheth",
+  "date_local": "2026-11-10",
+  "timezone": "America/Los_Angeles",
+  "captured_at": "2026-11-10T18:51:48.024426-08:00",
+  "result": "PASS",
+  "engine": {
+    "version": "29.9.3",
+    "rootless": true,
+    "storage_driver": "vfs",
+    "security_options": [
+      "name=seccomp,profile=builtin",
+      "name=rootless",
+      "name=cgroupns"
+    ]
+  },
+  "tooling": {
+    "compose": "5.7.0",
+    "buildx": "0.38.2"
+  },
+  "versions": {
+    "postgresql": "16.15",
+    "mongodb": "7.0.45",
+    "minio": "RELEASE.2025-10-15T17-29-55Z",
+    "nginx": "1.28.3",
+    "python": "3.12.16",
+    "fastapi": "0.162.4",
+    "torch": "2.5.1+cpu",
+    "torchaudio": "2.5.1+cpu",
+    "model": "cnn-v1",
+    "librosa": "1.0.0"
+  },
+  "surfaces": {
+    "ui": "http://127.0.0.1:5174",
+    "api": "http://127.0.0.1:8002",
+    "s3_downloads": "http://127.0.0.1:9000"
+  },
+  "images": [
+    {
+      "tag": "autosound-demo-backend:local",
+      "id": "sha256:bab1e4bd1648599e336f657baf53de954a126990889ce30fab15d26eb7a61857",
+      "size_bytes": 1610703840,
+      "architecture": "amd64"
+    },
+    {
+      "tag": "autosound-demo-frontend:local",
+      "id": "sha256:c206c38af039007cfb5c084765eaefb75382a572d2fd0ca8eb2ff790d65f8743",
+      "size_bytes": 62580658,
+      "architecture": "amd64"
+    },
+    {
+      "tag": "autosound-demo-minio:2025-10-15",
+      "id": "sha256:ec949310f958811f87cea8b524a53328aa85f75184b35fafab28fe2af76e2ecb",
+      "size_bytes": 205162819,
+      "architecture": "amd64"
+    },
+    {
+      "tag": "postgres:16-bookworm",
+      "id": "sha256:cadebe7c08430c896edac883fa92f8de2c36e330805e770fbee8a7eae13f144f",
+      "size_bytes": 435424474,
+      "architecture": "amd64"
+    },
+    {
+      "tag": "mongo:7.0",
+      "id": "sha256:bf46c3fd4f186a3569a6c8d180ee6f55e46cc81e98c0cadaee2f56718c84979f",
+      "size_bytes": 865920084,
+      "architecture": "amd64"
+    }
+  ],
+  "services": [
+    {
+      "Service": "api",
+      "Image": "autosound-demo-backend:local",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Ports": "127.0.0.1:8002->8000/tcp"
+    },
+    {
+      "Service": "edge-demo",
+      "Image": "autosound-demo-backend:local",
+      "State": "running",
+      "Health": "",
+      "ExitCode": 0,
+      "Ports": "8000/tcp"
+    },
+    {
+      "Service": "frontend",
+      "Image": "autosound-demo-frontend:local",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Ports": "80/tcp, 127.0.0.1:5174->8080/tcp"
+    },
+    {
+      "Service": "minio",
+      "Image": "autosound-demo-minio:2025-10-15",
+      "State": "running",
+      "Health": "",
+      "ExitCode": 0,
+      "Ports": "127.0.0.1:9000-9001->9000-9001/tcp"
+    },
+    {
+      "Service": "mongo",
+      "Image": "mongo:7.0",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Ports": "27017/tcp"
+    },
+    {
+      "Service": "postgres",
+      "Image": "postgres:16-bookworm",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Ports": "5432/tcp"
+    },
+    {
+      "Service": "storage-init",
+      "Image": "autosound-demo-backend:local",
+      "State": "exited",
+      "Health": "",
+      "ExitCode": 0,
+      "Ports": ""
+    }
+  ],
+  "checks": {
+    "hello_world_container": "PASS",
+    "container_https_dns": "PASS",
+    "api_health": "PASS",
+    "frontend_health_and_proxy": "PASS",
+    "minio_live_endpoint": "PASS",
+    "live_component_groups": 8,
+    "live_component_result": "PASS",
+    "browser_checks": [
+      "JWT login",
+      "five scenarios",
+      "moving and stopped telemetry",
+      "data monitor",
+      "raw audio playback",
+      "generated alert",
+      "model administration",
+      "Cloud read-only device access"
+    ],
+    "browser_javascript_errors": 0,
+    "containerized_full_suite": {
+      "passed": 508,
+      "skipped": 14,
+      "failed": 0,
+      "errors": 0
+    }
+  },
+  "retained_record_ids": [
+    "5f95beb5-79ad-4c0d-880a-31575f055507"
+  ],
+  "temporary_verification_device_deleted": true,
+  "build_fix": "Separate npm ci --ignore-scripts from npm rebuild into distinct Docker layers; avoids observed esbuild ETXTBSY while preserving install hooks.",
+  "runtime_scope": "Task workspace only; no sudo, host kernel settings, global Docker context or shell profile changes.",
+  "evidence": [
+    "docker-live-verification.json",
+    "docker-browser-verification.json",
+    "docker-services.json",
+    "docker-api-build.txt",
+    "docker-frontend-build.txt",
+    "docker-minio-build.txt",
+    "docker-startup.txt",
+    "docker-live-tests.txt",
+    "docker-browser-tests.txt",
+    "docker-hello-world.txt",
+    "docker-unit-verification.json",
+    "docker-unit-tests.txt"
+  ],
+  "updated_at": "2026-11-10T18:59:06.065797-08:00"
+}

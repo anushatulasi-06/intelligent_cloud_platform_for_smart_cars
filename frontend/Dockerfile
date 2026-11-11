@@ -1,7 +1,10 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+# Finish package extraction before executing native postinstall binaries.
+# A separate layer avoids ETXTBSY on rootless Docker with the vfs driver.
+RUN npm ci --ignore-scripts --no-audit --no-fund
+RUN npm rebuild
 COPY frontend/ ./
 ENV VITE_USE_MOCK=false VITE_API_BASE_URL=/api
 RUN npm run build

@@ -58,6 +58,35 @@ docker compose --env-file infra/.env.demo -f infra/demo-compose.yml down
 
 The committed defaults bind the demonstration to the local machine. A remote deployment needs its reachable UI/API/object-storage URLs, private secrets and HTTPS configured for that host. With AWS S3, leave the custom S3 endpoint unset and provide the bucket, region and AWS credentials or instance role.
 
+## Verified Docker deployment on this host
+
+On **November 10, 2026**, the full deployment was built and started with an isolated **rootless Docker Engine 29.9.3**, Compose 5.7.0 and Buildx 0.38.2. PostgreSQL 16.15, MongoDB 7.0.45, MinIO, the bucket initializer, API, frontend and edge client ran in actual containers. The API, frontend and database health checks passed; MinIO's live endpoint returned HTTP 200, the initializer exited successfully, and the edge client sent authenticated heartbeats and camera uploads.
+
+The host already runs the native demo on UI port 5173 and API port 8000. The verified Docker instance uses a workspace-only port override:
+
+| Current Docker surface | Address |
+| --- | --- |
+| UI and login | `http://127.0.0.1:5174/login` |
+| API documentation | `http://127.0.0.1:8002/docs` |
+| Object downloads | `http://127.0.0.1:9000` |
+
+The generic deployment recipe above uses its committed default ports. This host's isolated runtime and override are invoked through the following wrapper; it keeps Docker data, configuration and its daemon socket inside the task workspace without changing shell profiles or the global Docker context.
+
+```bash
+/home/rishi/Documents/Codex/2026-11-10/cme/work/docker-runtime/compose.sh ps
+/home/rishi/Documents/Codex/2026-11-10/cme/work/docker-runtime/compose.sh up --no-build -d
+```
+
+The task output `start-docker-demo.py` checks this runtime, starts its existing rootless daemon if necessary, and starts the already-built services without showing private configuration. The workspace must remain available when using that helper. [Docker's rootless documentation](https://docs.docker.com/engine/security/rootless/) describes the supported unprivileged setup; the required user namespaces and subordinate UID/GID mappings were available on this host.
+
+The first frontend container build exposed an `ETXTBSY` error during esbuild's install hook on the rootless `vfs` storage driver. The corrected Dockerfile completes `npm ci --ignore-scripts` in one layer and runs `npm rebuild` in the next. This preserves install hooks; the corrected rebuild and Vite build both passed inside Docker.
+
+The [Docker verification summary](evidence/docker-verification-summary.json) records actual image IDs, versions and service states. The [live Docker verification](evidence/docker-live-verification.json) passed all eight check groups, including the deployed CNN producing a linked alert, byte-identical signed MinIO audio download and deletion of only its temporary device. The [Docker browser evidence](evidence/docker-browser-verification.json) verifies JWT login, all five scenarios, moving/stopped telemetry, F13, raw audio playback, generated alerts, model administration and Cloud Staff read-only access with zero JavaScript errors. These checks used real HTTP and stores.
+
+The [complete backend and model suite also passed inside the built Docker image](evidence/docker-unit-verification.json): **508 passed, 14 skipped, zero failures** with Python 3.12.16, Torch 2.5.1 CPU and librosa 1.0.0. This used a pristine Git archive mounted read-only at `/workspace`, disabled container networking, temporary caches, and the non-root `autosound` account. The [containerized test transcript](evidence/docker-unit-tests.txt) preserves its actual output.
+
+Build and startup transcripts are retained in [backend build](evidence/docker-api-build.txt), [frontend build](evidence/docker-frontend-build.txt), [MinIO build](evidence/docker-minio-build.txt), [Compose startup](evidence/docker-startup.txt), [live checks](evidence/docker-live-tests.txt) and [browser checks](evidence/docker-browser-tests.txt). They exclude private environment values, device keys, JWTs and signed download URLs.
+
 ## Sign in and establish the demo state
 
 These are the seeded **local development** accounts. The browser obtains a signed JWT from `/login`; every staff request uses that token.
@@ -169,9 +198,15 @@ The implementation was exercised on the local machine using PostgreSQL 16.15, Mo
 | Browser | Device form/detail validation; all five scenarios; moving/stopped telemetry; raw audio playback; linked alert; model UI; Cloud read-only device view; no JavaScript errors |
 | Frontend production build | Passed with Vite 7.3.8 and React Router 7.18.5 |
 | Dependency audit | Zero npm vulnerabilities |
-| Docker recipe | Official Compose parser accepted it; pinned MinIO binary extracted and executed; full container build/start remains untested because the host has no Docker engine |
+| Docker deployment | Full backend, frontend and MinIO image builds passed on rootless Docker 29.9.3; all seven Compose services started or completed as intended; live model/S3 and browser verification passed |
 | CARLA | Adapter and protocol tests passed; no actual CARLA server run was available. The recorded demo uses the explicitly labeled local virtual vehicle with real sound recordings |
 
 See [verification summary](evidence/verification-summary.json), [complete test transcript](evidence/unit-tests.txt), [PostgreSQL transcript](evidence/postgres-migrations.txt), and [dependency audit](evidence/npm-audit.json). The task output package includes the scenario recording and screenshots. The recording is silent with on-screen explanations; audio playback was verified in the live browser. Review it and upload it through the course submission page; no course submission was performed automatically.
 
-The captured scenario walkthrough is 3 minutes 17 seconds, with on-screen explanations, actual UI interactions, seven executed component checks and a live HTTP verification run. The longer presenter script above is available if you want to record your own narration. See the [captured unit checks](evidence/recorded-unit-demo.txt), [captured live checks](evidence/recorded-live-demo.txt), [browser result](evidence/browser-verification.json), and [recording metadata](evidence/video-metadata.json).
+The captured scenario walkthrough is 3 minutes 27 seconds, with on-screen explanations, actual UI interactions, seven component checks executed inside the Docker backend container and a live HTTP verification run. The longer presenter script above is available if you want to record your own narration. See the [captured unit checks](evidence/recorded-unit-demo.txt), [captured live checks](evidence/recorded-live-demo.txt), [browser result](evidence/browser-verification.json), and [recording metadata](evidence/video-metadata.json).
+
+## Actual CARLA through an existing Google Colab account
+
+The local CARLA archive download was deliberately skipped at the user's request. The supplied [CARLA Colab notebook](colab/CMPE281_Real_CARLA_Colab_Rishi_Sheth.ipynb) uses the existing SJSU Google account, with no additional cloud signup. A Tesla T4 allocation with 15,360 MiB VRAM was confirmed by the user on November 10, 2026. This confirms an allocated GPU; actual Vulkan rendering and CARLA execution still require the notebook's checks and evidence.
+
+Upload the notebook to Colab and run the first two code cells before the large download. They verify the GPU's Vulkan device, available memory and at least 25 GiB disk. The later cells install an isolated matching Python client, start the real simulator as a non-root Unix user in the disposable runtime, drive an owned vehicle, capture real camera frames and save evidence. This is an interactive notebook workflow; it does not use SSH, VNC or a public tunnel. No Colab server execution is claimed until its logs and captured frames are obtained.

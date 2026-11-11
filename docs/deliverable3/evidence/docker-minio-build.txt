@@ -1,0 +1,133 @@
+ Image autosound-demo-minio:2025-10-15 Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 709B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Minio.Dockerfile
+#2 transferring dockerfile: 1.25kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.12-slim-bookworm
+#3 DONE 0.2s
+
+#4 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#4 DONE 0.5s
+
+#5 [1/9] FROM docker.io/library/python:3.12-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df
+#5 CACHED
+
+#6 [internal] load .dockerignore
+#6 transferring context: 272B done
+#6 DONE 0.0s
+
+#7 [stage-1 1/4] FROM docker.io/library/debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
+#7 CACHED
+
+#8 [internal] load build context
+#8 transferring context: 74B done
+#8 DONE 0.0s
+
+#9 [stage-1 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends ca-certificates     && rm -rf /var/lib/apt/lists/*     && groupadd --gid 10001 minio     && useradd --uid 10001 --gid minio --home-dir /data minio     && mkdir /data     && chown minio:minio /data
+#9 0.491 Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+#9 0.530 Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+#9 0.551 Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [34.8 kB]
+#9 0.602 Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8790 kB]
+#9 ...
+
+#10 [extract 2/4] RUN python -m pip install --no-cache-dir zstandard==0.23.0
+#10 3.872 Collecting zstandard==0.23.0
+#10 4.768   Downloading zstandard-0.23.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (3.0 kB)
+#10 5.146 Downloading zstandard-0.23.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (5.4 MB)
+#10 23.71    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.4/5.4 MB 454.6 kB/s eta 0:00:00
+#10 23.74 Installing collected packages: zstandard
+#10 23.88 Successfully installed zstandard-0.23.0
+#10 23.88 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#10 24.37 
+#10 24.37 [notice] A new release of pip is available: 25.0.1 -> 26.3
+#10 24.37 [notice] To update, run: pip install --upgrade pip
+#10 DONE 24.5s
+
+#9 [stage-1 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends ca-certificates     && rm -rf /var/lib/apt/lists/*     && groupadd --gid 10001 minio     && useradd --uid 10001 --gid minio --home-dir /data minio     && mkdir /data     && chown minio:minio /data
+#9 ...
+
+#11 [extract 3/4] COPY infra/extract_demo_minio.py /extract_demo_minio.py
+#11 DONE 0.5s
+
+#9 [stage-1 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends ca-certificates     && rm -rf /var/lib/apt/lists/*     && groupadd --gid 10001 minio     && useradd --uid 10001 --gid minio --home-dir /data minio     && mkdir /data     && chown minio:minio /data
+#9 ...
+
+#12 [extract 4/4] RUN python /extract_demo_minio.py --output /out
+#12 ...
+
+#9 [stage-1 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends ca-certificates     && rm -rf /var/lib/apt/lists/*     && groupadd --gid 10001 minio     && useradd --uid 10001 --gid minio --home-dir /data minio     && mkdir /data     && chown minio:minio /data
+#9 33.16 Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+#9 33.44 Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [367 kB]
+#9 36.30 Fetched 9405 kB in 36s (262 kB/s)
+#9 36.30 Reading package lists...
+#9 36.89 Reading package lists...
+#9 37.45 Building dependency tree...
+#9 37.61 Reading state information...
+#9 37.84 The following additional packages will be installed:
+#9 37.84   libssl3 openssl
+#9 37.86 The following NEW packages will be installed:
+#9 37.86   ca-certificates libssl3 openssl
+#9 37.93 0 upgraded, 3 newly installed, 0 to remove and 0 not upgraded.
+#9 37.93 Need to get 3643 kB of archives.
+#9 37.93 After this operation, 8955 kB of additional disk space will be used.
+#9 37.93 Get:1 http://deb.debian.org/debian-security bookworm-security/main amd64 libssl3 amd64 3.0.22-1~deb12u2 [2040 kB]
+#9 72.31 Get:2 http://deb.debian.org/debian-security bookworm-security/main amd64 openssl amd64 3.0.22-1~deb12u2 [1442 kB]
+#9 ...
+
+#12 [extract 4/4] RUN python /extract_demo_minio.py --output /out
+#12 106.7 Pinned MinIO executable and licenses extracted; package checksum verified.
+#12 DONE 106.7s
+
+#9 [stage-1 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends ca-certificates     && rm -rf /var/lib/apt/lists/*     && groupadd --gid 10001 minio     && useradd --uid 10001 --gid minio --home-dir /data minio     && mkdir /data     && chown minio:minio /data
+#9 132.3 Get:3 http://deb.debian.org/debian-security bookworm-security/main amd64 ca-certificates all 20250419~deb12u2 [161 kB]
+#9 132.6 debconf: delaying package configuration, since apt-utils is not installed
+#9 132.6 Fetched 3643 kB in 1min 35s (38.5 kB/s)
+#9 132.7 Selecting previously unselected package libssl3:amd64.
+#9 132.7 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 6096 files and directories currently installed.)
+#9 132.7 Preparing to unpack .../libssl3_3.0.22-1~deb12u2_amd64.deb ...
+#9 132.7 Unpacking libssl3:amd64 (3.0.22-1~deb12u2) ...
+#9 132.8 Selecting previously unselected package openssl.
+#9 132.8 Preparing to unpack .../openssl_3.0.22-1~deb12u2_amd64.deb ...
+#9 132.8 Unpacking openssl (3.0.22-1~deb12u2) ...
+#9 133.0 Selecting previously unselected package ca-certificates.
+#9 133.0 Preparing to unpack .../ca-certificates_20250419~deb12u2_all.deb ...
+#9 133.0 Unpacking ca-certificates (20250419~deb12u2) ...
+#9 133.0 Setting up libssl3:amd64 (3.0.22-1~deb12u2) ...
+#9 133.0 Setting up openssl (3.0.22-1~deb12u2) ...
+#9 133.0 Setting up ca-certificates (20250419~deb12u2) ...
+#9 133.1 debconf: unable to initialize frontend: Dialog
+#9 133.1 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#9 133.1 debconf: falling back to frontend: Readline
+#9 133.1 debconf: unable to initialize frontend: Readline
+#9 133.1 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC contains: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.36.0 /usr/local/share/perl/5.36.0 /usr/lib/x86_64-linux-gnu/perl5/5.36 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl-base /usr/lib/x86_64-linux-gnu/perl/5.36 /usr/share/perl/5.36 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 7.)
+#9 133.1 debconf: falling back to frontend: Teletype
+#9 133.5 Updating certificates in /etc/ssl/certs...
+#9 134.1 148 added, 0 removed; done.
+#9 134.1 Processing triggers for libc-bin (2.36-9+deb12u14) ...
+#9 134.1 Processing triggers for ca-certificates (20250419~deb12u2) ...
+#9 134.1 Updating certificates in /etc/ssl/certs...
+#9 134.5 0 added, 0 removed; done.
+#9 134.5 Running hooks in /etc/ca-certificates/update.d...
+#9 134.5 done.
+#9 DONE 134.6s
+
+#13 [stage-1 3/4] COPY --from=extract /out/bin/minio /usr/local/bin/minio
+#13 DONE 0.4s
+
+#14 [stage-1 4/4] COPY --from=extract /out/licenses/ /usr/share/doc/minio/licenses/
+#14 DONE 0.4s
+
+#15 exporting to image
+#15 exporting layers
+#15 exporting layers 0.6s done
+#15 writing image sha256:ec949310f958811f87cea8b524a53328aa85f75184b35fafab28fe2af76e2ecb done
+#15 naming to docker.io/library/autosound-demo-minio:2025-10-15 done
+#15 DONE 0.6s
+
+#16 resolving provenance for metadata file
+#16 DONE 0.0s
+ Image autosound-demo-minio:2025-10-15 Built 

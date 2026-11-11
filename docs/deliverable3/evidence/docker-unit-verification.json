@@ -1,0 +1,33 @@
+{
+  "author": "Rishi Sheth",
+  "date_local": "2026-11-10",
+  "timezone": "America/Los_Angeles",
+  "result": "PASS",
+  "exit_code": 0,
+  "environment": {
+    "image": "autosound-demo-backend:local",
+    "python": "3.12.16",
+    "torch": "2.5.1+cpu",
+    "librosa": "1.0.0",
+    "network": "none",
+    "user": "autosound"
+  },
+  "source": {
+    "type": "pristine git archive HEAD",
+    "commit": "6c8193455df0ee58dd79f4b5d7e4016f3778f5d5",
+    "mount": "/workspace",
+    "read_only": true,
+    "private_environment_files_included": false
+  },
+  "command": "python -m pytest -q -p no:cacheprovider backend/tests model/tests",
+  "counts": {
+    "passed": 508,
+    "skipped": 14,
+    "failed": 0,
+    "errors": 0
+  },
+  "count_method": "Pytest double-quiet progress output: 508 pass dots and 14 skip symbols; process exit 0.",
+  "skip_reason": "10 PostgreSQL-specific cases require a separate disposable database; four optional model tests require the unavailable dataset.",
+  "transcript": "docker-unit-tests.txt",
+  "completed_at": "2026-11-10T18:59:06.065797-08:00"
+}

@@ -1,0 +1,9 @@
+PASS API health and real JWT staff login
+PASS Temporary WPA2 device registration, one-time key, inventory and role restrictions
+PASS Edit, Wi-Fi validation, protected configuration delivery and acknowledgement
+PASS Live heartbeat, capture command lifecycle, duplicate protection and simulator state
+PASS Audio authentication/format checks, S3 acceptance and idempotent replay
+PASS Real background worker and deployed model produced a linked alert
+PASS Byte-identical signed audio playback/download, monitor statistics and retry role/state guards
+PASS Deleted only the temporary device; accepted audio and alert retained as evidence
+PASS C2/C3 live verification complete (retained clip is a generated test tone, not an accuracy benchmark)

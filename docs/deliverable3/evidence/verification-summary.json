@@ -26,9 +26,24 @@
     "ui": "React; real backend mode"
   },
   "runtime_limits": {
-    "full_docker_build_and_start_verified": false,
-    "reason": "No Docker engine installed on task host; Compose config and pinned MinIO binary extraction verified",
+    "full_docker_build_and_start_verified": true,
+    "reason": "Verified November 10, 2026 with isolated rootless Docker 29.9.3: full image builds, seven Compose services, live C2/C3 model and S3 checks, and real browser checks all passed.",
     "actual_carla_server_verified": false,
     "carla_reason": "No running CARLA server supplied; local virtual edge uses actual HTTP, stores and model"
+  },
+  "docker_verification": {
+    "result": "PASS",
+    "summary": "docker-verification-summary.json",
+    "live_checks": "docker-live-verification.json",
+    "browser_checks": "docker-browser-verification.json",
+    "ui": "http://127.0.0.1:5174",
+    "api": "http://127.0.0.1:8002",
+    "containerized_full_suite": {
+      "passed": 508,
+      "skipped": 14,
+      "failed": 0,
+      "python": "3.12.16",
+      "proof": "docker-unit-verification.json"
+    }
   }
 }

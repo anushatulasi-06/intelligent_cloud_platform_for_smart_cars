@@ -1,0 +1,58 @@
+[
+  {
+    "Service": "api",
+    "Image": "autosound-demo-backend:local",
+    "State": "running",
+    "Health": "healthy",
+    "ExitCode": 0,
+    "Ports": "127.0.0.1:8002->8000/tcp"
+  },
+  {
+    "Service": "edge-demo",
+    "Image": "autosound-demo-backend:local",
+    "State": "running",
+    "Health": "",
+    "ExitCode": 0,
+    "Ports": "8000/tcp"
+  },
+  {
+    "Service": "frontend",
+    "Image": "autosound-demo-frontend:local",
+    "State": "running",
+    "Health": "healthy",
+    "ExitCode": 0,
+    "Ports": "80/tcp, 127.0.0.1:5174->8080/tcp"
+  },
+  {
+    "Service": "minio",
+    "Image": "autosound-demo-minio:2025-10-15",
+    "State": "running",
+    "Health": "",
+    "ExitCode": 0,
+    "Ports": "127.0.0.1:9000-9001->9000-9001/tcp"
+  },
+  {
+    "Service": "mongo",
+    "Image": "mongo:7.0",
+    "State": "running",
+    "Health": "healthy",
+    "ExitCode": 0,
+    "Ports": "27017/tcp"
+  },
+  {
+    "Service": "postgres",
+    "Image": "postgres:16-bookworm",
+    "State": "running",
+    "Health": "healthy",
+    "ExitCode": 0,
+    "Ports": "5432/tcp"
+  },
+  {
+    "Service": "storage-init",
+    "Image": "autosound-demo-backend:local",
+    "State": "exited",
+    "Health": "",
+    "ExitCode": 0,
+    "Ports": ""
+  }
+]

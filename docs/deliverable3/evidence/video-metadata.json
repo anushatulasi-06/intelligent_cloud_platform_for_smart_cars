@@ -1,10 +1,10 @@
 {
   "author": "Rishi Sheth",
-  "duration_seconds": 196.64,
+  "duration_seconds": 207.48,
   "video": "CMPE281_Deliverable3_Rishi_Sheth_Demo.mp4",
   "captions": true,
   "audio_track": false,
-  "actual_unit_checks": 7,
+  "unit_checks_in_docker": 7,
   "unit_checks_passed": 7,
-  "mode": "Local edge demo; recorded sound scenarios and real backend/stores/model"
+  "mode": "Actual full Docker deployment, virtual edge vehicle, real recordings, API, PostgreSQL, MongoDB, MinIO and model"
 }
