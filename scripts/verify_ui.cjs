@@ -22,6 +22,7 @@ const assert = require('node:assert/strict');
  assert(parseFloat(await page.locator('.sim-telemetry strong').innerText()) > 0);
  for(const name of ['Siren','Glass / crash','Scream','Horn','Rain / wind']) {
   await page.getByRole('button',{name:new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).click();
+  await page.waitForFunction(()=>{const a=document.querySelector('.sim-audio-preview audio');return a && a.currentTime>0 && a.duration===5 && a.src.startsWith('blob:')});
   await page.waitForTimeout(3000);
  }
  await page.getByRole('button',{name:'Stop route',exact:true}).click();
@@ -48,6 +49,6 @@ const assert = require('node:assert/strict');
  await page.screenshot({path:path.join(OUTPUT, 'models.png'),fullPage:true});
  await page.goto(BASE+'/devices'); await page.waitForTimeout(1000);
  assert.equal(await page.getByRole('button',{name:'+ Add Device',exact:true}).count(),0);
- assert.equal(errors.length,0,errors.join('\n')); fs.writeFileSync(path.join(OUTPUT, 'browser-verification.json'), JSON.stringify({author:'Rishi Sheth', checked_at:new Date().toISOString(), base_url:BASE, checks:['JWT login','five scenarios','moving and stopped telemetry','data monitor','raw audio playback','generated alert','model administration','Cloud read-only device access'],page_errors:errors},null,2)); console.log('PASS real UI login, five scenarios, moving/stopped telemetry, F13, S3 audio playback, alert, model admin and read-only Cloud device view.');
+ assert.equal(errors.length,0,errors.join('\n')); fs.writeFileSync(path.join(OUTPUT, 'browser-verification.json'), JSON.stringify({author:'Rishi Sheth', checked_at:new Date().toISOString(), base_url:BASE, checks:['JWT login','five scenarios and authenticated audible browser previews','moving and stopped telemetry','data monitor','raw audio playback','generated alert','model administration','Cloud read-only device access'],page_errors:errors},null,2)); console.log('PASS real UI login, five scenarios, moving/stopped telemetry, F13, S3 audio playback, alert, model admin and read-only Cloud device view.');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

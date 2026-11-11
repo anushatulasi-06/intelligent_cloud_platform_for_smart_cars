@@ -22,6 +22,7 @@ from app.config import SOUND_CATEGORIES
 from app.services.edge_buffer import EdgeBuffer
 from app.services.errors import ServiceError
 from app.services.ingest_service import MAX_AUDIO_BYTES, validate_audio
+from edge.audio_playback import SystemAudioPlayer
 
 log = logging.getLogger(__name__)
 
@@ -91,11 +92,12 @@ def load_scenarios(path: Path) -> dict[str, Path]:
 class CarlaEdgeClient:
     def __init__(self, vehicle, carla_map, cloud: CloudTransport, mic: DeviceCredentials, car_id: int,
                  buffer: EdgeBuffer, scenarios: dict[str, Path], *, camera: DeviceCredentials | None = None,
-                 wifi_apply=None, traffic_manager_port: int = 8001):
+                 wifi_apply=None, traffic_manager_port: int = 8001, play_audio=None):
         self.vehicle, self.map, self.cloud = vehicle, carla_map, cloud
         self.mic, self.camera, self.car_id = mic, camera, car_id
         self.buffer, self.scenarios, self.wifi_apply = buffer, scenarios, wifi_apply
         self.traffic_manager_port = traffic_manager_port
+        self.play_audio = play_audio
         # Capture here means forwarding explicit scenario clips, not recording a physical microphone.
         self.capture_enabled = True
         self.camera_capture_enabled = True
@@ -167,7 +169,15 @@ class CarlaEdgeClient:
                                    "content_type": content_type, "trigger": category,
                                    "captured_at": datetime.now(timezone.utc).isoformat(),
                                    "lat": position["lat"], "lon": position["lon"]})
-        return True, None  # Captured durably; the upload may wait for connectivity.
+        detail = None
+        if self.play_audio is not None:
+            try:
+                started = self.play_audio(source) is True
+            except Exception as exc:
+                log.warning("Edge audio playback unavailable (%s)", type(exc).__name__)
+                started = False
+            detail = "Clip buffered; edge audio player started" if started else "Clip buffered; use browser preview for audio"
+        return True, detail  # Captured durably; playback never prevents the upload.
 
     def _retry_acks(self):
         # A backlog of slow ACKs must not delay the next liveness heartbeat.
@@ -241,6 +251,7 @@ def main():
     parser.add_argument("--camera", action="store_true", help="Attach one owned RGB camera sensor")
     parser.add_argument("--scenarios", type=Path, default=Path(__file__).with_name("edge_scenarios.json"))
     parser.add_argument("--buffer-dir", type=Path, default=Path(".local_edge"))
+    parser.add_argument("--no-audio-playback", action="store_true", help="Use browser preview instead of an installed local sound player")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     try:
@@ -266,9 +277,11 @@ def main():
         parser.error("--actor-id must identify an existing CARLA vehicle")
     connection.get_trafficmanager(args.traffic_manager_port)
     cloud = CloudTransport(os.environ.get("EDGE_API_URL", "http://localhost:8000"))
+    audio_player = SystemAudioPlayer(enabled=not args.no_audio_playback)
+    log.info("Scenario sound output: %s", audio_player.description)
     adapter = CarlaEdgeClient(vehicle, world.get_map(), cloud, mic, car_id,
                               EdgeBuffer(args.buffer_dir), scenarios, camera=camera,
-                              traffic_manager_port=args.traffic_manager_port)
+                              traffic_manager_port=args.traffic_manager_port, play_audio=audio_player)
     sensor, stop = None, Event()
     try:
         if args.camera:
@@ -297,7 +310,10 @@ def main():
                 finally:
                     sensor.destroy()
         finally:
-            cloud.close()
+            try:
+                audio_player.close()
+            finally:
+                cloud.close()
 
 
 if __name__ == "__main__":

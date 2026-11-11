@@ -65,6 +65,34 @@ the runnable client always uses the configured API and its actual services.
 
 ## CARLA client
 
+### Owned vehicle demo runner
+
+With a running, advancing CARLA server and matching Python client, the following
+runner creates one vehicle and a small RGB camera, then connects the registered
+devices through the normal C2/C3 interface:
+
+```bash
+# From backend/, using the EDGE_* credentials described above:
+python -m edge.carla_demo --camera-width 320 --camera-height 180 --no-edge-audio
+```
+
+The camera is enabled by default; `--no-camera` is available for telemetry/audio
+only. Frames are captured on every rendered simulation frame and the latest JPEG
+is uploaded once per two-second edge pass. This keeps low-frame-rate CARLA runs
+from waiting two full simulation seconds between captures. The runner preserves
+world settings, creates no other traffic, and stops/destroys only its own vehicle
+and sensor on SIGINT/SIGTERM or a setup failure. Traffic Manager uses port 8001.
+Its `carla-demo-v1` heartbeat selects the **CARLA** mode label in F11.
+
+This runner models Wi-Fi provisioning and reboot on a simulated device: passwords
+are saved encrypted, configuration is acknowledged explicitly as simulated, and
+reboot resets capture/route state. Neither operation changes the host network or
+reboots the operating system. These semantics do not establish physical device
+execution. Actual CARLA rendering is verified only by a successful server run and
+received camera frames.
+
+### Attach to an existing vehicle
+
 This optional client connects an **existing** CARLA vehicle to the platform. It sends
 position heartbeats every two seconds, executes the device command queue, forwards
 scenario audio through `/device-data`, and optionally sends camera frames. It never
@@ -111,6 +139,25 @@ WAV/MP3 recordings. Paths are relative to the JSON file. Clips must be non-empty
 at most 10 MiB, and at most 15 seconds. A `simulate_event` payload uses
 `{"scenario": "emergency"}` (or another category). The CARLA client forwards the
 selected recording; it does not synthesize sound or record a physical microphone.
+
+### Audible scenario output
+
+Clicking a sound scenario in F11 also plays the matching bundled recording in the
+browser. The UI fetches the fixed WAV through a staff-only JWT endpoint and uses a
+temporary Blob URL; tokens are never placed in audio URLs. If browser autoplay is
+blocked, **Play preview** and normal audio controls remain visible. Audio errors
+and retries are independent of the queued edge command and its C3 upload. The
+browser labels this as a bundled preview: custom edge mappings and synthetic mode
+can upload a different clip. Recording credits are available below the controls.
+
+The command-line edge clients also try an installed `ffplay`, `paplay`, `aplay` or
+`afplay` without using a shell. This requires a working local sound device. Use
+`--no-audio-playback` (or `--no-edge-audio` on the owned CARLA runner) when sound
+should come from the browser. The headless Docker demo uses browser preview as
+its audible output. A launched edge player is not proof of sound hardware output.
+Embedders can pass `CarlaEdgeClient(..., play_audio=callback)`; the callback receives
+the validated local `Path` and returns `True` after accepting playback. Playback
+failure never discards a durably captured clip or prevents its upload.
 
 On the microphone, `start_capture` and `stop_capture` enable/disable accepting these
 explicit scenario captures. On the camera, they toggle frame forwarding. Both start

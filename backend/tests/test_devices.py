@@ -208,3 +208,20 @@ def test_store_outages_keep_error_contract(client, monkeypatch, store):
     error(response, 503)
     assert response.json() == {"detail": "Database temporarily unavailable"}
     assert "private" not in response.text
+
+
+def test_f4_search_accepts_car_labels_models_and_plates_without_widening_owner_scope(client):
+    mine = create(client, name="Cabin microphone")["device"]["id"]
+    theirs = create(client, car_id=20, name="Rear camera", device_type="camera")["device"]["id"]
+    with postgres.session_scope() as session:
+        session.get(Car, 20).plate = "TEAM-PLATE"
+    for term in ("C-010", "Car 10", "10", "Toyota", "Toyota Camry"):
+        response = client.get("/devices", headers=IOT, params={"q": term})
+        assert response.status_code == 200
+        assert [row["id"] for row in response.json()["items"]] == [mine]
+    for term in ("C-020", "Honda Civic", "TEAM-PLATE"):
+        assert [row["id"] for row in client.get("/devices", headers=CLOUD, params={"q": term}).json()["items"]] == [theirs]
+        assert client.get("/devices", headers=OWNER, params={"q": term}).json()["total"] == 0
+    assert client.get("/devices", headers=CLOUD, params={"q": "9" * 60}).json()["total"] == 0
+    filtered = client.get("/devices", headers=CLOUD, params={"q": "Honda", "device_type": "microphone"}).json()
+    assert filtered["total"] == 0

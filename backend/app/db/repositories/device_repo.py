@@ -1,8 +1,9 @@
 """devices (PostgreSQL). Owners may only read devices of their own cars (DT-C2-1)."""
 from datetime import datetime
+import re
 from typing import Any
 
-from sqlalchemy import case, func, select, update
+from sqlalchemy import case, func, or_, select, update
 
 from app.db.models import Car, Device
 from app.db.repositories.base import SqlRepo
@@ -24,17 +25,24 @@ class DeviceRepo(SqlRepo[Device]):
                device_type: str | None = None, q: str | None = None,
                page: int = 1, page_size: int = 20) -> dict[str, Any]:
         """GET /devices. Pass owner_id for owners: only devices on their cars are counted or returned."""
-        query = select(Device)
+        query = select(Device).join(Car, Car.id == Device.car_id)
         if owner_id is not None:
-            query = query.join(Car, Car.id == Device.car_id).where(Car.owner_id == owner_id)
+            query = query.where(Car.owner_id == owner_id)
         if car_id is not None:
             query = query.where(Device.car_id == car_id)
         if status:
             query = query.where(Device.status == status)
         if device_type:
             query = query.where(Device.device_type == device_type)
-        if q:
-            query = query.where(Device.name.ilike(f"%{q}%"))
+        if q and (text := q.strip()):
+            pattern = f"%{text}%"
+            # F4's search box accepts a device name or a car identifier/name.
+            matches = [Device.name.ilike(pattern), Car.plate.ilike(pattern),
+                       (Car.make + " " + Car.model).ilike(pattern)]
+            car_label = re.fullmatch(r"(?:(?:car|c)\s*-?\s*)?0*(\d+)", text, re.IGNORECASE)
+            if car_label and 0 < (car_number := int(car_label.group(1))) <= 2**31 - 1:
+                matches.append(Device.car_id == car_number)
+            query = query.where(or_(*matches))
         return self.paginate(query.order_by(Device.id), page, page_size)
 
     def get_for_owner(self, device_id: int, owner_id: int) -> Device | None:

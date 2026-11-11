@@ -168,6 +168,56 @@ def test_duplicate_commands_and_ack_timeouts_do_not_repeat_side_effects(setup):
     assert adapter.vehicle.autopilot_calls == [(True, 8001)]
 
 
+def test_scenario_playback_is_once_per_command_and_never_blocks_durable_upload(setup):
+    adapter, cloud = setup
+    played = []
+    adapter.play_audio = lambda source: played.append(source) or True
+    cloud.commands[6] = [command(21, "simulate_event", {"scenario": "human"})]
+    cloud.fail_acks = 1
+    adapter.step()
+    cloud.commands[6] = [command(21, "simulate_event", {"scenario": "human"})]
+    adapter.step()
+    assert played == [adapter.scenarios["human"]]
+    assert len(cloud.uploads) == 1 and cloud.acks[-1][1]["ok"]
+    assert "player started" in cloud.acks[-1][1]["detail"]
+    def unavailable(source):
+        raise OSError("No sound device")
+    adapter.play_audio = unavailable
+    cloud.commands[6] = [command(22, "simulate_event", {"scenario": "traffic"})]
+    adapter.step()
+    assert len(cloud.uploads) == 2 and cloud.acks[-1][1]["ok"]
+    assert "browser preview" in cloud.acks[-1][1]["detail"]
+    assert not adapter.buffer
+
+
+def test_stopped_capture_never_plays_or_uploads_a_scenario(setup):
+    adapter, cloud = setup
+    played = []
+    adapter.play_audio = lambda source: played.append(source) or True
+    adapter.capture_enabled = False
+    cloud.commands[6] = [command(23, "simulate_event", {"scenario": "human"})]
+    adapter.step()
+    assert not played and not cloud.uploads and not cloud.acks[-1][1]["ok"]
+
+
+def test_system_audio_player_passes_path_as_one_argument_and_cleans_only_owned_child(tmp_path, monkeypatch):
+    from edge import audio_playback
+    calls, stopped = [], []
+    monkeypatch.setattr(audio_playback.shutil, "which", lambda name: "/usr/bin/ffplay" if name == "ffplay" else None)
+    def launch(args, **kwargs):
+        calls.append((args, kwargs))
+        return SimpleNamespace(poll=lambda: None, terminate=lambda: stopped.append("terminate"), wait=lambda timeout: 0)
+    monkeypatch.setattr(audio_playback.subprocess, "Popen", launch)
+    player = audio_playback.SystemAudioPlayer()
+    source = tmp_path / "clip ; $(untrusted).wav"
+    assert player(source)
+    assert calls[0][0][-2:] == ["-i", str(source.resolve())]
+    assert "shell" not in calls[0][1] and calls[0][1]["stdin"] == audio_playback.subprocess.DEVNULL
+    player.close()
+    assert stopped == ["terminate"]
+    assert audio_playback.SystemAudioPlayer(enabled=False)(source) is False
+
+
 def test_capture_resume_and_missing_or_invalid_scenario_fail_cleanly(setup):
     adapter, cloud = setup
     adapter.capture_enabled = False

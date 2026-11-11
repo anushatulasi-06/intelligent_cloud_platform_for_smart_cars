@@ -1,4 +1,5 @@
 .device-data-monitor .section-head > p { margin: 0; }
+.device-data-monitor .kpi-success { --kpi: var(--teal); --kpi-tint: var(--tint-teal); }
 .record-detail .kv dd { overflow-wrap: anywhere; min-width: 0; }
 .record-detail .kv-row { align-items: start; }
 .record-detail > .btn { align-self: start; }

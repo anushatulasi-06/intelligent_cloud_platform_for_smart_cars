@@ -118,7 +118,7 @@ export default function DeviceDataTab() {
       </div>
       {stats.error && <p className="state-error">{stats.error.message}</p>}
       <section className="panel">
-        <div className="section-head"><h2>Clips received · last 12 hours</h2><span className="small muted">Local time</span></div>
+        <div className="section-head"><h2>Clips received per hour</h2><span className="small muted">Last 12 hours · Local time</span></div>
         {hours.length ? <div className="intake-chart" role="img" aria-label={hours.map((h) => `${formatDateTime(h.hour)}: ${h.count} clips`).join('; ')}>
           {hours.map((h) => <div className="intake-column" key={h.hour} title={`${formatDateTime(h.hour)} · ${h.count} clips`}><span className="small">{h.count}</span><div className="intake-track"><div className="intake-bar" style={{ height: `${h.count / max * 100}%` }} /></div><span className="small muted">{new Date(h.hour).toLocaleTimeString([], { hour: '2-digit', hour12: false })}</span></div>)}
         </div> : <p className="muted">{stats.loading ? 'Loading intake...' : 'No clips received in this period.'}</p>}
@@ -129,12 +129,11 @@ export default function DeviceDataTab() {
       <p className="muted small">Dates use your local time zone. Select a record for audio, processing details and the generated alert.</p>
       <DataTable rows={records.data?.items} rowKey="record_id" loading={records.loading && !records.data} error={records.error} empty="No records match the filters" onRowClick={(r) => setSelected(r.record_id)} columns={[
         { key: 'record_id', header: 'Record', render: (r) => <button className="btn btn-sm" title={r.record_id} onClick={(e) => { e.stopPropagation(); setSelected(r.record_id); }}>{r.record_id.slice(0, 8)}…</button> },
-        { key: 'received_timestamp', header: 'Received', render: (r) => formatDateTime(r.received_timestamp) },
         { key: 'car_id', header: 'Car', render: (r) => `Car ${r.car_id}` },
-        { key: 'device_id', header: 'Device' },
+        { key: 'received_timestamp', header: 'Received', render: (r) => formatDateTime(r.received_timestamp) },
         { key: 'status', header: 'Status', render: (r) => <StatusBadge value={r.status} tone={r.status === 'pending' ? 'medium' : undefined} /> },
-        { key: 'attempts', header: 'Attempts' },
-        ...(role === 'cloud_staff' ? [{ key: 'retry', header: 'Actions', render: (r) => r.status === 'failed' && <button className="btn btn-sm" disabled={retrying != null} onClick={(e) => { e.stopPropagation(); retry(r); }}>{retrying === r.record_id ? 'Retrying...' : 'Retry'}</button> }] : []),
+        { key: 'attempts', header: 'Tries' },
+        { key: 'retry', header: 'Actions', render: (r) => role === 'cloud_staff' && r.status === 'failed' ? <button className="btn btn-sm" disabled={retrying != null} onClick={(e) => { e.stopPropagation(); retry(r); }}>{retrying === r.record_id ? 'Retrying...' : 'Retry'}</button> : null },
       ]} />
       {records.data && <Pagination page={page} pageSize={PAGE_SIZE} total={records.data.total} onChange={setPage} />}
       {selected && <RecordDetail key={selected} id={selected} onClose={() => setSelected(null)} onRetry={retry} retrying={retrying} />}

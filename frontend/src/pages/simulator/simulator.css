@@ -31,4 +31,14 @@
 .sim-scenario-environmental .sound-dot { background: var(--sound-environmental); }
 .sim-event-log { min-width: 0; }
 .sim-event-log .data-table td { font-size: 12px; }
+.sim-audio-preview { margin-top: 14px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: var(--bg); }
+.sim-audio-preview[hidden] { display: none; }
+.sim-preview-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: 12px; margin-bottom: 8px; }
+.sim-audio-preview audio { display: block; width: 100%; height: 36px; }
+.sim-audio-preview p { margin: 8px 0 0; line-height: 1.5; }
+.sim-audio-preview .btn { margin-top: 8px; }
+.sim-recording-credits { margin-top: 12px; color: var(--text-2); font-size: 11px; line-height: 1.5; }
+.sim-recording-credits summary { cursor: pointer; }
+.sim-recording-credits p, .sim-recording-credits ul { margin: 8px 0; }
+.sim-recording-credits ul { padding-left: 16px; }
 @media (max-width: 1050px) { .sim-main-grid, .sim-bottom-grid { grid-template-columns: 1fr; } }

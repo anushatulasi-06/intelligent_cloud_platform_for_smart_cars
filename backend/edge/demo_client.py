@@ -21,6 +21,7 @@ from PIL import Image, ImageDraw, ImageFont
 from app.config import SOUND_CATEGORIES
 from app.services.edge_buffer import EdgeBuffer
 from edge.carla_client import CarlaEdgeClient, CloudTransport, _device_from_env, load_scenarios
+from edge.audio_playback import SystemAudioPlayer
 
 log = logging.getLogger(__name__)
 BUNDLED_SCENARIOS = Path(__file__).with_name("demo_clips") / "scenarios.json"
@@ -198,6 +199,7 @@ def main():
     audio_options.add_argument("--synthetic-audio", action="store_true", help="Generate synthetic test tones instead of bundled ESC-50 recordings")
     parser.add_argument("--no-camera", action="store_true", help="Run microphone/position only")
     parser.add_argument("--heartbeat-seconds", type=float, default=2.0)
+    parser.add_argument("--no-audio-playback", action="store_true", help="Use browser preview instead of an installed local sound player")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
@@ -219,13 +221,15 @@ def main():
         parser.error(str(exc))
     firmware = "local-demo-synth-v1" if args.synthetic_audio else "local-demo-real-v1"
     cloud = CloudTransport(os.environ.get("EDGE_API_URL", "http://localhost:8000"), firmware=firmware)
+    audio_player = SystemAudioPlayer(enabled=not args.no_audio_playback)
     adapter = DemoEdgeClient(DemoVehicle(), DemoMap(), cloud, mic, car_id,
                              EdgeBuffer(args.buffer_dir), scenarios, camera=camera,
-                             synthetic_audio=args.synthetic_audio)
+                             synthetic_audio=args.synthetic_audio, play_audio=audio_player)
     log.info("LOCAL EDGE DEMO: virtual car %s; real cloud requests; %s", car_id,
              "synthetic test tones (not accuracy evidence)" if args.synthetic_audio else
              "user-provided recordings" if args.scenarios else "bundled ESC-50 recordings (CC BY-NC 3.0; see demo_clips/README.md)")
     log.info("Open Simulator as IoT Staff. Start route, then select a sound scenario.")
+    log.info("Scenario sound output: %s", audio_player.description)
     stop, previous = Event(), time.monotonic()
     try:
         while not stop.is_set():
@@ -243,7 +247,10 @@ def main():
     except KeyboardInterrupt:
         stop.set()
     finally:
-        cloud.close()
+        try:
+            audio_player.close()
+        finally:
+            cloud.close()
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getSimulatorCars, getSimulatorState, listDevices, queueDeviceCommand, USE_MOCK } from '../../api/endpoints.js';
+import { getSimulatorCars, getSimulatorScenarioAudio, getSimulatorState, listDevices, queueDeviceCommand, USE_MOCK } from '../../api/endpoints.js';
 import { useRole } from '../../config/RoleContext.jsx';
 import { useAsync } from '../../utils/useAsync.js';
 import { usePolling } from '../../utils/usePolling.js';
@@ -27,6 +27,9 @@ function Simulator({ role }) {
   const [busy, setBusy] = useState('');
   const [frameError, setFrameError] = useState(false);
   const [pendingScenario, setPendingScenario] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const previewAudio = useRef(null);
+  const previewRequest = useRef({ id: 0, controller: null, url: null });
   const toast = useToast();
   const state = useAsync(() => getSimulatorState(carId), [carId, role]);
   const cars = useAsync(getSimulatorCars, [role]);
@@ -47,8 +50,55 @@ function Simulator({ role }) {
   const carChoices = cars.data || [];
   useEffect(() => { setFrameError(false); }, [frameUrl]);
   useEffect(() => { setPendingScenario(null); setDeviceId(''); }, [carId]);
+  useEffect(() => {
+    setPreview(null);
+    const request = previewRequest.current;
+    const audio = previewAudio.current;
+    return () => {
+      request.id += 1;
+      request.controller?.abort();
+      audio?.pause();
+      audio?.removeAttribute('src');
+      if (request.url) URL.revokeObjectURL(request.url);
+      request.url = null;
+    };
+  }, [carId]);
+  async function startPreview(category) {
+    const request = previewRequest.current;
+    const id = ++request.id;
+    request.controller?.abort();
+    request.controller = new AbortController();
+    previewAudio.current?.pause();
+    previewAudio.current?.removeAttribute('src');
+    if (request.url) URL.revokeObjectURL(request.url);
+    request.url = null;
+    setPreview({ category, status: 'loading' });
+    try {
+      const blob = await getSimulatorScenarioAudio(category, { signal: request.controller.signal });
+      if (id !== request.id) return;
+      request.url = URL.createObjectURL(blob);
+      const audio = previewAudio.current;
+      audio.src = request.url;
+      audio.load();
+      setPreview({ category, status: 'ready' });
+      try {
+        await audio.play();
+      } catch {
+        if (id === request.id) setPreview({ category, status: 'blocked', message: 'Audio is ready. Press Play preview to hear it.' });
+      }
+    } catch (error) {
+      if (id === request.id && error.name !== 'AbortError') setPreview({ category, status: 'error', message: error.message });
+    }
+  }
+  async function replayPreview() {
+    try { await previewAudio.current?.play(); }
+    catch { setPreview((current) => current && { ...current, status: 'blocked', message: 'Press the audio player’s Play control to hear this recording.' }); }
+  }
   async function send(command, scenario) {
     if (!canSend || !targetId) return;
+    // Preview and edge execution are independent: a browser audio problem must
+    // never discard the normal queued command or its C3 upload.
+    if (scenario) void startPreview(scenario);
     setBusy(scenario || command);
     try {
       const result = await queueDeviceCommand(targetId, { command, ...(scenario ? { payload: { scenario } } : {}) });
@@ -92,6 +142,27 @@ function Simulator({ role }) {
           <div className="sim-route-actions"><button className="btn btn-primary" disabled={!canSend} onClick={() => send('start_route')}>Start route</button><button className="btn" disabled={!canSend} onClick={() => send('stop_route')}>Stop route</button></div>
           <p className="muted small">Play a sound event in the car:</p>
           <div className="sim-scenarios">{SCENARIOS.map(([category, label, description]) => <button key={category} className={`sim-scenario sim-scenario-${category}`} disabled={!canSend} onClick={() => send('simulate_event', category)}><span className="sound-dot" /><span><strong>{busy === category ? 'Queuing…' : label}</strong><small>{description}</small></span><span aria-hidden="true">↗</span></button>)}</div>
+          <div className="sim-audio-preview" hidden={!preview}>
+            <div className="sim-preview-heading"><strong>Browser sound preview</strong><span className="small">{SCENARIOS.find(([category]) => category === preview?.category)?.[1]}</span></div>
+            <audio ref={previewAudio} controls preload="metadata" aria-label="Scenario preview audio"
+              onPlay={() => setPreview((current) => current && { ...current, status: 'playing', message: null })}
+              onPause={() => setPreview((current) => current && current.status === 'playing' ? { ...current, status: 'paused' } : current)}
+              onEnded={() => setPreview((current) => current && { ...current, status: 'ended' })}
+              onError={() => { if (previewRequest.current.url) setPreview((current) => current && { ...current, status: 'error', message: 'The recording could not be played. Retry the preview.' }); }} />
+            <p className="small" role="status">{preview?.message || ({ loading: 'Loading the matching recording…', ready: 'Recording ready.', playing: 'Playing the matching recording.', paused: 'Preview paused.', ended: 'Preview finished.' }[preview?.status])}</p>
+            {preview?.status === 'blocked' && <button className="btn btn-sm" onClick={replayPreview}>Play preview</button>}
+            {preview?.status === 'error' && <button className="btn btn-sm" onClick={() => startPreview(preview.category)}>Retry preview</button>}
+            <p className="muted small">This browser plays the bundled recording. An edge client with a custom scenario mapping can upload a different clip.</p>
+          </div>
+          <details className="sim-recording-credits"><summary>Recording credits · CC BY-NC 3.0</summary>
+            <p>Five <a href="https://github.com/karolpiczak/ESC-50" target="_blank" rel="noreferrer">ESC-50</a> recordings, curated by Karol J. Piczak, are used unchanged for this educational demo under <a href="https://creativecommons.org/licenses/by-nc/3.0/" target="_blank" rel="noreferrer">CC BY-NC 3.0</a>.</p>
+            <ul><li>Siren: <a href="https://freesound.org/people/guitarguy1985/sounds/54084/" target="_blank" rel="noreferrer">civildefense.wav</a> by guitarguy1985 (CC0).</li>
+              <li>Glass breaking: <a href="https://freesound.org/people/gezortenplotz/sounds/20133/" target="_blank" rel="noreferrer">breaking_glass.wav</a> by gezortenplotz (CC BY 3.0).</li>
+              <li>Human: <a href="https://freesound.org/people/the_yura/sounds/211527/" target="_blank" rel="noreferrer">Crying newborn baby child 3.WAV</a> by the_yura (CC0).</li>
+              <li>Horn: <a href="https://freesound.org/people/cognito%20perceptu/sounds/17124/" target="_blank" rel="noreferrer">car sharp horn.wav</a> by cognito perceptu (CC0).</li>
+              <li>Rain: <a href="https://freesound.org/people/cognito%20perceptu/sounds/17367/" target="_blank" rel="noreferrer">unlocki door to mod rain.wav</a> by cognito perceptu (CC0).</li></ul>
+            <a href="https://github.com/karolpiczak/ESC-50/blob/33c8ce9eb2cf0b1c2f8bcf322eb349b6be34dbb6/LICENSE" target="_blank" rel="noreferrer">Complete upstream notices</a>
+          </details>
           {!targetOnline && <p className="muted small">Controls become available when this microphone reports a heartbeat.</p>}
           {pendingScenario && <p className="small" role="status">{humanize(pendingScenario.category)} · command #{pendingScenario.commandId}: <strong>{pendingEvent ? humanize(pendingEvent.status) : 'Queued'}</strong>. <Link to={`/devices?tab=data&car_id=${carId}`}>View audio processing</Link></p>}
         </> : <p className="muted">Cloud Staff can monitor the live feed and classifications. Sign in as IoT Staff to control the route and scenarios.</p>}

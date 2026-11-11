@@ -245,7 +245,13 @@ export function listDevices({ car_id, status, device_type, q, page = 1, page_siz
     (!car_id || d.car_id === Number(car_id)) &&
     (!status || d.status === status) &&
     (!device_type || d.device_type === device_type) &&
-    (!q || d.name.toLowerCase().includes(q.toLowerCase())));
+    (!q || (() => {
+      const term = q.trim().toLowerCase();
+      const car = fleetJson.map.cars.find((entry) => entry.car_id === d.car_id);
+      const id = term.match(/^(?:(?:car|c)\s*-?\s*)?0*(\d+)$/i);
+      return d.name.toLowerCase().includes(term) || (car?.name || '').toLowerCase().includes(term)
+        || (car?.plate || '').toLowerCase().includes(term) || (id && d.car_id === Number(id[1]));
+    })()));
   return respond(paginate(items, page, page_size));
 }
 
@@ -332,6 +338,32 @@ export function getSimulatorState(car_id) {
 export function getSimulatorCars() {
   if (!USE_MOCK) return http('GET', '/simulator/cars');
   return respond(fleetJson.map.cars.map((c) => ({ car_id: c.car_id, make: c.name, model: '', plate: '' })));
+}
+
+// Staff-only bundled scenario preview. Keep the JWT in the header, never an audio URL.
+export async function getSimulatorScenarioAudio(category, { signal } = {}) {
+  if (!SOUND_TYPES.includes(category)) throw new ApiError(422, 'Unknown sound scenario');
+  if (USE_MOCK) throw new ApiError(409, 'Scenario playback requires the running backend');
+  const headers = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let response;
+  try {
+    response = await fetch(new URL(`${API_BASE_URL}/simulator/scenarios/${encodeURIComponent(category)}/audio`, window.location.origin), { headers, signal });
+  } catch (error) {
+    if (error.name === 'AbortError') throw error;
+    throw new ApiError(0, 'The scenario recording could not be loaded');
+  }
+  if (response.status === 401) sessionExpired();
+  if (!response.ok) {
+    let detail;
+    try { detail = (await response.json()).detail; } catch { /* retain the HTTP error */ }
+    throw new ApiError(response.status, detail || 'The scenario recording is unavailable');
+  }
+  if (response.headers.get('content-type')?.split(';')[0] !== 'audio/wav') {
+    throw new ApiError(502, 'The server did not return a WAV scenario recording');
+  }
+  return response.blob();
 }
 
 /* ------------------------------------------------------------------ */
