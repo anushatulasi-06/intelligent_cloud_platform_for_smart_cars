@@ -321,51 +321,51 @@ flowchart TB
   on the bucket, plus `ses:SendEmail`. With an instance role, no AWS keys are
   stored on the server.
 
-### 2. Backend on EC2 (Amazon Linux 2023)
-```bash
-sudo dnf install -y python3.12 git
-git clone <repo-url> autosound && cd autosound/backend
-python3.12 -m venv .venv && source .venv/bin/activate
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu   # CPU-only torch
-pip install -r requirements.txt
-cp .env.example .env        # then edit it as below
-alembic upgrade head
-python -m app.db.seed       # first deploy only: demo data and the cnn-v1 model row
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
-```
+The deployment files are in [`infra/aws/`](infra/aws/):
 
-Production values in `backend/.env`:
+| File | Purpose |
+|---|---|
+| [`setup_ec2.sh`](infra/aws/setup_ec2.sh) | First-time setup on the instance: packages (incl. `pg_dump`, `mongodump`), venv with CPU torch, `.env`, migrations, seed, systemd service, health check |
+| [`deploy_backend.sh`](infra/aws/deploy_backend.sh) | Later deploys: `git pull`, dependencies, migrations, restart, health check |
+| [`deploy_frontend.sh`](infra/aws/deploy_frontend.sh) | Builds the UI against the real API and publishes it to an S3 static-website bucket |
+| [`autosound-api.service`](infra/aws/autosound-api.service) | systemd unit: uvicorn, 1 worker, port 8000, `Restart=always` |
+| [`backend.env.production.example`](infra/aws/backend.env.production.example) | Production `backend/.env` template |
+| [`iam-instance-policy.json`](infra/aws/iam-instance-policy.json) | Instance role policy (S3 bucket + SES) |
+| [`frontend-bucket-policy.json`](infra/aws/frontend-bucket-policy.json) | Public read for the frontend bucket |
+
+### 2. Backend on EC2 (Amazon Linux 2023)
+Launch the instance with an IAM role that has `iam-instance-policy.json` (replace `<bucket>`). Then,
+on the instance as `ec2-user`:
+```bash
+sudo dnf install -y git
+git clone <repo-url> ~/autosound && cd ~/autosound
+bash infra/aws/setup_ec2.sh   # 1st run: creates backend/.env from the template and stops
+nano backend/.env             # fill in the <...> values (RDS, Atlas, bucket, SES sender, CORS)
+bash infra/aws/setup_ec2.sh   # 2nd run: migrate, seed, start the service, check /health
 ```
-DATABASE_URL=postgresql+psycopg2://<user>:<password>@<rds-endpoint>:5432/autosound
-MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/autosound
-S3_BUCKET=<bucket>
-AWS_REGION=us-west-2
-MODEL_DIR=../model/artifacts
-CORS_ORIGINS=https://<frontend-domain>
-DEV_FAKE_EMAIL=false        # send real SES email
-DEV_FAKE_BACKUP=false       # real pg_dump/mongodump backups to S3
-# remove LOCAL_AUDIO_DIR: audio links become presigned S3 URLs
-```
+`SKIP_SEED=1 bash infra/aws/setup_ec2.sh` skips the demo data. Logs: `journalctl -u autosound-api -f`.
+
+To deploy new code later: `bash infra/aws/deploy_backend.sh` (optionally `BRANCH=main`).
 
 - **One uvicorn worker.** Backup jobs run in-process, and interrupted jobs are marked failed at
   startup; both assume a single process.
-- **Keep it running** under systemd: `ExecStart=/home/ec2-user/autosound/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1`,
-  with `WorkingDirectory=/home/ec2-user/autosound/backend` and `Restart=always`.
+- **Production `.env`:** `DEV_FAKE_EMAIL=false` and `DEV_FAKE_BACKUP=false` turn on real SES email
+  and real `pg_dump`/`mongodump` backups to S3. `LOCAL_AUDIO_DIR` is left out, so audio links are
+  presigned S3 URLs.
 - **Load balancer:** forward HTTPS to port 8000. Use **`GET /health`** as the target-group health
   check (every 30 s).
-- **Backups:** install `postgresql16` and the MongoDB database tools on the instance so
-  `pg_dump` and `mongodump` are available.
 
 ### 3. Frontend
+From any machine with Node 18+ and the AWS CLI:
 ```bash
-cd frontend
-echo "VITE_USE_MOCK=false"                          >  .env.production
-echo "VITE_API_BASE_URL=https://<api-domain>"       >> .env.production
-npm ci && npm run build      # -> frontend/dist/
+FRONTEND_BUCKET=<frontend-bucket> API_BASE_URL=https://<api-domain> \
+  bash infra/aws/deploy_frontend.sh
 ```
-Upload `dist/` to an S3 static-website bucket (or serve it with nginx). It is a single-page app,
-so send unknown paths to `index.html`. The frontend address must be listed in the backend's
-`CORS_ORIGINS`.
+This builds with `VITE_USE_MOCK=false`, turns on static website hosting with `index.html` as the
+error document (so single-page-app routes work on reload), applies the public-read policy, and
+uploads `dist/`. The bucket's Block Public Access settings must allow a public bucket policy. Add
+the printed website URL to `CORS_ORIGINS` in the backend's `.env`, then
+`sudo systemctl restart autosound-api`.
 
 ### 4. Deploying a new model
 The model ships **with the code**: `model/artifacts/<version>/` is in git. To deploy a new
@@ -406,7 +406,8 @@ backend/    FastAPI API: routers, services (C4 orchestrator, alerts, notificatio
 frontend/   React 18 + Vite UI: pages/alerts (F12, F7), pages/config (F8a, F8b, F14), shared shell
 model/      CNN training, evaluation, checkpoints, and the packaged artifact cnn-v1
 scripts/    export_model.py, make_dummy_model.py, make_local_audio.py
-infra/      docker-compose.yml for local PostgreSQL and MongoDB
+infra/      docker-compose.yml for local PostgreSQL and MongoDB; aws/ deploy scripts, systemd unit,
+            production .env template, IAM and bucket policies
 ```
 
 ---

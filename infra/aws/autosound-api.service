@@ -1,0 +1,29 @@
+# systemd unit for the FastAPI backend on EC2 (Amazon Linux 2023).
+# Installed by infra/aws/setup_ec2.sh as /etc/systemd/system/autosound-api.service.
+#
+#   sudo systemctl status autosound-api
+#   journalctl -u autosound-api -f
+#
+# One uvicorn worker on purpose: backup jobs run in-process, and interrupted jobs are marked
+# failed at startup; both assume a single process (see README, "Deployment").
+# Settings come from backend/.env (read by app/config.py), so no EnvironmentFile is needed.
+
+[Unit]
+Description=Smart Car Platform API (C4 alerts, C5 config)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/autosound/backend
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/ec2-user/autosound/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips=*
+Restart=always
+RestartSec=5
+# Model load and Mongo index creation happen at startup; give them time before systemd gives up.
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target
