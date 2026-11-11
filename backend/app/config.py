@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     MODEL_DIR: Path = Path("../model/artifacts")
     CONFIDENCE_THRESHOLD: float = 0.75   # default only; the active model's threshold wins
 
+    # Auth (C1). Change JWT_SECRET in backend/.env before deploying; tokens signed with the
+    # default are only safe on a developer machine.
+    JWT_SECRET: str = "dev-only-secret-change-me-before-deploying"   # 32+ bytes, or PyJWT warns
+    JWT_ALGORITHM: str = "HS256"
+    JWT_TTL_MINUTES: int = 60
+
     # Web
     CORS_ORIGINS: str = "http://localhost:5173"   # comma-separated
 
@@ -74,6 +80,11 @@ class Settings(BaseSettings):
     DEVICE_SWEEPER_ENABLED: bool = True
     PROCESSING_WORKER_ENABLED: bool = True
     PROCESSING_WORKER_POLL_SECONDS: float = Field(default=2.0, gt=0)
+    @field_validator("LOCAL_AUDIO_DIR", mode="before")
+    @classmethod
+    def _blank_means_off(cls, v):
+        # `LOCAL_AUDIO_DIR=` (empty) turns local audio off, like leaving the line out.
+        return None if isinstance(v, str) and not v.strip() else v
 
     @field_validator("MODEL_DIR", "LOCAL_BACKUP_DIR", "LOCAL_AUDIO_DIR")
     @classmethod

@@ -18,6 +18,7 @@ os.environ.update({
     "LOAD_MODEL_ON_STARTUP": "false",
     "DEVICE_SWEEPER_ENABLED": "false",
     "PROCESSING_WORKER_ENABLED": "false",
+    "LOCAL_AUDIO_DIR": "",          # audio links are presigned S3 URLs unless a test opts in
 })
 
 import pytest  # noqa: E402

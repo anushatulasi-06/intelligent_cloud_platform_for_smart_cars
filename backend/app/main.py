@@ -16,7 +16,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import Settings, get_settings
 from app.db import mongo
-from app.routers import admin_config, admin_db, alerts, devices, device_data, health, local_audio, simulator
+from app.routers import (admin_config, admin_db, alerts, auth, dashboard, devices,
+                         device_data, fleet, health, local_audio, simulator, subscriptions)
 from app.services.errors import ServiceError
 
 log = logging.getLogger(__name__)
@@ -50,10 +51,10 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(status_code=503, content={"detail": "Database temporarily unavailable"})
 
 
-# What the frontend (CORS_ORIGINS, default http://localhost:5173) may send. X-Role / X-User-Id are the
-# auth stub's headers; Authorization is for the C1 JWT that replaces them.
+# What the frontend (CORS_ORIGINS, default http://localhost:5173) may send. Authorization carries
+# the JWT from POST /login; every endpoint except /health and /login needs it.
 CORS_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-CORS_HEADERS = ["Authorization", "Content-Type", "X-Role", "X-User-Id", "X-Device-Key"]
+CORS_HEADERS = ["Authorization", "Content-Type", "X-Device-Key"]
 
 
 def _sweep_loop(stop):
@@ -119,6 +120,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     register_error_handlers(app)
     app.include_router(health.router)
+    app.include_router(auth.router)
+    app.include_router(dashboard.router)
+    app.include_router(subscriptions.router)
+    app.include_router(fleet.router)
     app.include_router(admin_config.router)
     app.include_router(admin_db.router)
     app.include_router(alerts.router)

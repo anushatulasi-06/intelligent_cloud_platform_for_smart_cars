@@ -14,12 +14,13 @@ from app.db.models import AlertTypeConfig, Car, Subscription, User
 from app.db.repositories import alert_repo
 from app.main import create_app
 from app.services.notification_service import Decision, NotificationService
+from tests.auth_headers import bearer
 
 T0 = datetime(2026, 11, 3, 12, 0, tzinfo=timezone.utc)
-OWNER_A = {"X-Role": "owner", "X-User-Id": "1"}     # cars 10, 11
-OWNER_B = {"X-Role": "owner", "X-User-Id": "2"}     # car 20
-OWNER_NONE = {"X-Role": "owner", "X-User-Id": "4"}  # owns no cars
-STAFF = {"X-Role": "cloud_staff", "X-User-Id": "3"}
+OWNER_A = bearer("owner", 1)       # cars 10, 11
+OWNER_B = bearer("owner", 2)       # car 20
+OWNER_NONE = bearer("owner", 4)    # owns no cars
+STAFF = bearer("cloud_staff", 3)
 
 # (car, sound, severity, status, anomaly, hours ago)
 ROWS = [
@@ -87,7 +88,7 @@ def routes(ids):
 
 def test_iot_staff_403_and_no_role_401(client, ids, mdb):
     for method, url, body in routes(ids):
-        assert_error(client.request(method, url, json=body, headers={"X-Role": "iot_staff"}), 403)
+        assert_error(client.request(method, url, json=body, headers=bearer("iot_staff")), 403)
         assert_error(client.request(method, url, json=body), 401)
     assert mdb["alerts"].find_one({"record_id": "rec-0"})["status"] == "new"
 

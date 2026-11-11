@@ -40,12 +40,21 @@ create the `user`/`pass` role and the `autosound` database, then continue at ste
 **Frontend against this API:** in `frontend/.env.local` set `VITE_USE_MOCK=false` and
 `VITE_API_BASE_URL=http://localhost:8000`, then run `npm run dev`. CORS allows
 `http://localhost:5173` (`CORS_ORIGINS`) with the methods GET, POST, PUT and DELETE and the headers
-`X-Role`, `X-User-Id`, `Content-Type` and `Authorization`.
+`Authorization` and `Content-Type`.
 
 **Dev logins** created by the seed (local development only):
 `owner@autosound.dev / owner-dev-pass` (cars 1–3), `owner2@autosound.dev / owner2-dev-pass` (car 4),
 `iot@autosound.dev / iot-dev-pass`,
 `cloud@autosound.dev / cloud-dev-pass`.
+
+```bash
+# 8. Optional: positions for the Map and Tracking pages, and alert times moved to the last 2 hours.
+#    The seed leaves car_positions empty, so F9 and F10 have nothing to draw without this.
+#    From the repo root:
+python scripts/demo_data.py                  # 2 hours of history
+python scripts/demo_data.py --live           # keep the markers moving during a demo
+python scripts/demo_data.py --offline 3      # leave car 3 grey, to show the offline marker
+```
 
 **Tests** need no databases or AWS: `python -m pytest` (from `backend/`). They run on SQLite and
 mongomock. To also check the migration against real PostgreSQL, point `TEST_DATABASE_URL` at a
@@ -65,6 +74,13 @@ runs and is tested on 3.14. Install the CPU-only torch build to keep the instanc
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
+```
+
+Set a real `JWT_SECRET` in `backend/.env` before deploying, or every instance signs tokens with the
+committed development key:
+
+```bash
+python -c "import secrets; print('JWT_SECRET=' + secrets.token_urlsafe(48))" >> .env
 ```
 
 Run the API as **one uvicorn worker** (team decision, 2026-11-04):
@@ -95,7 +111,8 @@ backend/
 ├── app/
 │   ├── main.py          # create_app(): CORS, routers, Mongo indexes on startup
 │   ├── config.py        # Settings (pydantic-settings, reads backend/.env)
-│   ├── auth_stub.py     # TEMPORARY role headers – replace with the C1 JWT version
+│   ├── auth.py          # JWT auth: CurrentUser, get_current_user, require_role, owns_car
+│   ├── auth_stub.py     # re-exports app.auth so older imports keep working
 │   ├── db/              # ALL database code
 │   │   ├── postgres.py  # engine, session_scope(), get_session(), ping()
 │   │   ├── mongo.py     # client, get_collection(), INDEXES, ensure_indexes(), ping()
@@ -104,7 +121,8 @@ backend/
 │   │   ├── repositories/# the only code that queries a store, one file per data set
 │   │   ├── migrations/  # Alembic (alembic.ini is in backend/); 0001_initial_schema
 │   │   ├── seed.py      # idempotent dev data; seed_data/alerts.json = the frontend's 25 mock alerts
-│   ├── routers/         # HTTP endpoints: health, alerts, admin_config, admin_db, local_audio (dev)
+│   ├── routers/         # HTTP endpoints: health, auth, dashboard, subscriptions, fleet,
+│   │                    #   alerts, admin_config, admin_db, local_audio (dev)
 │   ├── services/        # business logic, calls repositories
 │   └── ml/              # inference; artifacts from MODEL_DIR (../model/artifacts)
 ├── tests/
@@ -115,10 +133,13 @@ backend/
 
 - **Only repositories talk to a database** (BR-5.1). Routers call services; services call repositories.
 - **Owners see only their own cars:** put the owner filter in the repository query, never filter after fetching.
-- **Every router except `/health` uses `require_role`** from `app.auth_stub`. The C1 JWT version will
-  replace that one file and keep the names `CurrentUser`, `get_current_user` and `require_role`.
-  Until then, send `X-Role: owner | iot_staff | cloud_staff` and optionally `X-User-Id` (default 1).
-  A missing or unknown role returns 401; a role that isn't allowed returns 403.
+- **Every router except `/health` and `POST /login` uses `require_role`** from `app.auth`. Call
+  `POST /login` with a seeded account and send the token back as `Authorization: Bearer <token>`;
+  the Authorize button in `/docs` does this for you. No token or an expired one returns 401, a role
+  that isn't allowed returns 403. Tokens last `JWT_TTL_MINUTES` (60) and carry the user id and role,
+  so checking a request costs no database query.
+- The old `X-Role` / `X-User-Id` headers are gone. `app.auth_stub` now just re-exports `app.auth`,
+  so routers that still import from it keep working; new code should import from `app.auth`.
 - Five sound categories only: emergency, in_vehicle, human, traffic, environmental.
 - `notify_method` is `email` (AWS SES) or `in_app`. No MQTT, MSK, IoT Core or push notifications.
 

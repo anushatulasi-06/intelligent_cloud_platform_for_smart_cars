@@ -1,12 +1,6 @@
 // One function per backend endpoint (Component Design, sections C1-C5).
-// C2-C5 call the real backend at
-// VITE_API_BASE_URL when VITE_USE_MOCK=false, sending the header role dropdown
-// as X-Role / X-User-Id (see http() below). C1, and the other components when
-// VITE_USE_MOCK is unset or "true", returns mock data from src/mocks/*.json
-// after a 200 ms delay; nothing is fetched. Names, parameters and response shapes
-// follow the design document so each body can later be replaced with a real
-// HTTP call (e.g. `return http('GET', '/alerts', { params })`) without
-// touching the pages.
+// C1-C5 call the backend with the signed-in user JWT when VITE_USE_MOCK=false.
+// Mock data is available only for an explicitly selected UI prototype mode.
 //
 // Errors are thrown as ApiError with the HTTP status the real backend would
 // return (404, 409, 422, ...), so pages already handle them.
@@ -27,6 +21,7 @@ import devicesJson from '../mocks/devices.json';
 import deviceDataJson from '../mocks/deviceData.json';
 import configJson from '../mocks/config.json';
 import sessionJson from '../mocks/session.json';
+import { getToken, sessionExpired } from './session.js';
 
 const DELAY_MS = 200;
 
@@ -35,20 +30,18 @@ const DELAY_MS = 200;
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
 
-// Demo auth (backend app/auth_stub.py): the role from the header dropdown plus a
-// seeded user id for that role (backend/app/db/seed.py). Replaced by the C1 JWT later.
-export const USER_ID_FOR_ROLE = { owner: 1, iot_staff: 3, cloud_staff: 4 };
-let currentRole = 'cloud_staff';
-export function setApiRole(role) { currentRole = role; }
-
 // Real HTTP call. Query params that are undefined, null or '' are left out (the
 // filter forms use '' for "any"). Errors become ApiError(status, detail).
-async function http(method, path, { params, body } = {}) {
+// `anonymous` is for POST /login, where a 401 means wrong credentials rather than
+// an expired session.
+async function http(method, path, { params, body, anonymous = false } = {}) {
   const url = new URL(API_BASE_URL + path);
   Object.entries(params || {}).forEach(([k, v]) => {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
   });
-  const headers = { 'X-Role': currentRole, 'X-User-Id': String(USER_ID_FOR_ROLE[currentRole] ?? '') };
+  const headers = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   let res;
   try {
@@ -56,6 +49,7 @@ async function http(method, path, { params, body } = {}) {
   } catch (e) {
     throw new ApiError(0, `Backend not reachable at ${API_BASE_URL} (${e.message})`);
   }
+  if (res.status === 401 && !anonymous) sessionExpired();   // token expired: back to F1 (BR-1.1)
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = text; }
@@ -107,34 +101,52 @@ const inRange = (iso, from, to) => (!from || iso >= from) && (!to || iso <= to);
 /* C1 Identity, dashboards and maps                                    */
 /* ------------------------------------------------------------------ */
 
+// The seeded development accounts (backend/app/db/seed.py). Mock mode accepts any
+// password for these, so teammates can work as each role without the backend.
+const DEV_ACCOUNTS = {
+  'owner@autosound.dev': { id: 1, name: 'Olivia Owner', role: 'owner', password: 'owner-dev-pass' },
+  'owner2@autosound.dev': { id: 2, name: 'Oscar Owner', role: 'owner', password: 'owner2-dev-pass' },
+  'iot@autosound.dev': { id: 3, name: 'Ian IoT', role: 'iot_staff', password: 'iot-dev-pass' },
+  'cloud@autosound.dev': { id: 4, name: 'Chloe Cloud', role: 'cloud_staff', password: 'cloud-dev-pass' },
+};
+
+// Shown on the login page while running `npm run dev`, never in a production build.
+export const DEV_LOGINS = Object.entries(DEV_ACCOUNTS)
+  .map(([email, a]) => ({ email, password: a.password, role: a.role }));
+
 // POST /login -> { access_token, token_type, expires_in, role, user: { id, name, email } }
-// Not used by the UI yet (no authentication in this build).
 export function login({ email, password }) {
+  if (!USE_MOCK) return http('POST', '/login', { body: { email, password }, anonymous: true });
   if (!email || !password) return fail(422, 'Email and password are required');
-  const { me } = sessionJson;
-  return respond({ access_token: 'mock-token', token_type: 'bearer', expires_in: 3600, role: me.role,
-    user: { id: me.id, name: me.name, email } });
+  const account = DEV_ACCOUNTS[String(email).trim().toLowerCase()];
+  if (!account) return fail(401, 'Invalid email or password');
+  return respond({ access_token: 'mock-token', token_type: 'bearer', expires_in: 3600,
+    role: account.role, user: { id: account.id, name: account.name, email } });
 }
 
 // GET /me -> { id, name, email, role }
 export function getMe() {
+  if (!USE_MOCK) return http('GET', '/me');
   return respond(sessionJson.me);
 }
 
 // GET /dashboard/owner -> { cars: [...], counts: { alerts_today, unresolved }, recent_alerts: [alert x5] }
 export function getOwnerDashboard() {
+  if (!USE_MOCK) return http('GET', '/dashboard/owner');
   return respond(dashboardJson.owner);
 }
 
 // GET /admin/fleet-summary?window_days -> { total_cars, devices, alerts_today, anomalies_today, alerts_by_type, alerts_per_day }
 export function getFleetSummary({ window_days = 7 } = {}) {
+  if (!USE_MOCK) return http('GET', '/admin/fleet-summary', { params: { window_days } });
   if (window_days < 1 || window_days > 90) return fail(422, 'window_days out of range');
   const s = dashboardJson.fleet_summary;
   return respond({ ...s, alerts_per_day: s.alerts_per_day.slice(-window_days) });
 }
 
 // GET /admin/reports/alerts?from&to&group_by&car_id -> { group_by, rows: [{ key, count, anomalies, avg_confidence }] }
-export function getAlertReport({ from, to, group_by = 'sound_type' } = {}) {
+export function getAlertReport({ from, to, group_by = 'sound_type', car_id } = {}) {
+  if (!USE_MOCK) return http('GET', '/admin/reports/alerts', { params: { from, to, group_by, car_id } });
   if (!from || !to) return fail(422, 'from and to are required');
   const days = (Date.parse(to) - Date.parse(from)) / 86400000;
   if (Number.isNaN(days) || days < 0) return fail(422, 'Invalid dates');
@@ -144,17 +156,21 @@ export function getAlertReport({ from, to, group_by = 'sound_type' } = {}) {
 
 // GET /subscriptions?car_id -> [{ id, car_id, alert_type, enabled, notify_method }]
 export function listSubscriptions({ car_id } = {}) {
+  if (!USE_MOCK) return http('GET', '/subscriptions', { params: { car_id } });
   return respond(db.subscriptions.filter((s) => !car_id || s.car_id === Number(car_id)));
 }
 
 // POST /subscriptions (upsert) -> { id, car_id, alert_type, enabled, notify_method }
 export function upsertSubscription({ car_id, alert_type, enabled, notify_method = 'email' }) {
+  if (!USE_MOCK) {
+    return http('POST', '/subscriptions', { body: { car_id: Number(car_id), alert_type, enabled, notify_method } });
+  }
   if (!SOUND_TYPES.includes(alert_type)) return fail(422, 'Invalid alert type');
   if (!['email', 'in_app'].includes(notify_method)) return fail(422, 'Invalid notify method');
-  let row = db.subscriptions.find((s) => s.car_id === car_id && s.alert_type === alert_type);
+  let row = db.subscriptions.find((s) => s.car_id === Number(car_id) && s.alert_type === alert_type);
   if (row) Object.assign(row, { enabled, notify_method });
   else {
-    row = { id: nextId(db.subscriptions), car_id, alert_type, enabled, notify_method };
+    row = { id: nextId(db.subscriptions), car_id: Number(car_id), alert_type, enabled, notify_method };
     db.subscriptions.push(row);
   }
   return respond(row);
@@ -162,19 +178,22 @@ export function upsertSubscription({ car_id, alert_type, enabled, notify_method 
 
 // DELETE /subscriptions/{id} -> 204
 export function deleteSubscription(id) {
+  if (!USE_MOCK) return http('DELETE', `/subscriptions/${id}`);
   const i = db.subscriptions.findIndex((s) => s.id === id);
   if (i < 0) return fail(404, 'Subscription not found');
   db.subscriptions.splice(i, 1);
   return respond(null);
 }
 
-// GET /health -> { status, version, time }
+// GET /health -> { status, version }
 export function getHealth() {
+  if (!USE_MOCK) return http('GET', '/health');
   return respond(sessionJson.health);
 }
 
 // GET /fleet/map?status&sound_type&car_id -> { cars: [{ car_id, name, lat, lon, heading, speed_kmh, position_at, status, open_alerts, top_severity }] }
 export function getFleetMap({ status, sound_type, car_id } = {}) {
+  if (!USE_MOCK) return http('GET', '/fleet/map', { params: { status, sound_type, car_id } });
   const hasOpen = (carId) => db.alerts.some((a) => a.car_id === carId && a.status !== 'resolved' && a.sound_type === sound_type);
   const cars = fleetJson.map.cars.filter((c) =>
     (!status || c.status === status) &&
@@ -184,7 +203,8 @@ export function getFleetMap({ status, sound_type, car_id } = {}) {
 }
 
 // GET /cars/{car_id}/track?from&to&max_points -> { car_id, points: [{ ts, lat, lon, speed_kmh }], alerts: [...] }
-export function getCarTrack(car_id, { from, to } = {}) {
+export function getCarTrack(car_id, { from, to, max_points } = {}) {
+  if (!USE_MOCK) return http('GET', `/cars/${car_id}/track`, { params: { from, to, max_points } });
   const track = fleetJson.tracks[car_id];
   if (!track) return fail(404, 'Car not found');
   if (from && to && Date.parse(to) - Date.parse(from) > 24 * 3600 * 1000) return fail(422, 'Range over 24 h');
