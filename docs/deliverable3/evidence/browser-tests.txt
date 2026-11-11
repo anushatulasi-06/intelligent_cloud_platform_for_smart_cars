@@ -1,0 +1,1 @@
+PASS real UI login, five scenarios, moving/stopped telemetry, F13, S3 audio playback, alert, model admin and read-only Cloud device view.

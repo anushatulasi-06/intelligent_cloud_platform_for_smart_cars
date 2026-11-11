@@ -1,0 +1,30 @@
+{
+  "author": "Rishi Sheth",
+  "started_at": "2026-11-11T02:10:43.980486+00:00",
+  "api_url": "http://127.0.0.1:8000",
+  "checks": [
+    "API health and real JWT staff login",
+    "Temporary WPA2 device registration, one-time key, inventory and role restrictions",
+    "Edit, Wi-Fi validation, protected configuration delivery and acknowledgement",
+    "Live heartbeat, capture command lifecycle, duplicate protection and simulator state",
+    "Audio authentication/format checks, S3 acceptance and idempotent replay",
+    "Real background worker and deployed model produced a linked alert",
+    "Byte-identical signed audio playback/download, monitor statistics and retry role/state guards",
+    "Deleted only the temporary device; accepted audio and alert retained as evidence"
+  ],
+  "retained_record_ids": [
+    "4cf72f45-0a5d-4a8e-ab33-69f0f74effa4"
+  ],
+  "temporary_device_id": 11,
+  "alert_id": "6af3cea556f856f70baf039c",
+  "model_version": "cnn-v1",
+  "classification": "in_vehicle",
+  "confidence": 0.778229832649231,
+  "observed_record_states": [
+    "pending",
+    "processed"
+  ],
+  "temporary_device_deleted": true,
+  "result": "PASS",
+  "finished_at": "2026-11-11T02:10:45.834977+00:00"
+}
