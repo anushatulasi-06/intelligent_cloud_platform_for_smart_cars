@@ -1,9 +1,10 @@
 """Ownership and virtual device semantics; no claim of real CARLA rendering."""
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
-from edge.carla_demo import CarlaDemoClient, OwnedCarlaVehicle
+from edge.carla_demo import AdvancingCarlaWorld, CarlaDemoClient, OwnedCarlaVehicle
 from tests.test_edge_client import command, setup  # noqa: F401 - isolated edge fixture
 from tests.test_devices import client, create, device_env  # noqa: F401
 from tests.auth_headers import bearer
@@ -86,3 +87,45 @@ def test_actual_carla_runner_firmware_selects_carla_ui_mode(client):
     assert response.status_code == 200
     state = client.get("/simulator/10/state", headers=bearer("iot_staff")).json()
     assert state["edge_mode"] == "carla" and state["position"]["town"] == "Town02"
+
+
+@pytest.mark.parametrize("snapshot", [None, SimpleNamespace(frame=10), SimpleNamespace(frame=9)])
+def test_frozen_or_regressed_world_cannot_send_heartbeats_or_uploads(snapshot):
+    world = SimpleNamespace(wait_for_tick=Mock(return_value=snapshot))
+    adapter = SimpleNamespace(step=Mock())
+    monitor = AdvancingCarlaWorld(world, frame=10, timeout=30)
+    with pytest.raises(RuntimeError, match="world is not advancing"):
+        monitor.step(adapter)
+    world.wait_for_tick.assert_called_once_with(30)
+    adapter.step.assert_not_called()
+    assert monitor.frame == 10
+
+
+def test_world_rpc_failure_never_permits_cached_edge_step():
+    world = SimpleNamespace(wait_for_tick=Mock(side_effect=RuntimeError("server disconnected")))
+    adapter = SimpleNamespace(step=Mock())
+    monitor = AdvancingCarlaWorld(world, frame=10, timeout=30)
+    with pytest.raises(RuntimeError, match="server disconnected"):
+        monitor.step(adapter)
+    adapter.step.assert_not_called()
+
+
+def test_only_new_world_ticks_permit_edge_steps():
+    world = SimpleNamespace(wait_for_tick=Mock(side_effect=[SimpleNamespace(frame=11), SimpleNamespace(frame=12)]))
+    adapter = SimpleNamespace(step=Mock())
+    monitor = AdvancingCarlaWorld(world, frame=10, timeout=30)
+    monitor.step(adapter)
+    monitor.step(adapter)
+    assert monitor.frame == 12 and adapter.step.call_count == 2
+
+
+def test_cloud_failure_does_not_allow_the_same_frozen_tick_to_be_reused():
+    world = SimpleNamespace(wait_for_tick=Mock(return_value=SimpleNamespace(frame=11)))
+    adapter = SimpleNamespace(step=Mock(side_effect=OSError("cloud temporarily unavailable")))
+    monitor = AdvancingCarlaWorld(world, frame=10, timeout=30)
+    with pytest.raises(OSError):
+        monitor.step(adapter)
+    assert monitor.frame == 11
+    with pytest.raises(RuntimeError, match="world is not advancing"):
+        monitor.step(adapter)
+    adapter.step.assert_called_once()

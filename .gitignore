@@ -30,3 +30,6 @@ backend/.local_audio/
 backend/.local_edge/
 # Private Docker demo credentials (generated once; retain across restarts).
 infra/.env.demo
+
+# Local official CARLA archive, server, client and evidence runtime
+.local_carla/

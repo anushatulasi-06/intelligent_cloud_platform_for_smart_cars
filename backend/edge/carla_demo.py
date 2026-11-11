@@ -78,6 +78,21 @@ class OwnedCarlaVehicle(AbstractContextManager):
         return False
 
 
+class AdvancingCarlaWorld:
+    """Gate cloud updates on a new server tick, never cached actor telemetry."""
+    def __init__(self, world, frame, timeout):
+        self.world, self.frame, self.timeout = world, frame, timeout
+
+    def step(self, adapter):
+        snapshot = self.world.wait_for_tick(self.timeout)
+        if snapshot is None or snapshot.frame <= self.frame:
+            raise RuntimeError("CARLA world is not advancing; cloud updates withheld")
+        # Consume the tick even if a later cloud request fails, so it cannot be
+        # reused to advertise cached telemetry when the simulator has frozen.
+        self.frame = snapshot.frame
+        adapter.step()
+
+
 class CarlaDemoClient(CarlaEdgeClient):
     """Real CARLA telemetry/camera with explicitly virtual device configuration."""
     def __init__(self, *args, **kwargs):
@@ -135,6 +150,7 @@ def main():
     snapshot = world.wait_for_tick(args.timeout)
     if snapshot is None or snapshot.frame <= before:
         raise SystemExit("CARLA world is not advancing; retain its existing clock owner")
+    live_world = AdvancingCarlaWorld(world, snapshot.frame, args.timeout)
     connection.get_trafficmanager(args.traffic_manager_port)
     cloud = CloudTransport(os.environ.get("EDGE_API_URL", "http://localhost:8000"), firmware="carla-demo-v1")
     player = SystemAudioPlayer(enabled=not args.no_audio_playback)
@@ -167,13 +183,13 @@ def main():
             while not stop.is_set():
                 started = time.monotonic()
                 try:
-                    adapter.step()
+                    live_world.step(adapter)
                 except httpx.HTTPStatusError as exc:
                     if exc.response.status_code in (401, 403, 404):
                         raise SystemExit("Device rejected or deleted; check ids, keys and car assignment") from None
                     log.warning("Cloud request failed (%s); buffered audio retained", exc.response.status_code)
                 except (httpx.HTTPError, OSError, RuntimeError):
-                    log.warning("Edge connection unavailable; buffered audio retained")
+                    log.warning("CARLA world or cloud unavailable; buffered audio retained")
                 stop.wait(max(0, args.heartbeat_seconds - (time.monotonic() - started)))
     finally:
         try:
