@@ -13,8 +13,9 @@ from app.db.models import AlertTypeConfig, ModelVersion
 from app.db.repositories import ModelRepo
 from app.main import create_app
 from app.services import model_service
+from tests.auth_headers import bearer
 
-STAFF = {"X-Role": "cloud_staff"}
+STAFF = bearer("cloud_staff")
 
 
 # ---- fixtures ---------------------------------------------------------------------------
@@ -100,7 +101,7 @@ def test_no_role_is_401(client, method, url, body):
 @pytest.mark.parametrize("role", ["owner", "iot_staff"])
 @pytest.mark.parametrize("method,url,body", ROUTES)
 def test_other_roles_are_403(client, method, url, body, role):
-    assert_error(client.request(method, url, json=body, headers={"X-Role": role}), 403)
+    assert_error(client.request(method, url, json=body, headers=bearer(role)), 403)
     assert active_labels() == ["cnn-v3"]                       # nothing changed
 
 

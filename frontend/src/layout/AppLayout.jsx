@@ -24,6 +24,11 @@ export default function AppLayout() {
   const [seen, setSeen] = useState(() => new Set());
 
   const refreshCount = useCallback(() => {
+    // IoT staff may not read alerts at all, so asking would only produce 403s.
+    if (!canAccess(role, 'alerts')) {
+      setNewIds(null);
+      return;
+    }
     // 100 = the backend's maximum page_size (GET /alerts answers 422 above it).
     listAlerts({ status: 'new', page: 1, page_size: 100 })
       .then((r) => setNewIds(r.items.map((a) => a.id)))

@@ -17,6 +17,10 @@ class PositionRepo(MongoRepo):
         return self.add({"car_id": car_id, "ts": ts, "lat": lat, "lon": lon,
                          "speed_kmh": speed_kmh, "heading": heading})
 
+    def delete_between(self, car_id: int, from_: datetime, to: datetime) -> int:
+        """Remove one car's positions in a time range. Returns how many were deleted."""
+        return self.collection.delete_many({"car_id": car_id, "ts": {"$gte": from_, "$lte": to}}).deleted_count
+
     def last_per_car(self, car_ids: list[int]) -> dict[int, dict]:
         """Newest position of each car (uses the {car_id:1, ts:-1} index)."""
         rows = self.collection.aggregate([

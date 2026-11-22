@@ -22,6 +22,7 @@ from app.ml.classifier import EXPECTED_LABELS, AudioCNN, CnnClassifier, ModelLoa
 from app.ml.model_config import ModelConfigError, load_model_config
 from app.ml.preprocessor import AudioLoadError, AudioPreprocessor
 from app.ml.severity import SeverityPolicy, UnknownAlertType
+from tests.auth_headers import bearer
 from app.services import orchestrator as orch_mod
 from app.services.orchestrator import MLOrchestrator, ModelNotReady
 
@@ -405,7 +406,7 @@ def test_activate_endpoint_reloads_real_orchestrator(world, artifacts, monkeypat
     o.reload_model()
     monkeypatch.setattr(model_service, "get_orchestrator", lambda: o)
     with TestClient(create_app()) as c:
-        r = c.put("/admin/models/2/activate", headers={"X-Role": "cloud_staff"})
+        r = c.put("/admin/models/2/activate", headers=bearer("cloud_staff"))
     assert r.status_code == 200, r.text
     assert o.loaded.version_label == "cnn-v2"
 

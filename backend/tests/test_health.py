@@ -36,31 +36,31 @@ def test_health_503_does_not_leak_error_details(client, monkeypatch):
 
 
 def test_health_is_public(client, sqlite_engine):
-    assert client.get("/health").status_code == 200   # no X-Role header needed
+    assert client.get("/health").status_code == 200   # no token needed
 
 
 def test_cors_allows_configured_origin(client):
     r = client.options("/health", headers={
         "Origin": "http://localhost:5173",
         "Access-Control-Request-Method": "GET",
-        "Access-Control-Request-Headers": "X-Role, X-User-Id",
+        "Access-Control-Request-Headers": "authorization",
     })
     assert r.status_code == 200
     assert r.headers["access-control-allow-origin"] == "http://localhost:5173"
 
 
 @pytest.mark.parametrize("method", ["PUT", "POST", "GET", "DELETE"])
-def test_cors_preflight_allows_role_headers_and_writes(client, method):
+def test_cors_preflight_allows_auth_header_and_writes(client, method):
     r = client.options("/alerts/abc", headers={
         "Origin": "http://localhost:5173",
         "Access-Control-Request-Method": method,
-        "Access-Control-Request-Headers": "x-role, x-user-id, content-type",
+        "Access-Control-Request-Headers": "authorization, content-type",
     })
     assert r.status_code == 200
     assert r.headers["access-control-allow-origin"] == "http://localhost:5173"
     assert method in r.headers["access-control-allow-methods"]
     allowed = r.headers["access-control-allow-headers"].lower()
-    assert all(h in allowed for h in ("x-role", "x-user-id", "content-type"))
+    assert all(h in allowed for h in ("authorization", "content-type"))
 
 
 def test_cors_rejects_unlisted_header(client):

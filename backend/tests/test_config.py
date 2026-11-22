@@ -16,6 +16,12 @@ def test_absolute_model_dir_kept():
     assert Settings(MODEL_DIR="/opt/models").MODEL_DIR == Path("/opt/models")
 
 
+def test_blank_local_audio_dir_means_off():
+    assert Settings(LOCAL_AUDIO_DIR="").LOCAL_AUDIO_DIR is None
+    assert Settings(LOCAL_AUDIO_DIR="  ").LOCAL_AUDIO_DIR is None
+    assert Settings(LOCAL_AUDIO_DIR=".local_audio").LOCAL_AUDIO_DIR.name == ".local_audio"
+
+
 def test_cors_origins_split():
     s = Settings(CORS_ORIGINS="http://localhost:5173, https://app.example.com ,")
     assert s.cors_origin_list == ["http://localhost:5173", "https://app.example.com"]
@@ -38,7 +44,7 @@ def test_env_example_has_every_documented_key():
             if line and not line.startswith("#")}
     assert keys == {"DATABASE_URL", "MONGO_URI", "S3_BUCKET", "AWS_REGION", "MODEL_DIR",
                     "CONFIDENCE_THRESHOLD", "CORS_ORIGINS", "DEV_FAKE_EMAIL", "DEV_FAKE_BACKUP",
-                    "LOCAL_AUDIO_DIR"}
+                    "LOCAL_AUDIO_DIR", "JWT_SECRET", "JWT_TTL_MINUTES"}
     for k in keys:
         assert hasattr(Settings, k) or k in Settings.model_fields
 

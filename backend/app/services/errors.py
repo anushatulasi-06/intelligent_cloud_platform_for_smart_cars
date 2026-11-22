@@ -10,6 +10,10 @@ class ServiceError(Exception):
         self.detail = detail
 
 
+class Unauthorized(ServiceError):
+    status_code = 401
+
+
 class Forbidden(ServiceError):
     status_code = 403
 

@@ -21,9 +21,9 @@
         "heading": 90,
         "speed_kmh": 0,
         "position_at": "2026-11-02T16:59:30.000Z",
-        "status": "urgent",
-        "open_alerts": 3,
-        "top_severity": "high"
+        "status": "alert",
+        "open_alerts": 2,
+        "top_severity": "medium"
       },
       {
         "car_id": 3,
@@ -33,9 +33,9 @@
         "heading": 180,
         "speed_kmh": 61,
         "position_at": "2026-11-02T16:59:00.000Z",
-        "status": "urgent",
-        "open_alerts": 3,
-        "top_severity": "high"
+        "status": "online",
+        "open_alerts": 0,
+        "top_severity": null
       },
       {
         "car_id": 4,
@@ -46,8 +46,8 @@
         "speed_kmh": 18,
         "position_at": "2026-11-02T16:50:00.000Z",
         "status": "offline",
-        "open_alerts": 5,
-        "top_severity": "critical"
+        "open_alerts": 1,
+        "top_severity": "high"
       }
     ]
   },
@@ -131,30 +131,30 @@
       "alerts": [
         {
           "id": "d6e2d40702e359b9c99141ef",
-          "ts": "2026-11-02T16:47:00.000Z",
           "lat": 37.32998,
           "lon": -121.87482,
           "sound_type": "emergency",
           "severity": "high",
-          "status": "new"
+          "status": "new",
+          "timestamp": "2026-11-02T16:47:00.000Z"
         },
         {
           "id": "dcb021ec6ed95e0dccd879ba",
-          "ts": "2026-11-02T10:05:00.000Z",
           "lat": 37.34028,
           "lon": -121.87203,
           "sound_type": "in_vehicle",
           "severity": "high",
-          "status": "new"
+          "status": "new",
+          "timestamp": "2026-11-02T10:05:00.000Z"
         },
         {
           "id": "db8206c1e13a606f0b15ec8e",
-          "ts": "2026-11-02T05:43:00.000Z",
           "lat": 37.33508,
           "lon": -121.89044,
           "sound_type": "human",
           "severity": "medium",
-          "status": "new"
+          "status": "new",
+          "timestamp": "2026-11-02T05:43:00.000Z"
         }
       ]
     },
@@ -237,30 +237,30 @@
       "alerts": [
         {
           "id": "15fa3b4be418ca3cf203273c",
-          "ts": "2026-11-02T15:35:00.000Z",
           "lat": 37.34484,
           "lon": -121.94788,
           "sound_type": "human",
           "severity": "medium",
-          "status": "new"
+          "status": "new",
+          "timestamp": "2026-11-02T15:35:00.000Z"
         },
         {
           "id": "d169d41efda155eefa53519b",
-          "ts": "2026-11-02T11:10:00.000Z",
           "lat": 37.35951,
           "lon": -121.94109,
           "sound_type": "traffic",
           "severity": "low",
-          "status": "new"
+          "status": "new",
+          "timestamp": "2026-11-02T11:10:00.000Z"
         },
         {
           "id": "184634f752132172f1914345",
-          "ts": "2026-11-02T04:14:00.000Z",
           "lat": 37.34057,
           "lon": -121.93583,
           "sound_type": "environmental",
           "severity": "low",
-          "status": "resolved"
+          "status": "resolved",
+          "timestamp": "2026-11-02T04:14:00.000Z"
         }
       ]
     },
@@ -343,30 +343,30 @@
       "alerts": [
         {
           "id": "6000582bb6146b2ad7e1b1f8",
-          "ts": "2026-11-02T14:05:00.000Z",
           "lat": 37.32785,
           "lon": -121.91891,
           "sound_type": "environmental",
           "severity": "low",
-          "status": "new"
+          "status": "new",
+          "timestamp": "2026-11-02T14:05:00.000Z"
         },
         {
           "id": "3ef5f7d25f251c79b2ce2116",
-          "ts": "2026-11-02T07:10:00.000Z",
           "lat": 37.32356,
           "lon": -121.91359,
           "sound_type": "emergency",
           "severity": "high",
-          "status": "new"
+          "status": "new",
+          "timestamp": "2026-11-02T07:10:00.000Z"
         },
         {
           "id": "9494678438f949920b3481f3",
-          "ts": "2026-11-02T02:56:00.000Z",
           "lat": 37.32031,
           "lon": -121.91288,
           "sound_type": "human",
           "severity": "medium",
-          "status": "acknowledged"
+          "status": "acknowledged",
+          "timestamp": "2026-11-02T02:56:00.000Z"
         }
       ]
     },
@@ -449,30 +449,30 @@
       "alerts": [
         {
           "id": "048e55464064bce3443d24f4",
-          "ts": "2026-11-02T12:39:00.000Z",
           "lat": 37.36658,
           "lon": -121.9057,
           "sound_type": "in_vehicle",
           "severity": "high",
-          "status": "new"
+          "status": "new",
+          "timestamp": "2026-11-02T12:39:00.000Z"
         },
         {
           "id": "846c58e68b9b822f2b7da152",
-          "ts": "2026-11-02T08:40:00.000Z",
           "lat": 37.36962,
           "lon": -121.91238,
           "sound_type": "traffic",
           "severity": "low",
-          "status": "resolved"
+          "status": "resolved",
+          "timestamp": "2026-11-02T08:40:00.000Z"
         },
         {
           "id": "2ad279a035b1cc8c7b604e5c",
-          "ts": "2026-11-02T01:28:00.000Z",
           "lat": 37.37458,
           "lon": -121.91198,
           "sound_type": "environmental",
           "severity": "low",
-          "status": "new"
+          "status": "new",
+          "timestamp": "2026-11-02T01:28:00.000Z"
         }
       ]
     }

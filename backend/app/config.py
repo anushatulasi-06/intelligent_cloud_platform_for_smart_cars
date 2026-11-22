@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     MODEL_DIR: Path = Path("../model/artifacts")
     CONFIDENCE_THRESHOLD: float = 0.75   # default only; the active model's threshold wins
 
+    # Auth (C1). Change JWT_SECRET in backend/.env before deploying; tokens signed with the
+    # default are only safe on a developer machine.
+    JWT_SECRET: str = "dev-only-secret-change-me-before-deploying"   # 32+ bytes, or PyJWT warns
+    JWT_ALGORITHM: str = "HS256"
+    JWT_TTL_MINUTES: int = 60
+
     # Web
     CORS_ORIGINS: str = "http://localhost:5173"   # comma-separated
 

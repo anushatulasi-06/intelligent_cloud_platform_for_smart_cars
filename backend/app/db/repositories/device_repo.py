@@ -1,7 +1,7 @@
 """devices (PostgreSQL). Owners may only read devices of their own cars (DT-C2-1)."""
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 
 from app.db.models import Car, Device
 from app.db.repositories.base import SqlRepo
@@ -37,3 +37,16 @@ class DeviceRepo(SqlRepo[Device]):
 
     def list_for_car(self, car_id: int) -> list[Device]:
         return list(self.session.scalars(select(Device).where(Device.car_id == car_id).order_by(Device.id)))
+
+    def count_by_status(self) -> dict[str, int]:
+        """How many devices are in each state, for the fleet dashboard (F6)."""
+        rows = self.session.execute(select(Device.status, func.count()).group_by(Device.status))
+        return {status: count for status, count in rows if status}
+
+    def counts_for_cars(self, car_ids: list[int]) -> dict[int, dict[str, int]]:
+        """Per car: {"total": n, "online": n}. Cars without devices are not in the result (F2)."""
+        online = func.sum(case((Device.status == "online", 1), else_=0))
+        rows = self.session.execute(
+            select(Device.car_id, func.count(), online)
+            .where(Device.car_id.in_(car_ids)).group_by(Device.car_id))
+        return {car_id: {"total": total, "online": int(n_online or 0)} for car_id, total, n_online in rows}
