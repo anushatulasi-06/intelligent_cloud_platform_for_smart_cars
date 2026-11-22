@@ -8,7 +8,7 @@ Usage:
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/ — relative paths in .env (e.g. MODEL_DIR=../model/artifacts) resolve from here,
@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     MONGO_URI: str = "mongodb://localhost:27017/autosound"
     S3_BUCKET: str = "autosound-audio-dev"
     AWS_REGION: str = "us-west-2"
+    # Optional S3-compatible service; unset uses AWS. Public endpoint is used only for browser links.
+    S3_ENDPOINT_URL: str | None = None
+    S3_PUBLIC_ENDPOINT_URL: str | None = None
 
     # ML
     MODEL_DIR: Path = Path("../model/artifacts")
@@ -75,10 +78,15 @@ class Settings(BaseSettings):
     # Load the active model version's artifacts when the app starts (a failure is logged, not fatal).
     LOAD_MODEL_ON_STARTUP: bool = True
 
-    @field_validator("LOCAL_AUDIO_DIR", mode="before")
+    # Keep this Fernet key stable across restarts; encrypted Wi-Fi settings depend on it.
+    WIFI_ENCRYPTION_KEY: str = Field(default="", repr=False)
+    DEVICE_SWEEPER_ENABLED: bool = True
+    PROCESSING_WORKER_ENABLED: bool = True
+    PROCESSING_WORKER_POLL_SECONDS: float = Field(default=2.0, gt=0)
+    @field_validator("LOCAL_AUDIO_DIR", "S3_ENDPOINT_URL", "S3_PUBLIC_ENDPOINT_URL", mode="before")
     @classmethod
-    def _blank_means_off(cls, v):
-        # `LOCAL_AUDIO_DIR=` (empty) turns local audio off, like leaving the line out.
+    def _blank_audio_dir_is_off(cls, v):
+        # LOCAL_AUDIO_DIR= (empty) means "off", the same as leaving it unset.
         return None if isinstance(v, str) and not v.strip() else v
 
     @field_validator("MODEL_DIR", "LOCAL_BACKUP_DIR", "LOCAL_AUDIO_DIR")

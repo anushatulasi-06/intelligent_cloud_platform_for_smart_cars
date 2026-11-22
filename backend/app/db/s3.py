@@ -8,6 +8,7 @@ Usage:
     url = s3.presigned_url(key)          # 5-minute download link
 """
 import time
+from datetime import datetime
 
 import boto3
 from botocore.client import BaseClient
@@ -20,11 +21,14 @@ _client: BaseClient | None = None
 
 def make_client(**kwargs) -> BaseClient:
     """Create an S3 client. SigV4 signing so presigned URLs carry X-Amz-Expires (SigV2 is deprecated)."""
+    endpoint = kwargs.pop("endpoint_url", get_settings().S3_ENDPOINT_URL)
     return boto3.client(
         "s3",
         region_name=get_settings().AWS_REGION,
+        endpoint_url=endpoint,
         config=Config(signature_version="s3v4", connect_timeout=3, read_timeout=10,
-                      retries={"max_attempts": 2}),
+                      retries={"max_attempts": 2},
+                      s3={"addressing_style": "path" if endpoint else "auto"}),
         **kwargs,
     )
 
@@ -61,9 +65,16 @@ def get_object(key: str) -> bytes:
 
 def presigned_url(key: str, expires: int = 300) -> str:
     """Short-lived GET link (default 5 minutes, as in GET /alerts/{id}/audio)."""
-    return get_client().generate_presigned_url(
-        "get_object", Params={"Bucket": _bucket(), "Key": key}, ExpiresIn=expires
-    )
+    public = get_settings().S3_PUBLIC_ENDPOINT_URL
+    # Sign for the browser-visible host. Rewriting the hostname after signing breaks SigV4.
+    client = make_client(endpoint_url=public) if public else get_client()
+    try:
+        return client.generate_presigned_url(
+            "get_object", Params={"Bucket": _bucket(), "Key": key}, ExpiresIn=expires
+        )
+    finally:
+        if public:
+            client.close()
 
 
 def list_prefix(prefix: str) -> list[str]:
@@ -84,6 +95,21 @@ def exists(key: str) -> bool:
     except ClientError as exc:
         if exc.response.get("Error", {}).get("Code") in ("404", "NoSuchKey", "NotFound"):
             return False
+        raise
+
+
+def object_last_modified(key: str) -> datetime | None:
+    """Actual object update time, or None when the key is absent.
+
+    Simulator frame freshness must come from S3, because a device heartbeat can
+    continue while its camera has stopped uploading.
+    """
+    from botocore.exceptions import ClientError
+    try:
+        return get_client().head_object(Bucket=_bucket(), Key=key).get("LastModified")
+    except ClientError as exc:
+        if exc.response.get("Error", {}).get("Code") in ("404", "NoSuchKey", "NotFound"):
+            return None
         raise
 
 

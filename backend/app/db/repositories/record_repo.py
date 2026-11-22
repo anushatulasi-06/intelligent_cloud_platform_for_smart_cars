@@ -4,6 +4,7 @@ States: pending -> processing (120 s lease) -> processed | back to pending | fai
 """
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from uuid import uuid4
 
 from pymongo import ASCENDING, DESCENDING, ReturnDocument
 
@@ -40,32 +41,46 @@ class RecordRepo(MongoRepo):
     def claim_next(self, lease_seconds: int = LEASE_SECONDS) -> dict | None:
         """Atomically take the oldest pending record, or one whose lease expired (BR-3.4)."""
         now = _now()
+        # A crash on the last attempt must not leave an endlessly reclaimable lease.
+        self.collection.update_many(
+            {"attempts": {"$gte": MAX_ATTEMPTS}, "$or": [
+                {"status": "pending"}, {"status": "processing", "lease_until": {"$lte": now}}]},
+            {"$set": {"status": "failed", "processed": False, "lease_until": None,
+                      "error": "Processing lease expired after the final attempt"}})
         doc = self.collection.find_one_and_update(
-            {"$or": [{"status": "pending"}, {"status": "processing", "lease_until": {"$lt": now}}]},
-            {"$set": {"status": "processing", "lease_until": now + timedelta(seconds=lease_seconds)},
+            {"attempts": {"$lt": MAX_ATTEMPTS}, "$or": [
+                {"status": "pending"}, {"status": "processing", "lease_until": {"$lte": now}}]},
+            {"$set": {"status": "processing", "lease_until": now + timedelta(seconds=lease_seconds),
+                      "lease_token": str(uuid4())},
              "$inc": {"attempts": 1}},
             sort=[("received_timestamp", ASCENDING)],
             return_document=ReturnDocument.AFTER,
         )
         return self.to_public(doc)
 
-    def mark_processed(self, record_id: str, alert_id: str | None) -> dict | None:
+    def mark_processed(self, record_id: str, alert_id: str | None, *, attempt: int | None = None,
+                       lease_token: str | None = None) -> dict | None:
         return self._set(record_id, {"status": "processed", "processed": True, "alert_id": alert_id,
-                                     "lease_until": None, "error": None})
+                                     "processed_at": _now(), "lease_until": None, "lease_token": None,
+                                     "error": None}, attempt=attempt, lease_token=lease_token)
 
-    def mark_error(self, record_id: str, error: str, max_attempts: int = MAX_ATTEMPTS) -> dict | None:
+    def mark_error(self, record_id: str, error: str, max_attempts: int = MAX_ATTEMPTS,
+                   *, attempt: int | None = None, lease_token: str | None = None) -> dict | None:
         """Back to pending for another try, or failed once attempts are used up (BR-3.5)."""
         rec = self.get_by_record_id(record_id)
         if rec is None:
             return None
         status = "failed" if rec.get("attempts", 0) >= max_attempts else "pending"
-        return self._set(record_id, {"status": status, "error": error[:500], "lease_until": None})
+        return self._set(record_id, {"status": status, "processed": False,
+                                    "error": error[:500], "lease_until": None, "lease_token": None},
+                         attempt=attempt, lease_token=lease_token)
 
     def retry_failed(self, record_id: str) -> dict | None:
         """POST /device-data/{id}/retry: only failed records go back to the queue (else None -> 409)."""
         doc = self.collection.find_one_and_update(
             {"record_id": record_id, "status": "failed"},
-            {"$set": {"status": "pending", "attempts": 0, "error": None, "lease_until": None}},
+            {"$set": {"status": "pending", "processed": False, "attempts": 0,
+                      "error": None, "lease_until": None, "lease_token": None}},
             return_document=ReturnDocument.AFTER)
         return self.to_public(doc)
 
@@ -92,6 +107,11 @@ class RecordRepo(MongoRepo):
         for row in self.collection.aggregate([{"$group": {"_id": "$status", "n": {"$sum": 1}}}]):
             if row["_id"] in counts:
                 counts[row["_id"]] = row["n"]
+        # The GUI labels this card "Processed (24 h)"; other cards show live backlog.
+        cutoff = now - timedelta(hours=24)
+        counts["processed"] = self.collection.count_documents({"status": "processed", "$or": [
+            {"processed_at": {"$gte": cutoff}},
+            {"processed_at": None, "received_timestamp": {"$gte": cutoff}}]})
         start = (now - timedelta(hours=window_hours)).replace(minute=0, second=0, microsecond=0)
         hours = {start + timedelta(hours=i): 0 for i in range(window_hours + 1)}
         for doc in self.collection.find({"received_timestamp": {"$gte": start}}, {"received_timestamp": 1}):
@@ -101,9 +121,26 @@ class RecordRepo(MongoRepo):
             if bucket in hours:
                 hours[bucket] += 1
         per_hour = [{"hour": h.isoformat(), "count": n} for h, n in sorted(hours.items())][-window_hours:]
-        return {"counts": counts, "per_hour": per_hour}
+        totals = next(iter(self.collection.aggregate([{"$group": {
+            "_id": None, "bytes_stored": {"$sum": "$size_bytes"}}}])), {})
+        latency, completed = 0.0, 0
+        for doc in self.collection.find({"status": "processed", "processed_at": {"$gte": start}},
+                                         {"processed_at": 1, "received_timestamp": 1}):
+            received, processed = doc.get("received_timestamp"), doc.get("processed_at")
+            if received and processed:
+                latency += max(0, (processed - received).total_seconds())
+                completed += 1
+        return {"counts": counts, "per_hour": per_hour,
+                "bytes_stored": totals.get("bytes_stored", 0),
+                "avg_latency_s": latency / completed if completed else None}
 
-    def _set(self, record_id: str, fields: dict[str, Any]) -> dict | None:
-        doc = self.collection.find_one_and_update({"record_id": record_id}, {"$set": fields},
+    def _set(self, record_id: str, fields: dict[str, Any], *, attempt: int | None = None,
+             lease_token: str | None = None) -> dict | None:
+        query = {"record_id": record_id}
+        if attempt is not None:
+            query.update(status="processing", attempts=attempt, lease_until={"$gt": _now()})
+        if lease_token is not None:
+            query["lease_token"] = lease_token
+        doc = self.collection.find_one_and_update(query, {"$set": fields},
                                                   return_document=ReturnDocument.AFTER)
         return self.to_public(doc)

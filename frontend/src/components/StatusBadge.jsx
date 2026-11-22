@@ -13,7 +13,7 @@ const TONES = {
   new: 'new', acknowledged: 'acknowledged', resolved: 'resolved',
   // devices, cars, stores, jobs, records
   online: 'online', moving: 'online', healthy: 'online', succeeded: 'online', processed: 'online', enabled: 'online',
-  offline: 'offline', parked: 'offline', registered: 'offline', inactive: 'offline', standby: 'offline', delivered: 'new', expired: 'offline', disabled: 'offline', pending: 'offline',
+  offline: 'failed', parked: 'offline', registered: 'offline', inactive: 'offline', standby: 'offline', delivered: 'new', expired: 'offline', disabled: 'offline', pending: 'offline',
   failed: 'failed', down: 'failed',
   degraded: 'medium',
   queued: 'new', running: 'new', processing: 'new', configuring: 'new',

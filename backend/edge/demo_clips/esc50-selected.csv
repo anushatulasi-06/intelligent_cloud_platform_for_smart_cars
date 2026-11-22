@@ -1,0 +1,6 @@
+filename,fold,target,category,esc10,src_file,take
+1-54084-A-42.wav,1,42,siren,False,54084,A
+1-20133-A-39.wav,1,39,glass_breaking,False,20133,A
+1-211527-A-20.wav,1,20,crying_baby,True,211527,A
+1-17124-A-43.wav,1,43,car_horn,False,17124,A
+1-17367-A-10.wav,1,10,rain,True,17367,A

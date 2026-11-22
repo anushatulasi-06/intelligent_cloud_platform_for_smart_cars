@@ -44,7 +44,9 @@ def test_env_example_has_every_documented_key():
             if line and not line.startswith("#")}
     assert keys == {"DATABASE_URL", "MONGO_URI", "S3_BUCKET", "AWS_REGION", "MODEL_DIR",
                     "CONFIDENCE_THRESHOLD", "CORS_ORIGINS", "DEV_FAKE_EMAIL", "DEV_FAKE_BACKUP",
-                    "LOCAL_AUDIO_DIR", "JWT_SECRET", "JWT_TTL_MINUTES"}
+                    "LOCAL_AUDIO_DIR", "WIFI_ENCRYPTION_KEY", "DEVICE_SWEEPER_ENABLED",
+                    "PROCESSING_WORKER_ENABLED", "PROCESSING_WORKER_POLL_SECONDS",
+                    "JWT_SECRET", "JWT_TTL_MINUTES", "S3_ENDPOINT_URL", "S3_PUBLIC_ENDPOINT_URL"}
     for k in keys:
         assert hasattr(Settings, k) or k in Settings.model_fields
 
