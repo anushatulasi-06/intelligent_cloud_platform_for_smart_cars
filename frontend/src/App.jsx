@@ -4,7 +4,6 @@ import { ROLE_HOME } from './config/access.js';
 import { ToastProvider } from './components/Toast.jsx';
 import AppLayout from './layout/AppLayout.jsx';
 import RequireAccess from './layout/RequireAccess.jsx';
-import PlaceholderPage from './pages/PlaceholderPage.jsx';
 import LoginPage from './pages/login/LoginPage.jsx';
 import DashboardPage from './pages/dashboard/DashboardPage.jsx';
 import MapViewPage from './pages/map/MapViewPage.jsx';
