@@ -8,8 +8,12 @@ CMPE 281, Group 8. Component submission by **Anusha Tulasi**, branch `feature/co
 | **C5 Database Management and Configuration** | Config | F8a, F8b, F14 | FR-8, FR-9 (database support for all) |
 
 The design follows *Component Design for Intelligent Cloud Platform for Smart Cars* (Group 8),
-chapters C4 and C5. C1 (dashboard, login), C2 (devices) and C3 (data ingestion) belong to
-teammates and are not part of this submission. See [Scope and dependencies](#scope-and-dependencies).
+chapters C4 and C5. This branch also integrates the teammates' components: C1 (login, dashboards,
+map, tracking), C2 (devices, simulator) and C3 (data ingestion). See
+[Scope and dependencies](#scope-and-dependencies).
+
+C2 (Device Manager) and C3 (Data Management) setup, the Docker demo stack and the CARLA edge client are
+documented in [infra/README.md](infra/README.md) and [backend/edge/README.md](backend/edge/README.md).
 
 ---
 
@@ -212,9 +216,10 @@ npm run dev                   # http://localhost:5173
 
 Without step 3's `.env.local` the UI runs on **mock data** and needs no backend.
 
-**Logging in:** login (F1) and JWT belong to C1. Until they land, use the **Role** dropdown in the
-header. The frontend sends it to the backend as the `X-Role` / `X-User-Id` headers. Use
-`cloud_staff` to see every C4 and C5 screen, and `owner` to see owner scoping on Alerts.
+**Logging in:** sign in at `/login` (F1, from C1) with a seeded account. The API issues a JWT, which the
+frontend sends as `Authorization: Bearer <token>`. Use `cloud@autosound.dev` / `cloud-dev-pass` to see
+every C4 and C5 screen, and `owner@autosound.dev` / `owner-dev-pass` to see owner scoping on Alerts.
+All seeded accounts are listed in [infra/README.md](infra/README.md#seeded-accounts-local-development-only).
 
 **Alert audio locally (optional):** presigned S3 links need AWS credentials. To play clips without
 S3:
@@ -381,7 +386,10 @@ load switches back to the previous model.
 ### 5. Check the deployment
 ```bash
 curl https://<api-domain>/health                                      # {"status":"ok",...}
-curl -H "X-Role: cloud_staff" https://<api-domain>/admin/db/health    # postgres, mongodb, s3 healthy
+TOKEN=$(curl -s -X POST https://<api-domain>/login -H "Content-Type: application/json" \
+  -d '{"email":"cloud@autosound.dev","password":"<password>"}' \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+curl -H "Authorization: Bearer $TOKEN" https://<api-domain>/admin/db/health   # postgres, mongodb, s3 healthy
 ```
 Then open the frontend, go to F14 (all three cards should show Healthy) and play an alert's audio
 in F7, which checks the presigned S3 link.
@@ -390,24 +398,33 @@ in F7, which checks the presigned S3 link.
 
 ## Scope and dependencies
 
-- **C3's ingestion worker** (`POST /device-data`, the record queue) is not in this branch. C4
-  provides `MLOrchestrator.handle_record(record)` for that worker to call. The pipeline is covered
-  by the backend tests, and the seed provides alerts so the UI can be shown on its own.
-- **C1 (login, dashboards, map)** and **C2 (devices, simulator)** pages appear as placeholders in
-  this branch.
-- **`device_commands`** (C2) arrives later as migration `0002_device_commands` on top of
-  `0001_initial_schema`.
+This branch combines all five components. C4 and C5 are described above; the others come from
+teammates' branches:
+
+| Component | Pages | Where it connects to C4/C5 |
+|---|---|---|
+| **C1** Login, dashboards, map, tracking | F1, F2, F3, F6, F9, F10 | JWT login (`POST /login`) protects every C4 and C5 endpoint. |
+| **C2** Device Manager and simulator | F4, F5, F11 | Device and command tables live in the C5 data layer; `device_commands` is migration `0002_device_commands` on top of `0001_initial_schema`. |
+| **C3** Data ingestion | F13 | `POST /device-data` stores the clip in S3 and queues a record in MongoDB; the in-process processing worker calls the C4 `MLOrchestrator.handle_record(record)`, which creates the alert. |
+
+- The seed still provides alerts, so the Alerts and Config pages can be shown without a running edge
+  client.
+- The full Docker stack (with MinIO in place of S3), the edge clients and CARLA are documented in
+  [infra/README.md](infra/README.md) and [backend/edge/README.md](backend/edge/README.md).
 
 ## Repository layout
 
 ```
 backend/    FastAPI API: routers, services (C4 orchestrator, alerts, notifications; C5 config,
-            maintenance), db/ (models, repositories, migrations, seed), ml/, tests/
-frontend/   React 18 + Vite UI: pages/alerts (F12, F7), pages/config (F8a, F8b, F14), shared shell
+            maintenance; C2 devices; C3 ingestion and processing worker), db/ (models,
+            repositories, migrations, seed), ml/, tests/; edge/ holds the local and CARLA edge clients
+frontend/   React 18 + Vite 7 UI: pages/alerts (F12, F7), pages/config (F8a, F8b, F14), plus the C1
+            login, dashboard, map and tracking pages and the C2/C3 devices and simulator pages
 model/      CNN training, evaluation, checkpoints, and the packaged artifact cnn-v1
-scripts/    export_model.py, make_dummy_model.py, make_local_audio.py
-infra/      docker-compose.yml for local PostgreSQL and MongoDB; aws/ deploy scripts, systemd unit,
-            production .env template, IAM and bucket policies
+scripts/    model scripts (export_model.py, make_dummy_model.py, make_local_audio.py), demo_data.py,
+            and verify_* checks against a running deployment
+infra/      docker-compose.yml for local PostgreSQL and MongoDB; demo-compose.yml for the full Docker
+            stack; aws/ deploy scripts and policies; carla/ server launcher (see infra/README.md)
 ```
 
 ---
@@ -473,7 +490,7 @@ second active model.
 In **F8b**, press **Activate** on the `cnn-v2` row and confirm. Or call the API:
 ```bash
 curl -X PUT http://localhost:8000/admin/models/<id>/activate \
-     -H "X-Role: cloud_staff" -H "X-User-Id: 1"
+     -H "Authorization: Bearer $TOKEN"    # cloud_staff token from POST /login, as in "Check the deployment"
 ```
 - Activation is one transaction: the old version becomes standby and the new one active
   (BR-CF-1).

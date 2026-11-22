@@ -8,6 +8,7 @@ from app.db.repositories.alert_repo import AlertRepo
 from app.db.repositories.alert_type_repo import AlertTypeRepo
 from app.db.repositories.base import BaseRepository, MongoRepo, SqlRepo
 from app.db.repositories.car_repo import CarRepo
+from app.db.repositories.command_repo import CommandRepo
 from app.db.repositories.device_repo import DeviceRepo
 from app.db.repositories.job_repo import JobRepo
 from app.db.repositories.model_repo import ModelRepo
@@ -19,5 +20,5 @@ from app.db.repositories.user_repo import UserRepo
 __all__ = [
     "BaseRepository", "SqlRepo", "MongoRepo",
     "UserRepo", "CarRepo", "DeviceRepo", "SubscriptionRepo", "AlertTypeRepo", "ModelRepo", "JobRepo",
-    "AlertRepo", "PositionRepo", "RecordRepo",
+    "AlertRepo", "PositionRepo", "RecordRepo", "CommandRepo",
 ]

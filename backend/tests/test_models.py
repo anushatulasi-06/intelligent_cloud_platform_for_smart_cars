@@ -27,9 +27,9 @@ def make_car(owner_id, plate=None):
     return add(Car(owner_id=owner_id, make="Toyota", model="Camry", plate=plate))
 
 
-def test_all_seven_tables_exist(sql_db):
+def test_all_eight_tables_exist(sql_db):
     assert {n for n in inspect(sql_db).get_table_names() if not n.startswith("test_")} == {
-        "users", "cars", "devices", "subscriptions", "alert_type_config", "model_versions", "maintenance_jobs"}
+        "users", "cars", "devices", "device_commands", "subscriptions", "alert_type_config", "model_versions", "maintenance_jobs"}
 
 
 def test_column_types_and_lengths():

@@ -12,6 +12,8 @@ import TrackingPage from './pages/tracking/TrackingPage.jsx';
 import AlertsPage from './pages/alerts/AlertsPage.jsx';
 import AlertDetailPage from './pages/alerts/AlertDetailPage.jsx';
 import ConfigPage from './pages/config/ConfigPage.jsx';
+import DeviceManagerPage from './pages/devices/DeviceManagerPage.jsx';
+import SimulatorPage from './pages/simulator/SimulatorPage.jsx';
 
 // Everything below the login page needs a token; a 401 clears the session and lands here too.
 function RequireSignIn() {
@@ -41,8 +43,8 @@ export default function App() {
               <Route path="/tracking" element={guard('tracking', <TrackingPage />)} />
               <Route path="/alerts" element={guard('alerts', <AlertsPage />)} />
               <Route path="/alerts/:id" element={guard('alerts', <AlertDetailPage />)} />
-              <Route path="/simulator" element={guard('simulator', <PlaceholderPage pageKey="simulator" />)} />
-              <Route path="/devices" element={guard('devices', <PlaceholderPage pageKey="devices" />)} />
+              <Route path="/simulator" element={guard('simulator', <SimulatorPage />)} />
+              <Route path="/devices" element={guard('devices', <DeviceManagerPage />)} />
               <Route path="/config" element={guard('config', <ConfigPage />)} />
               <Route path="*" element={<div className="placeholder"><h1>Not found</h1></div>} />
             </Route>

@@ -13,9 +13,11 @@ class PositionRepo(MongoRepo):
     time_field = "ts"
 
     def add_position(self, car_id: int, ts: datetime, lat: float, lon: float,
-                     speed_kmh: float | None = None, heading: float | None = None) -> dict:
+                     speed_kmh: float | None = None, heading: float | None = None,
+                     town: str | None = None) -> dict:
         return self.add({"car_id": car_id, "ts": ts, "lat": lat, "lon": lon,
-                         "speed_kmh": speed_kmh, "heading": heading})
+                         "speed_kmh": speed_kmh, "heading": heading,
+                         **({"town": town} if town else {})})
 
     def delete_between(self, car_id: int, from_: datetime, to: datetime) -> int:
         """Remove one car's positions in a time range. Returns how many were deleted."""
