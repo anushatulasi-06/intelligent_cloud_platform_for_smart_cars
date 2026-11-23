@@ -1,0 +1,28 @@
+# Optional: the local edge client (virtual car with an illustrated camera) as a background service.
+# Option A only. Installed by `ENABLE_EDGE_DEMO=1 bash infra/aws/setup_ec2.sh`.
+# Keeps the C2 Simulator (F11) live and sends the five recorded sound scenarios through C3/C4.
+#
+#   sudo systemctl stop autosound-edge      # before a CARLA client connects with the same devices
+#   sudo systemctl start autosound-edge
+#   journalctl -u autosound-edge -f
+
+[Unit]
+Description=Smart Car Platform local edge demo client
+After=autosound-api.service
+Wants=autosound-api.service
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/autosound/backend
+Environment=PYTHONUNBUFFERED=1
+Environment=EDGE_API_URL=http://127.0.0.1:8000
+EnvironmentFile=/home/ec2-user/autosound/infra/aws/edge.env
+# No speakers on a server: the browser previews the audio instead.
+ExecStart=/home/ec2-user/autosound/backend/.venv/bin/python -m edge.demo_client --no-audio-playback --buffer-dir .local_edge/demo
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

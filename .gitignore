@@ -36,3 +36,5 @@ infra/.env.demo
 
 # Output of scripts/verify_*.cjs browser checks
 .local_evidence/
+# Optional EC2 demo-feed settings (from infra/aws/edge.env.example)
+infra/aws/edge.env
