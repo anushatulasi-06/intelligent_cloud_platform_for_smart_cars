@@ -1,0 +1,25 @@
+# Optional: scripts/demo_data.py --live as a background service, so the other cars move on the
+# C1 Map (F9) and Tracking (F10). Option A only. Installed by
+# `ENABLE_DEMO_DATA=1 bash infra/aws/setup_ec2.sh`. Options come from DEMO_DATA_ARGS in
+# infra/aws/edge.env. Each start rewrites the recent history and moves the seeded alerts to "now".
+#
+#   journalctl -u autosound-demo-data -f
+
+[Unit]
+Description=Smart Car Platform demo positions (demo_data.py --live)
+After=autosound-api.service
+Wants=autosound-api.service
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/autosound/backend
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/home/ec2-user/autosound/infra/aws/edge.env
+ExecStart=/home/ec2-user/autosound/backend/.venv/bin/python /home/ec2-user/autosound/scripts/demo_data.py $DEMO_DATA_ARGS
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

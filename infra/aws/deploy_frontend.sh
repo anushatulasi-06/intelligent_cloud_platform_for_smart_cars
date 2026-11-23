@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Build the React frontend and publish it to an S3 static-website bucket.
-# Run from any machine with Node 18+ and the AWS CLI configured:
+# Option A: build the React frontend and publish it to an S3 static-website bucket.
+# Run from any machine with Node 20.19+ (Vite 7) and the AWS CLI configured:
 #
-#   FRONTEND_BUCKET=<frontend-bucket> API_BASE_URL=https://<api-domain> \
+#   FRONTEND_BUCKET=<frontend-bucket> API_BASE_URL=http://<elastic-ip>:8000 \
 #     bash infra/aws/deploy_frontend.sh
 #
 # The first run also turns on static website hosting and applies frontend-bucket-policy.json
@@ -11,11 +11,14 @@
 set -euo pipefail
 
 : "${FRONTEND_BUCKET:?set FRONTEND_BUCKET to the S3 bucket name}"
-: "${API_BASE_URL:?set API_BASE_URL to the backend URL, e.g. https://api.example.com}"
+: "${API_BASE_URL:?set API_BASE_URL to the backend URL, e.g. http://<elastic-ip>:8000}"
 AWS_REGION="${AWS_REGION:-us-west-2}"
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 log() { printf '\n==> %s\n' "$*"; }
+
+node -e 'const [a,b]=process.versions.node.split(".").map(Number); process.exit(a>22||(a===22&&b>=12)||(a===20&&b>=19)?0:1)' \
+  || { echo "Node $(node -v) is too old: Vite 7 needs Node 20.19+ or 22.12+" >&2; exit 1; }
 
 log "Build (VITE_USE_MOCK=false, VITE_API_BASE_URL=$API_BASE_URL)"
 cd "$REPO_DIR/frontend"

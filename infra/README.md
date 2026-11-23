@@ -1,11 +1,115 @@
 # Infrastructure
 
+How to run the whole system (C1–C5), locally or on AWS, plus demo data, verification and the edge
+clients, including CARLA.
+
+## Ways to run it
+
+| Where | How | Needs | Guide |
+|---|---|---|---|
+| **Local, no Docker** | Homebrew PostgreSQL and MongoDB, MinIO for S3, backend and frontend in terminals | macOS with Homebrew | [Local setup without Docker](#local-setup-without-docker-homebrew--minio) |
+| **Local, Docker databases** | `docker-compose.yml` runs PostgreSQL and MongoDB; backend and frontend in terminals | Docker | `docker compose -f infra/docker-compose.yml up -d`, then [backend README → Run it](../backend/README.md#run-it) |
+| **Local, all in Docker** | `demo-compose.yml` runs everything: databases, MinIO, API, frontend and edge client | Docker | [Full local stack (Docker)](#full-local-stack-docker) |
+| **AWS, option A** | EC2 scripts, frontend on an S3 website | AWS account | [`aws/SETUP.md`](aws/SETUP.md) |
+| **AWS, option B** | Docker on EC2 | AWS account | [`aws/docker/SETUP.md`](aws/docker/SETUP.md) |
+
+## What's in this folder
+
 | Path | Purpose |
 |---|---|
-| [`docker-compose.yml`](docker-compose.yml) | Local PostgreSQL 16 and MongoDB 7 only, for running the backend and frontend on the host. See the [root README](../README.md#run-it). |
-| [`demo-compose.yml`](demo-compose.yml) | Full local stack in Docker: PostgreSQL, MongoDB, MinIO (S3-compatible), API, frontend and the local edge client. |
-| [`aws/`](aws/) | EC2 / S3 deployment scripts. See the [root README](../README.md#deployment-aws). |
-| [`carla/`](carla/) | CARLA 0.9.16 server launcher, hardware probe and matching client requirements. |
+| [`docker-compose.yml`](docker-compose.yml) | PostgreSQL 16 and MongoDB 7 only, for local development |
+| [`demo-compose.yml`](demo-compose.yml) · [`init_demo_env.py`](init_demo_env.py) · [`init_demo_storage.py`](init_demo_storage.py) · [`start_demo_api.sh`](start_demo_api.sh) · [`Minio.Dockerfile`](Minio.Dockerfile) · [`extract_demo_minio.py`](extract_demo_minio.py) | Full local Docker stack: compose file, private settings generator, bucket creation, API start-up, MinIO image |
+| [`aws/`](aws/) | AWS deployment, option A (scripts) and option B (Docker) |
+| [`carla/`](carla/) | CARLA 0.9.16 server launcher, hardware probe, matching client requirements |
+
+---
+
+## Seeded accounts
+
+`python -m app.db.seed` (run by every setup path) creates these **development** accounts. Their
+passwords are public in the repository.
+
+| Account | Password | Role | Can open |
+|---|---|---|---|
+| `owner@autosound.dev` | `owner-dev-pass` | owner of cars 1–3 | Dashboard, Subscriptions, Map, Tracking, Alerts (own cars) |
+| `owner2@autosound.dev` | `owner2-dev-pass` | owner of car 4 | The same pages, car 4 only |
+| `iot@autosound.dev` | `iot-dev-pass` | IoT staff | Device Manager (create, edit, Wi-Fi, commands), Simulator |
+| `cloud@autosound.dev` | `cloud-dev-pass` | cloud staff | Everything, including Config, device data retry and the fleet dashboard |
+
+The seed also creates:
+- 4 cars and 5 devices: a microphone on each car, plus camera `cam-1` on car 1. They start as
+  *registered*; a device only shows *online* while an edge client sends heartbeats.
+- 5 alert types, the active model `cnn-v1`, and 25 alerts.
+
+The seed is idempotent: it adds only missing rows and never overwrites anything.
+
+---
+
+## Local setup without Docker (Homebrew + MinIO)
+
+For macOS without Docker. MinIO is a local S3-compatible server, so audio uploads, camera frames
+and presigned links work just as they do on AWS.
+
+### One-time setup
+```bash
+brew install postgresql@16 mongodb/brew/mongodb-community@7.0 minio
+brew services start postgresql@16
+brew services start mongodb/brew/mongodb-community@7.0
+createuser -s user 2>/dev/null; psql -d postgres -c "ALTER USER \"user\" PASSWORD 'pass'"
+createdb -h localhost -U user autosound
+
+cd backend
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env
+cd ../frontend && npm install && cp .env.example .env.local && cd ..
+```
+
+In `backend/.env`, set these values:
+
+| Setting | Value |
+|---|---|
+| `S3_BUCKET` | `autosound-audio-dev` |
+| `S3_ENDPOINT_URL` | `http://127.0.0.1:9000` |
+| `S3_PUBLIC_ENDPOINT_URL` | empty |
+| `LOCAL_AUDIO_DIR` | empty |
+| `WIFI_ENCRYPTION_KEY` | generate once with `backend/.venv/bin/python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`, and keep it |
+
+`LOCAL_AUDIO_DIR` must stay empty, or audio from new alerts won't play.
+
+### Start (one terminal each, from the repository root)
+
+| Terminal | Command |
+|---|---|
+| 1. MinIO | `MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin minio server ~/minio-data --console-address :9001` |
+| 2. API | `cd backend && source .venv/bin/activate && export AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin && uvicorn app.main:app --reload` |
+| 3. UI | `cd frontend && npm run dev` |
+| 4. Edge client (car 1) | `cd backend && source .venv/bin/activate && EDGE_API_URL=http://localhost:8000 EDGE_CAR_ID=1 EDGE_DEVICE_ID=1 EDGE_DEVICE_KEY=dev-device-key-mic-1 EDGE_CAMERA_DEVICE_ID=5 EDGE_CAMERA_DEVICE_KEY=dev-device-key-cam-1 python -m edge.demo_client` |
+| 5. Map positions | `cd backend && source .venv/bin/activate && python ../scripts/demo_data.py --live --offline 1 4` |
+
+The backend reads S3 credentials from the shell environment, not from `.env`, so keep the
+`export` in terminal 2.
+
+**First time only**, and again after a database reset: run these in terminal 2 before `uvicorn`.
+```bash
+S3_ENDPOINT_URL=http://127.0.0.1:9000 S3_BUCKET=autosound-audio-dev AWS_REGION=us-west-2 \
+  python ../infra/init_demo_storage.py     # create the bucket
+alembic upgrade head                       # 8 tables
+python -m app.db.seed                      # seeded accounts and data
+```
+Then upload the seeded alerts' audio, as described in [Demo data](#demo-data).
+
+| Address | What |
+|---|---|
+| http://localhost:5173 | UI |
+| http://localhost:8000/docs | API docs |
+| http://localhost:9001 | MinIO console (`minioadmin` / `minioadmin`) |
+
+**Reset the data:**
+```bash
+dropdb -h localhost -U user autosound && createdb -h localhost -U user autosound
+mongosh autosound --quiet --eval 'db.dropDatabase()'
+```
+Then repeat the first-time commands.
 
 ---
 
@@ -20,20 +124,20 @@ docker compose --env-file infra/.env.demo -f infra/demo-compose.yml up --build -
 docker compose --env-file infra/.env.demo -f infra/demo-compose.yml ps
 ```
 
+It starts PostgreSQL, MongoDB, MinIO, a one-off bucket initializer, the API, the frontend and the
+local edge client.
+- The API runs the migrations and the seed before it serves requests.
+- PostgreSQL and MongoDB are reachable only inside the Compose network.
 - Keep `infra/.env.demo` between restarts. It holds the Wi-Fi encryption key, so stored Wi-Fi
   passwords can't be decrypted without it. Don't commit it or show it on screen.
-- The API runs migrations and seeds the database before it serves requests.
-- MinIO provides real S3-compatible uploads and signed downloads, so no AWS account is needed.
-- PostgreSQL and MongoDB are only reachable inside the Compose network.
+- The MinIO image is x86-64 only, so on Apple Silicon it runs under emulation.
 
-| Surface | Address |
+| Address | What |
 |---|---|
-| UI and login | http://localhost:5173/login |
-| API docs | http://localhost:8000/docs |
-| Object downloads (MinIO) | http://localhost:9000 |
-| MinIO console | http://localhost:9001 (credentials in `infra/.env.demo`) |
-
-The frontend forwards `/api` to the API. The edge client reaches the API over the internal network.
+| http://localhost:5173/login | UI. nginx also forwards `/api` to the API. |
+| http://localhost:8000/docs | API docs |
+| http://localhost:9000 | Object downloads (MinIO) |
+| http://localhost:9001 | MinIO console (credentials in `infra/.env.demo`) |
 
 ```bash
 # Logs, without resetting any data
@@ -43,37 +147,47 @@ docker compose --env-file infra/.env.demo -f infra/demo-compose.yml logs --tail=
 docker compose --env-file infra/.env.demo -f infra/demo-compose.yml down
 ```
 
-The defaults bind everything to the local machine. A remote deployment needs reachable
-UI/API/object-storage URLs, private secrets and HTTPS. With AWS S3, leave `S3_ENDPOINT_URL` unset
-and provide the bucket, region and credentials or an instance role.
+---
 
-### Seeded accounts (local development only)
+## Demo data
 
-| Account | Password | Access |
+Besides the seed, these give each component something to show:
+
+| Data | For | How |
 |---|---|---|
-| `iot@autosound.dev` | `iot-dev-pass` | Devices: create, edit, Wi-Fi, commands; Simulator |
-| `cloud@autosound.dev` | `cloud-dev-pass` | Inspect devices and Simulator, retry audio records, Alerts and Config |
-| `owner@autosound.dev` | `owner-dev-pass` | Owner dashboard and alerts; staff pages are locked |
+| **Car positions** | C1 Map (F9), Tracking (F10), "today" counts | `python scripts/demo_data.py` writes 2 hours of routes for every car and moves the seeded alerts to "now". Add `--live` to keep cars moving, `--offline 1 4` to leave cars 1 and 4 grey, `--minutes N` for a different history length, and `--keep-alerts` to leave alert times alone. A car is online while its last position is under 90 s old. |
+| **Live Simulator, F13 records, new alerts** | C2, C3, C4 | Run an edge client, then trigger the five sound scenarios in F11 (`/simulator?car_id=1`). |
+| **Audio for the 25 seeded alerts** | C4 F7 | The seed creates no audio. Upload the clips from `backend/.local_audio/` (created by `python scripts/make_local_audio.py`, which needs `model/data/`) to the bucket, using the backend's own S3 settings. See below. |
+| **Subscriptions** | C4 notifications | None are seeded. Sign in as an owner, open **Dashboard → Subscriptions (F3)**, and turn categories on. |
+| **Backup jobs** | C5 F14 | Click **Run backup now**. |
 
-- A fresh seed creates car 1 with microphone `mic-1` and camera `cam-1`, and the Compose edge
-  client uses those two devices.
-- A device created in F4 gets a new random key. An edge process must be configured with that key
-  before the device sends heartbeats or acknowledges commands. Registering a device doesn't start
-  a device process.
-- To check it works, open `/simulator?car_id=1` as IoT Staff. Heartbeats produce telemetry and a
-  labelled camera frame. **Start route** moves the car; **Stop route** stops it. A device's
-  status comes from its recent heartbeats, not from the seed.
+To upload the seeded audio, run this from `backend/`, with the virtualenv active and the
+storage credentials exported:
 
-### Live verification
+```bash
+python -c "
+from pathlib import Path
+from app.db import s3
+root = Path('.local_audio'); files = sorted(root.rglob('*.wav'))
+for p in files: s3.upload_file(str(p), p.relative_to(root).as_posix(), 'audio/wav')
+print('uploaded', len(files), 'clips')"
+```
 
-With the stack running, from the repository root:
+When the edge client drives car 1, keep car 1 in `demo_data.py --offline`, so the two sources
+never write different routes for the same car.
+
+---
+
+## Live verification
+
+With any setup running, from the repository root:
 
 ```bash
 backend/.venv/bin/python scripts/verify_components.py --base-url http://localhost:8000
 ```
 
-The script tests the running system end to end: real HTTP, JWT login, the databases, object
-storage, the processing worker and the deployed model.
+It tests the running system end to end: real HTTP, JWT login, the databases, object storage, the
+processing worker and the deployed model.
 - It creates one uniquely named temporary microphone, checks its lifecycle, and deletes only that
   device.
 - The test-tone audio it uploads and the alert it creates are left in the system.
@@ -85,12 +199,16 @@ storage, the processing worker and the deployed model.
 
 ## Edge clients and CARLA
 
-There are two edge clients:
-- the **local edge demo**, a virtual car with an illustrated camera, which runs in the stack above
-  as `edge-demo`
-- the **CARLA client**
+Both edge clients send heartbeats, camera frames, command acknowledgements and audio uploads to
+the API, using the seeded devices `mic-1` (ID 1) and `cam-1` (ID 5) on car 1:
 
-Both send heartbeats, camera frames, command acknowledgements and audio uploads to the API.
+| Client | What it is | Camera |
+|---|---|---|
+| `edge.demo_client` | A virtual car, with no simulator needed | An illustrated frame drawn in code, labelled "LOCAL EDGE DEMO" |
+| `edge.carla_demo` / `edge.carla_client` | A real vehicle in a CARLA 0.9.16 world | Real CARLA RGB frames |
+
+**Run only one edge client at a time** for the same devices.
+
 Configuration, commands, audio scenarios and buffering are covered in the
 [edge client guide](../backend/edge/README.md). Recording credits and the CC BY-NC 3.0 license are
 in [`demo_clips/README.md`](../backend/edge/demo_clips/README.md).
@@ -100,10 +218,17 @@ category; copy [`scenarios.example.json`](../backend/edge/scenarios.example.json
 - Paths in the file are relative to the file itself.
 - Each recording must be a non-empty WAV or MP3, at most 10 MiB and 15 s long.
 
-### CARLA server (Linux x86-64)
+### CARLA server (Linux x86-64 with an NVIDIA GPU)
 
-Needs Python 3.12, a working hardware Vulkan driver, and room for the 8 GB server archive. From the
-repository root:
+**Requirements:**
+- Linux x86-64 with Python 3.12, room for the 8 GB server archive, and a working hardware
+  **Vulkan** graphics driver.
+- macOS isn't supported.
+- **Google Colab can't render CARLA's camera.** Its GPUs are exposed for compute only, so Vulkan
+  fails with `ERROR_INCOMPATIBLE_DRIVER`. There, only physics mode (`start physics`, no camera)
+  works.
+
+From the repository root:
 
 ```bash
 python3.12 -m venv .local_carla/client-env
@@ -112,7 +237,7 @@ export CARLA_CLIENT_PYTHON="$PWD/.local_carla/client-env/bin/python"
 export CARLA_TASK_ROOT="$PWD/.local_carla"
 "$CARLA_CLIENT_PYTHON" infra/carla/probe.py --work-dir "$CARLA_TASK_ROOT" --require-gpu
 bash infra/carla/launch.sh prepare        # downloads the official 0.9.16 server, checks its size
-bash infra/carla/launch.sh start camera   # low-quality offscreen rendering, 0.05 s physics step
+bash infra/carla/launch.sh start camera   # or: start physics (no camera)
 ```
 
 - Everything generated stays under `.local_carla/`, which is gitignored.
@@ -120,20 +245,34 @@ bash infra/carla/launch.sh start camera   # low-quality offscreen rendering, 0.0
 - The server uses RPC port 2000. The edge client uses Traffic Manager port 8001, to stay clear of
   the API port.
 
-Then connect the Docker stack to CARLA. Stop the lightweight edge first, because two edge clients
-must never use the same device IDs:
+Then stop any other edge client using the same devices, and connect CARLA to the API:
+
+| Where the API runs | Stop the other edge client with | `EDGE_API_URL` |
+|---|---|---|
+| Local, no Docker | Ctrl+C in terminal 4 | `http://localhost:8000` (on the same machine) |
+| Full local Docker stack | `docker compose --env-file infra/.env.demo -f infra/demo-compose.yml stop edge-demo` | `http://localhost:8000` |
+| AWS | see the CARLA step of [`aws/SETUP.md`](aws/SETUP.md) or [`aws/docker/SETUP.md`](aws/docker/SETUP.md) | `http://<elastic-ip>:8000` |
 
 ```bash
-docker compose --env-file infra/.env.demo -f infra/demo-compose.yml stop edge-demo
 cd backend
+export EDGE_API_URL=http://localhost:8000 EDGE_CAR_ID=1 \
+       EDGE_DEVICE_ID=1 EDGE_DEVICE_KEY=dev-device-key-mic-1 \
+       EDGE_CAMERA_DEVICE_ID=5 EDGE_CAMERA_DEVICE_KEY=dev-device-key-cam-1
 "$CARLA_CLIENT_PYTHON" -m edge.carla_demo --camera-width 320 --camera-height 180 --no-edge-audio
 ```
 
-- Set `EDGE_API_URL` and the `EDGE_*` device IDs and keys as described in the
-  [edge client guide](../backend/edge/README.md).
+- Add `--no-camera` when the server runs in physics mode.
 - `edge.carla_demo` creates its own vehicle and camera and removes them when it exits.
   `edge.carla_client --actor-id <id>` attaches to an existing vehicle instead.
 - To stop: press Ctrl+C in the edge terminal, then run `bash infra/carla/launch.sh stop` from the
   repository root.
 - Wi-Fi and reboot commands only act on the simulated device. Real hardware needs its own
   executor for them.
+
+---
+
+## AWS deployment
+
+One EC2 instance with RDS PostgreSQL, MongoDB Atlas, S3 and SES. Pick an option and follow its
+guide from start to finish: **[option A, scripts](aws/SETUP.md)** or
+**[option B, Docker](aws/docker/SETUP.md)**.
