@@ -29,12 +29,16 @@ class ProcessingWorker:
                                      lease_token=record["lease_token"])
         return True
 
-    def run(self, stop: Event, poll_seconds: float = 2) -> None:
+    def run(self, stop: Event, poll_seconds: float = 2, on_cycle=None) -> None:
         while not stop.is_set():
+            ok = False
             try:
                 self.run_once()
+                ok = True
             except Exception as exc:
                 log.warning("Processing queue unavailable (%s)", type(exc).__name__)
+            if on_cycle is not None:
+                on_cycle(ok)
             stop.wait(poll_seconds)
 
 

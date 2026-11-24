@@ -8,12 +8,19 @@
 #
 # Pulls the code (including any new model/artifacts/<version>/ folders), installs dependencies,
 # runs migrations, restarts the service and waits for GET /health.
-# A new model version still has to be registered (seed) and activated in F8b; see README.
+# A new model version must be registered and activated through reviewed model management;
+# development seeding is prohibited in production.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SERVICE=autosound-api
 log() { printf '\n==> %s\n' "$*"; }
+
+source "$REPO_DIR/infra/aws/deployment_guard.sh"
+require_aws_deployment_consent
+require_aws_demo_consent
+python3 "$REPO_DIR/infra/aws/validate_production_env.py" "$REPO_DIR/backend/.env"
+prepare_aws_edge_settings
 
 cd "$REPO_DIR"
 if [ "${SKIP_PULL:-0}" = "1" ]; then
@@ -24,6 +31,9 @@ else
   git pull --ff-only
   git log -1 --oneline
 fi
+
+# The pulled revision may change validation; check again before dependency/database changes.
+python3 "$REPO_DIR/infra/aws/validate_production_env.py" "$REPO_DIR/backend/.env"
 
 cd backend
 log "Dependencies"
@@ -46,11 +56,14 @@ if [ "$healthy" != 1 ]; then
   exit 1
 fi
 
-# Optional demo feeds pick up the new code too (only if setup_ec2.sh enabled them).
-for unit in autosound-edge autosound-demo-data; do
-  if systemctl is-enabled --quiet "$unit" 2>/dev/null; then
+# Optional feeds are never silently restarted without the current-run request and cost consent.
+for feed in edge:ENABLE_EDGE_DEMO demo-data:ENABLE_DEMO_DATA; do
+  unit="autosound-${feed%%:*}"; flag="${feed##*:}"
+  if [ "${!flag:-0}" = 1 ] && systemctl is-enabled --quiet "$unit" 2>/dev/null; then
     log "Restart $unit"
     sudo systemctl restart "$unit"
+  elif systemctl is-enabled --quiet "$unit" 2>/dev/null; then
+    sudo systemctl disable --now "$unit"
   fi
 done
 log "Deployed."

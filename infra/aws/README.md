@@ -1,11 +1,179 @@
-# AWS deployment
+# AWS deployment safety and cost review
 
-There are two ways to deploy all five components (C1–C5) to one EC2 instance, with no load
-balancer. Both use RDS PostgreSQL, MongoDB Atlas, S3 and SES. Pick one and follow its guide from
-start to finish.
+Author: Rishi Sheth. Current authorized AWS credit budget: **$0**. Local review and tests are
+allowed; creating resources, installing on an AWS instance, starting feeds, probing AWS stores,
+and uploading audio are deferred until separate authorization. No AWS deployment is claimed.
 
-| | Option A: scripts | Option B: Docker |
-|---|---|---|
-| **Guide** | **[`SETUP.md`](SETUP.md)** | **[`docker/SETUP.md`](docker/SETUP.md)** |
-| UI | S3 static website | `http://<elastic-ip>/` (nginx on EC2) |
-| API | `http://<elastic-ip>:8000` | `http://<elastic-ip>:8000` |
+**Option B is the recommended private demo:** [Docker setup](docker/SETUP.md). Its API and UI
+bind EC2 loopback and are reached through SSH. [Option A](SETUP.md) runs the API with systemd
+and the frontend locally through the same kind of tunnel. The former public HTTP S3 website
+publisher is disabled. Public hosting requires a separate HTTPS, authentication and cost review.
+
+## Deployment guard
+
+All AWS setup/deploy shell entry points check consent before package downloads, local/server
+mutations, migrations or restarts. With missing consent or `AWS_CREDIT_BUDGET_USD=0`, they exit.
+For a later authorized deployment, these three variables are required together:
+
+```bash
+export ALLOW_AWS_DEPLOYMENT=I_ACCEPT_AWS_RESOURCE_CHANGES
+export AWS_COST_ACK=I_ACCEPT_AWS_USAGE_COSTS
+export AWS_CREDIT_BUDGET_USD='<separately-approved-positive-planning-amount>'
+```
+
+The amount is an acknowledgement, **not a hard spending cap**. Do not populate it while the
+budget is zero. Do not bypass the wrapper with direct Compose build/up, installer commands,
+or AWS console/CLI changes. Budget notifications can arrive after usage; they do not stop costs.
+See [AWS Budgets timing](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html).
+
+Defaults are no development seed and no feeds. `SKIP_SEED=0` is refused in production. A new
+empty database uses private bootstrap credentials, not public repository passwords/device keys.
+Optional feeds require `ALLOW_AWS_DEMO_FEEDS=I_UNDERSTAND_REQUEST_COSTS` and explicit
+`ENABLE_EDGE_DEMO=1` or `ENABLE_DEMO_DATA=1` on each setup run. Omitted feeds are stopped on
+subsequent setup runs. The position feed also requires `--demo-only` and preserves real history
+and all alerts; it is a demonstration of untouched demo cars, not live CARLA data.
+
+## Account plan and resource sizing
+
+Both guides use **us-west-2**, a Linux **x86_64** EC2 instance, private **Single-AZ RDS
+PostgreSQL 16 db.t4g.micro with 20 GiB gp2/gp3**, MongoDB Atlas M0, private S3 Standard app
+storage and SES. Neither requires an ALB, NAT gateway, CloudFront distribution, public RDS,
+or a public UI bucket. Atlas is an external provider; its account eligibility/limits are separate.
+The Docker guide still uses managed RDS and Atlas; local PostgreSQL/MongoDB would be a
+separate, unverified architecture change.
+
+The old `t3.medium` choice is **not listed in the current EC2 Free-plan eligible types**.
+`c7i-flex.large` (2 vCPU, 4 GiB, x86) is listed and is the planning candidate in these guides;
+`m7i-flex.large` (2 vCPU, 8 GiB) is another listed candidate if measured memory requires it.
+Neither size has been deployed or capacity-tested for this AWS setup. Eligibility, AMI, regional
+availability, quota and current plan must all be checked before authorizing a launch; an eligible
+label means credits may fund usage, not zero credit consumption. ARM requires a different build.
+[Current EC2 eligibility](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-free-tier-usage.html)
+
+An active Free account plan ends after six months or credit depletion, whichever comes first;
+access is suspended/closed and data is retained for 90 days. Staying Free is different from
+upgrading to Paid. Do not activate advanced features, Control Tower or enroll in Organizations
+to create a guardrail: these can require/trigger Paid and remove protections. A managed
+organization supplied by the new signup experience is a separate default. Actual account credit
+expiry and eligibility take precedence over old generic “750 hours / 12 months” claims.
+[RDS current and legacy offers](https://aws.amazon.com/rds/free/),
+[Account plan rules](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/free-tier-plans.html),
+[Advanced features](https://docs.aws.amazon.com/accounts/latest/reference/activate-advanced-features.html)
+
+## Planning costs before credits
+
+Public Oregon rates reviewed November 23, 2026. USD, on demand, no tax, reservations,
+CPU surplus, extra backups, traffic or optional services. A planning month is 730 hours;
+exactly 30 days is 720 hours. Storage is prorated by its actual billing duration.
+
+| Resource | Rate |
+|---|---:|
+| Original t3.medium, hypothetical only | $0.0416/hour |
+| Free-plan listed c7i-flex.large, 4 GiB candidate | $0.08479/hour |
+| Free-plan listed m7i-flex.large, 8 GiB candidate | $0.09576/hour |
+| EC2 gp3, baseline performance | $0.08/GiB-month |
+| One public IPv4 or retained Elastic IP | $0.005/hour |
+| RDS db.t4g.micro Single-AZ | $0.016/hour |
+| RDS gp2/gp3, 20 GiB | $2.30/month |
+| S3 Standard, first tier | $0.023/GB-month |
+| S3 PUT/COPY/POST/LIST | $0.005/1,000 requests |
+| S3 GET/HEAD | $0.0004/1,000 requests |
+
+Formula: `hours × (EC2 + .016 RDS + .005 IPv4) + hours/730 × (EBS + 2.30 RDS storage)`.
+
+| c7i-flex.large candidate | 1 hour | 8 hours | 24 hours | 730 hours |
+|---|---:|---:|---:|---:|
+| A, 20 GiB EC2 disk, fixed resources | $0.111 | $0.889 | $2.667 | $81.127 |
+| B, 30 GiB EC2 disk, fixed resources | $0.112 | $0.898 | $2.693 | $81.927 |
+| One camera refreshing every 2 seconds, PUT requests only | $0.009 | $0.072 | $0.216 | $6.570 |
+
+Thus B with one continuous demo camera is about **$88.497/month before other usage**.
+The original t3.medium A/B figures would be $49.598/$50.398 fixed, or $56.168/$56.968 with
+that camera, but are not a Free-plan deployment recommendation. The 8 GiB m7i candidate adds
+$0.01097/hour (about $8.008/month) over c7i. S3 audio and backups grow with use; overwriting
+`latest.jpg` avoids accumulated frames only when bucket versioning is off. Retries, HEAD/GET
+polling and viewers add requests. One viewer fetching every two seconds adds about $0.526/month
+in GETs, plus transfer. No camera/request activity is enabled automatically.
+
+First 100 GB/month internet egress is aggregated across AWS services/regions (not per bucket);
+then the first Oregon paid tier is $0.09/GB. Inbound internet transfer is free, but uploads still
+have request/storage costs. Same-region S3 to AWS-service transfers have no transfer fee.
+New SES account/region combinations default to Essentials at $0.16/1,000 recipient emails;
+à-la-carte is $0.10/1,000, with $0.12/GB outbound data. Extra SES features are not included.
+Do not assume an old SES free allowance. T3 surplus CPU adds $0.05/vCPU-hour; RDS T4g surplus
+adds $0.075/vCPU-hour. Cross-AZ traffic, snapshots, logs and optional features can add costs.
+
+**Stopping is not teardown.** Retained IPv4 + EC2 disk + RDS storage are about **$7.55/month A**
+or **$8.35/month B**, before S3/backups, even with compute stopped. RDS automatically restarts
+after seven days, so this is not a month-long paused forecast. RDS excess snapshots/backups are
+$0.095/GB-month; deleting the database while retaining snapshots does not remove all costs.
+[RDS stopping](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_StopInstance.html)
+
+Sources: [Regional EC2 public price list](https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/us-west-2/index.csv),
+[EBS price data](https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ebs.json),
+[RDS price data](https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/rds/USD/current/rds-postgresql-ondemand.json),
+[S3 price data](https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/s3/USD/current/s3-standard.json),
+[IPv4](https://aws.amazon.com/vpc/pricing/), [S3 transfer](https://aws.amazon.com/s3/pricing/),
+[SES](https://aws.amazon.com/ses/pricing/).
+
+## Supplied historical audio
+
+The project [shared Drive folder](https://drive.google.com/drive/folders/1XvLLGLWz2NwelPaCrykmZKbfcL5IvLtQ)
+was listed read-only: 30 WAVs, about 216 MB. Filenames cover all 25 object keys in
+`backend/app/db/seed_data/alerts.json`. Listing establishes filename coverage, not playable
+contents or successful uploads. No audio was fetched or uploaded for this AWS review.
+
+The private bootstrap does not create historical MongoDB alerts. Newly recorded scenarios
+upload their own audio after separately authorized deployment. Historical seed migration is
+optional; do not invent alert rows or upload arbitrary filenames to make the UI look populated.
+If these historical alerts are deliberately imported later, first obtain the WAVs locally through
+the supplied folder, then create a manifest outside git (the parent output directory must exist):
+
+```bash
+python3 infra/aws/seed_audio_manifest.py --directory /local/path/to/WAVs \
+  --output /private/path/seed-audio-manifest.json
+python3 infra/aws/seed_audio_manifest.py --verify /private/path/seed-audio-manifest.json
+```
+
+This helper performs no network calls. It requires exactly one valid local WAV for each tracked
+key, rejects ambiguous/missing/truncated files and symlinks, records size/SHA-256, and rechecks
+hashes. Extra folder WAVs are not assigned upload keys. A manifest is not upload authorization;
+a later reviewed uploader must revalidate it and target the chosen private bucket. Do not use
+the old unvalidated recursive “upload every WAV” snippet or trust `.local_audio` as automatically
+present. Keep paths/manifests/audio/private credentials out of commits.
+
+## Local checks
+
+```bash
+python3 -m unittest discover -s infra/aws/tests -v
+python3 infra/aws/validate_production_env.py /private/path/backend.env
+bash -n infra/aws/setup_ec2.sh infra/aws/deploy_backend.sh infra/aws/deploy_frontend.sh \
+  infra/aws/docker/setup_ec2_docker.sh infra/aws/deployment_guard.sh
+```
+
+These checks need no AWS credentials or services. They do not prove an AWS deployment, delivery
+of SES mail, regional launch permission, or external CARLA compatibility.
+
+### Repeatable local application verification
+
+[`scripts/verify_local.py`](../../scripts/verify_local.py) starts fresh local PostgreSQL 16,
+MongoDB 7, MinIO, the API/model/workers, the virtual edge client and a built frontend in a Linux
+network namespace containing only loopback. It refuses to run without isolation, installs
+nothing, excludes private settings/data from its source snapshot and removes its temporary
+stores and processes afterward. Run `python3 scripts/verify_local.py --help` for the required
+paths to already installed tools and an empty evidence directory.
+
+The November 23, 2026 local run passed **609 unit/model tests**, then all **10 PostgreSQL
+migration tests** separately, private bootstrap/repeat-refusal checks, C1–C5 live API checks,
+all five virtual-edge scenarios and Chromium audio/UI checks. An actual local MinIO outage
+produced readiness 503 while PostgreSQL health remained 200; recovery returned readiness 200.
+The separate AWS safety suite passed **15 tests**, and Compose configuration parsed with dummy
+settings without starting containers. Evidence includes JSON, JUnit XML, logs and screenshots.
+
+This run used native local tools (Python 3.14 and the installed CPU ML dependencies), not the
+AWS Docker image's pinned Python 3.12/Torch 2.5.1 environment. **Still pending:** CARLA from
+Anusha; exact production image/install and instance-capacity validation; real database
+dump/restore; and AWS IAM/network/S3/SES integration after separate cost authorization.
+Local email and backup dumps were explicitly simulated; inference and MinIO storage were real.
+Model smoke tests used a bundled recording, not a training run or accuracy evaluation. No AWS
+resources, accounts or credits were used for this local verification.

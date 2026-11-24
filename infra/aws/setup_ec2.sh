@@ -7,12 +7,11 @@
 #   cd ~/autosound    # full guide, incl. other ways to get the code: infra/aws/SETUP.md
 #   bash infra/aws/setup_ec2.sh
 #
-# Safe to run again. The first run stops after creating backend/.env from
+# After explicit deployment/cost authorization, a missing settings file stops the first run after creating backend/.env from
 # backend.env.production.example: fill in the <...> values, then run it again to finish.
 #
 # Options (environment variables):
-#   SKIP_SEED=1         do not load demo data (python -m app.db.seed is idempotent, but it adds demo
-#                       users, cars and alerts, so skip it for a non-demo deployment)
+#   SKIP_SEED=1         default: no public demo users or seeded alerts; bootstrap private accounts
 #   ENABLE_EDGE_DEMO=1  also run the local edge client as a service (autosound-edge): keeps the
 #                       C2 Simulator live and feeds C3/C4 without CARLA
 #   ENABLE_DEMO_DATA=1  also run scripts/demo_data.py --live as a service (autosound-demo-data):
@@ -24,6 +23,21 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BACKEND_DIR="$REPO_DIR/backend"
 SERVICE=autosound-api
 log() { printf '\n==> %s\n' "$*"; }
+
+source "$REPO_DIR/infra/aws/deployment_guard.sh"
+require_aws_deployment_consent
+require_aws_demo_consent
+
+# Fail before package downloads, migrations, or service changes. Preparing a template also
+# requires the explicit deployment consent above, but does not contact AWS.
+if [ ! -f "$BACKEND_DIR/.env" ]; then
+  cp "$REPO_DIR/infra/aws/backend.env.production.example" "$BACKEND_DIR/.env"
+  chmod 600 "$BACKEND_DIR/.env"
+  log "Created backend/.env. Fill in settings, validate locally, then rerun only when authorized."
+  exit 0
+fi
+python3 "$REPO_DIR/infra/aws/validate_production_env.py" "$BACKEND_DIR/.env"
+prepare_aws_edge_settings
 
 log "System packages (Python 3.12, PostgreSQL 16 client for pg_dump, font for edge camera frames)"
 sudo dnf install -y python3.12 python3.12-pip git postgresql16 dejavu-sans-fonts
@@ -50,27 +64,8 @@ cd "$BACKEND_DIR"
 .venv/bin/pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
 .venv/bin/pip install -r requirements.txt
 
-if [ ! -f .env ]; then
-  cp "$REPO_DIR/infra/aws/backend.env.production.example" .env
-  chmod 600 .env
-  log "Created backend/.env. Fill in the <...> values, then run this script again."
-  exit 0
-fi
-# Comment lines may mention <...>; only settings must be filled in.
-if grep -v '^[[:space:]]*#' .env | grep -q '<'; then
-  echo "backend/.env still has <...> placeholders:" >&2
-  grep -n -v '^[[:space:]]*#' .env | grep '<' | cut -d= -f1 >&2
-  echo "Fill them in and run again." >&2
-  exit 1
-fi
-
 log "Database schema (alembic upgrade head)"
 .venv/bin/alembic upgrade head
-
-if [ "${SKIP_SEED:-0}" != "1" ]; then
-  log "Seed data (demo users, cars, alert types, cnn-v1 model row)"
-  .venv/bin/python -m app.db.seed
-fi
 
 # The unit files assume /home/ec2-user/autosound; point them at wherever this repo actually is.
 install_unit() {
@@ -95,13 +90,6 @@ if [ "$healthy" != 1 ]; then
   exit 1
 fi
 
-if [ "${ENABLE_EDGE_DEMO:-0}" = "1" ] || [ "${ENABLE_DEMO_DATA:-0}" = "1" ]; then
-  if [ ! -f "$REPO_DIR/infra/aws/edge.env" ]; then
-    cp "$REPO_DIR/infra/aws/edge.env.example" "$REPO_DIR/infra/aws/edge.env"
-    chmod 600 "$REPO_DIR/infra/aws/edge.env"
-    log "Created infra/aws/edge.env with the seeded demo devices (edit it to use other devices)"
-  fi
-fi
 for feed in edge:ENABLE_EDGE_DEMO demo-data:ENABLE_DEMO_DATA; do
   unit="autosound-${feed%%:*}"; flag="${feed##*:}"
   if [ "${!flag:-0}" = "1" ]; then
@@ -110,7 +98,10 @@ for feed in edge:ENABLE_EDGE_DEMO demo-data:ENABLE_DEMO_DATA; do
     sudo systemctl daemon-reload
     sudo systemctl enable --now "$unit"
     sudo systemctl restart "$unit"
+  elif systemctl is-enabled --quiet "$unit" 2>/dev/null; then
+    log "Disable optional service $unit (not requested this run)"
+    sudo systemctl disable --now "$unit"
   fi
 done
 
-log "Done. API is on port 8000."
+log "Done. API listens on 127.0.0.1:8000 only. Use the SSH tunnel in infra/aws/SETUP.md."

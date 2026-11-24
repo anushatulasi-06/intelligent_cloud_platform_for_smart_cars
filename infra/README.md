@@ -84,7 +84,7 @@ In `backend/.env`, set these values:
 | 2. API | `cd backend && source .venv/bin/activate && export AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin && uvicorn app.main:app --reload` |
 | 3. UI | `cd frontend && npm run dev` |
 | 4. Edge client (car 1) | `cd backend && source .venv/bin/activate && EDGE_API_URL=http://localhost:8000 EDGE_CAR_ID=1 EDGE_DEVICE_ID=1 EDGE_DEVICE_KEY=dev-device-key-mic-1 EDGE_CAMERA_DEVICE_ID=5 EDGE_CAMERA_DEVICE_KEY=dev-device-key-cam-1 python -m edge.demo_client` |
-| 5. Map positions | `cd backend && source .venv/bin/activate && python ../scripts/demo_data.py --live --offline 1 4` |
+| 5. Map positions | `cd backend && source .venv/bin/activate && python ../scripts/demo_data.py --demo-only --live --offline 1 4` |
 
 The backend reads S3 credentials from the shell environment, not from `.env`, so keep the
 `export` in terminal 2.
@@ -155,7 +155,7 @@ Besides the seed, these give each component something to show:
 
 | Data | For | How |
 |---|---|---|
-| **Car positions** | C1 Map (F9), Tracking (F10), "today" counts | `python scripts/demo_data.py` writes 2 hours of routes for every car and moves the seeded alerts to "now". Add `--live` to keep cars moving, `--offline 1 4` to leave cars 1 and 4 grey, `--minutes N` for a different history length, and `--keep-alerts` to leave alert times alone. A car is online while its last position is under 90 s old. |
+| **Car positions** | C1 Map (F9), Tracking (F10), "today" counts | `python scripts/demo_data.py --demo-only` creates marked synthetic history only for seed-matching cars with no positions. Add `--live` for ongoing demo points, `--offline 1 4` to omit those cars from live updates, and `--minutes N` for the initial history length. Existing history and every alert timestamp stay intact. Cars with real or legacy unmarked telemetry are skipped; the feed stops for a car when real telemetry appears. A car is online while its last position is under 90 s old. |
 | **Live Simulator, F13 records, new alerts** | C2, C3, C4 | Run an edge client, then trigger the five sound scenarios in F11 (`/simulator?car_id=1`). |
 | **Audio for the 25 seeded alerts** | C4 F7 | The seed creates no audio. Upload the clips from `backend/.local_audio/` (created by `python scripts/make_local_audio.py`, which needs `model/data/`) to the bucket, using the backend's own S3 settings. See below. |
 | **Subscriptions** | C4 notifications | None are seeded. Sign in as an owner, open **Dashboard → Subscriptions (F3)**, and turn categories on. |
@@ -173,7 +173,7 @@ for p in files: s3.upload_file(str(p), p.relative_to(root).as_posix(), 'audio/wa
 print('uploaded', len(files), 'clips')"
 ```
 
-When the edge client drives car 1, keep car 1 in `demo_data.py --offline`, so the two sources
+When the edge client drives car 1, keep car 1 in `demo_data.py --demo-only --offline`, so the two sources
 never write different routes for the same car.
 
 ---

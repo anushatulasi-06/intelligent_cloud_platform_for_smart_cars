@@ -15,6 +15,16 @@ def counts(session):
     return {m.__tablename__: session.scalar(select(func.count()).select_from(m)) for m in TABLES}
 
 
+def test_production_seed_refuses_before_opening_any_store(monkeypatch):
+    import pytest
+    from types import SimpleNamespace
+    from app import config
+    monkeypatch.setattr(config, "get_settings", lambda: SimpleNamespace(APP_ENV="production"))
+    monkeypatch.setattr(postgres, "session_scope", lambda: pytest.fail("Production seed opened a store"))
+    with pytest.raises(RuntimeError, match="Development seed is disabled"):
+        seed.run()
+
+
 def run_seed(mongo_db):
     with postgres.session_scope() as s:
         result, car_ids, mics = seed_postgres(s)
