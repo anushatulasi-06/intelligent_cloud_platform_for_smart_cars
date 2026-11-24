@@ -170,10 +170,49 @@ produced readiness 503 while PostgreSQL health remained 200; recovery returned r
 The separate AWS safety suite passed **15 tests**, and Compose configuration parsed with dummy
 settings without starting containers. Evidence includes JSON, JUnit XML, logs and screenshots.
 
-This run used native local tools (Python 3.14 and the installed CPU ML dependencies), not the
-AWS Docker image's pinned Python 3.12/Torch 2.5.1 environment. **Still pending:** CARLA from
-Anusha; exact production image/install and instance-capacity validation; real database
-dump/restore; and AWS IAM/network/S3/SES integration after separate cost authorization.
-Local email and backup dumps were explicitly simulated; inference and MinIO storage were real.
-Model smoke tests used a bundled recording, not a training run or accuracy evaluation. No AWS
-resources, accounts or credits were used for this local verification.
+That native run used Python 3.14; its email and backup dumps were simulated, while inference
+and MinIO storage were real. The separate production-image checks below cover the pinned
+Python/Torch environment and actual database dumps/restores.
+
+### Production image and real restore verification
+
+The November 23, 2026 production image build with `INSTALL_BACKUP_TOOLS=true` passed locally.
+The verified backend image `autosound-production:local-nov23` has ID
+`sha256:5328f519d401ce329123b06e46899ac1f7743fab31bf14c03deb3a931634abd4`.
+It ran **Python 3.12.16, torch/torchaudio 2.5.1+cpu, PostgreSQL tools 16.16, and MongoDB tools
+100.20.1**. The MongoDB archive is pinned by its official SHA-256; the remaining package versions
+are recorded with the image evidence rather than claimed to be fully locked. Inside this exact
+image, `pip check` passed and **614 backend tests passed, with 10 PostgreSQL integration tests
+skipped and zero failures/errors**, under `--network=none` without private settings mounted.
+
+The final live local run used the built backend/frontend images and fresh PostgreSQL, MongoDB
+and MinIO on an internal Docker network without published ports, an external route or external
+DNS. Nginx assets, SPA fallback, API proxy, private JWT login and authenticated readiness passed.
+C2/C3 device configuration, command delivery, upload validation/idempotency, real model/worker
+inference and byte-identical signed audio passed on both the source and restored databases.
+
+With **`DEV_FAKE_BACKUP=false`**, the HTTP backup job created genuine PostgreSQL custom and
+gzip MongoDB archives in MinIO. Downloaded SHA-256 hashes matched; actual `pg_restore` and
+`mongorestore` into fresh databases passed comparisons across **9 SQL tables and 5 MongoDB
+collections**, including rows/BSON, indexes, collection options, SQL foreign keys, uniqueness and
+sequence state. Four private logins, the original device key, encrypted Wi-Fi data and the active
+model remained usable after restore. PostgreSQL's equivalent CHECK-expression deparse was
+compared against a third database loaded independently from the complete source schema; no
+constraints were omitted. Only the backup job's expected post-dump lifecycle changes
+(`status`, `result`, `finished_at`) were normalized in row comparisons.
+
+The final synthetic Docker-context test also passed: the real ignore rules excluded `.env`,
+bootstrap credentials, edge settings and nested local evidence canaries while copying safe
+source. No real secrets were used. Owned test containers, anonymous volumes, internal network
+and the temporary context-test image were removed; existing resources were not pruned.
+The evidence bundle is `production-docker-local-nov23/`, specifically
+`verification-final/verification.json`, `image-unit/` (JUnit, logs, versions) and
+`context-safety.json`.
+
+**Remaining:** Anusha's CARLA integration; AWS instance capacity, IAM/network/S3/SES delivery
+and public TLS after separate authorization. Email stayed logged locally. These are small local
+fixtures, not an AWS load/capacity test or a model training/accuracy evaluation. Backups are
+sequential logical database dumps taken with application writes quiescent, **not an atomic
+cross-database point-in-time snapshot**. They do not back up S3 media payloads, private settings,
+encryption keys or database-server roles; those need a separate recovery plan. No AWS account,
+resource, credit or charge was used for these local checks.
