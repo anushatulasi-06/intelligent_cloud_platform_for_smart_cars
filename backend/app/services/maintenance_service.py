@@ -11,6 +11,7 @@ s3://BUCKET/archive/<collection>/<date>.jsonl.gz, and only the documents in that
 If the upload fails, nothing is deleted.
 """
 import gzip
+import json
 import logging
 import os
 import shutil
@@ -25,6 +26,7 @@ from typing import Any, Callable
 from bson import json_util
 from botocore.exceptions import EndpointConnectionError, NoCredentialsError, PartialCredentialsError
 from sqlalchemy.engine import make_url
+from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
 
 from app.config import BACKEND_DIR, get_settings
 from app.db import mongo, postgres, s3
@@ -44,6 +46,22 @@ RETENTION_DEFAULT_DAYS: dict[str, int | None] = {
 RETENTION_COLLECTIONS = ("device_data_records", "car_positions", "alerts")
 DELETE_BATCH = 1000
 DUMP_TIMEOUT_S = 30 * 60
+# libpq environment names, including verified TLS and session options. Reject
+# unrepresented URL options instead of silently weakening the app's connection.
+_PG_ENV = {
+    "host": "PGHOST", "hostaddr": "PGHOSTADDR", "port": "PGPORT", "dbname": "PGDATABASE",
+    "user": "PGUSER", "password": "PGPASSWORD", "passfile": "PGPASSFILE", "service": "PGSERVICE",
+    "connect_timeout": "PGCONNECT_TIMEOUT", "client_encoding": "PGCLIENTENCODING",
+    "options": "PGOPTIONS", "application_name": "PGAPPNAME", "sslmode": "PGSSLMODE",
+    "sslcert": "PGSSLCERT", "sslkey": "PGSSLKEY", "sslrootcert": "PGSSLROOTCERT",
+    "sslcrl": "PGSSLCRL", "sslcrldir": "PGSSLCRLDIR", "sslcompression": "PGSSLCOMPRESSION",
+    "sslsni": "PGSSLSNI", "sslcertmode": "PGSSLCERTMODE",
+    "ssl_min_protocol_version": "PGSSLMINPROTOCOLVERSION", "ssl_max_protocol_version": "PGSSLMAXPROTOCOLVERSION",
+    "channel_binding": "PGCHANNELBINDING", "requirepeer": "PGREQUIREPEER", "require_auth": "PGREQUIREAUTH",
+    "gssencmode": "PGGSSENCMODE", "krbsrvname": "PGKRBSRVNAME", "gsslib": "PGGSSLIB",
+    "gssdelegation": "PGGSSDELEGATION", "target_session_attrs": "PGTARGETSESSIONATTRS",
+    "load_balance_hosts": "PGLOADBALANCEHOSTS",
+}
 S3_PREFIXES = {"audio": "audio/", "backups": "backups/"}
 
 _MONGO_REPOS = {"alerts": AlertRepo, "device_data_records": RecordRepo, "car_positions": PositionRepo}
@@ -149,25 +167,45 @@ def _run(cmd: list[str], env: dict[str, str]) -> None:
     proc = subprocess.run([exe, *cmd[1:]], env={**os.environ, **env}, capture_output=True, text=True,
                           timeout=DUMP_TIMEOUT_S)
     if proc.returncode != 0:
-        last = (proc.stderr or proc.stdout or "").strip().splitlines()[-1:] or ["no output"]
-        raise RuntimeError(f"{cmd[0]} exited with {proc.returncode}: {last[0][:200]}")
+        # Mongo option errors and libpq diagnostics can echo connection secrets.
+        raise RuntimeError(f"{cmd[0]} exited with {proc.returncode}; tool output omitted")
 
 
 def _dump_postgres(path: Path) -> None:
-    """pg_dump -Fc. Credentials go in PG* environment variables, never on the command line."""
-    url = make_url(get_settings().DATABASE_URL)
-    env = {k: str(v) for k, v in {"PGHOST": url.host or url.query.get("host"), "PGPORT": url.port,
-                                  "PGUSER": url.username, "PGPASSWORD": url.password,
-                                  "PGDATABASE": url.database}.items() if v}
-    _run(["pg_dump", "-Fc", "-f", str(path)], env)
+    """pg_dump -Fc with the app's host/TLS/session options and no credentials in argv.
+
+    Values use libpq's documented PG* environment variables. Unsupported options
+    fail closed; silently dropping sslmode/options could connect differently.
+    """
+    try:
+        url = make_url(get_settings().DATABASE_URL)
+        # This also normalizes repeated host/port query values like SQLAlchemy's
+        # normal psycopg2 connection path, including Unix socket overrides.
+        _, options = PGDialect_psycopg2().create_connect_args(url)
+    except Exception:
+        raise RuntimeError("PostgreSQL backup connection settings are invalid") from None
+    if options.keys() - _PG_ENV.keys():
+        raise RuntimeError("PostgreSQL backup URL has unsupported connection options; configure supported libpq options")
+    env = {_PG_ENV[key]: str(value) for key, value in options.items() if value is not None}
+    env.setdefault("PGCONNECT_TIMEOUT", str(get_settings().DB_CONNECT_TIMEOUT_S))
+    _run(["pg_dump", "-Fc", "-w", "-f", str(path)], env)
 
 
 def _dump_mongo(path: Path, workdir: Path) -> None:
     """mongodump --archive --gzip. The URI (with password) goes in a 0600 config file, not argv."""
     config = workdir / "mongodump.yaml"
-    config.write_text(f'uri: "{get_settings().MONGO_URI}"\n')
-    config.chmod(0o600)
-    _run(["mongodump", f"--config={config}", f"--archive={path}", "--gzip"], {})
+    descriptor = os.open(config, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            os.fchmod(stream.fileno(), 0o600)
+            # A JSON-quoted string is valid YAML, including quotes, backslashes,
+            # Unicode and control characters; none can inject another YAML key.
+            stream.write("uri: " + json.dumps(get_settings().MONGO_URI) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        _run(["mongodump", f"--config={config}", f"--archive={path}", "--gzip"], {})
+    finally:
+        config.unlink(missing_ok=True)
 
 
 # S3 errors that mean "S3 is not set up here" (as opposed to a real failure such as AccessDenied).
@@ -191,7 +229,11 @@ def _store_backup_file(path: Path, key: str, content_type: str) -> str:
 
 
 def run_backup(job_id: str) -> None:
-    """BackgroundTask: queued -> running -> succeeded | failed. Never raises."""
+    """queued -> running -> succeeded | failed, using sequential logical dumps.
+
+    This is not an atomic cross-database snapshot. Quiesce application writers
+    when restoring a mutually consistent PostgreSQL/MongoDB backup pair matters.
+    """
     jid = uuid.UUID(job_id)
     with postgres.session_scope() as session:
         JobRepo(session).mark_running(jid)

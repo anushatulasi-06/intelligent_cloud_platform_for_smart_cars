@@ -11,6 +11,9 @@
 **/.local_edge
 **/.local_audio
 **/.local_backups
+**/.local_bootstrap
+**/.local_evidence
+infra/aws/edge.env
 frontend/dist
 Audio_Datasets
 model/data
