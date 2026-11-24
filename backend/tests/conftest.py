@@ -6,12 +6,19 @@ real services.
 import os
 
 os.environ.update({
+    "APP_ENV": "test",
     "DATABASE_URL": "sqlite+pysqlite:///:memory:",
     "MONGO_URI": "mongodb://localhost:27017/autosound_test",
     "S3_BUCKET": "test-bucket",
     "AWS_REGION": "us-west-2",
     "AWS_ACCESS_KEY_ID": "testing",
     "AWS_SECRET_ACCESS_KEY": "testing",
+    "AWS_EC2_METADATA_DISABLED": "true",
+    "S3_ENDPOINT_URL": "",
+    "S3_PUBLIC_ENDPOINT_URL": "",
+    "LOCAL_BACKUP_DIR": ".local_backups",
+    "DEV_FAKE_EMAIL": "true",
+    "DEV_FAKE_BACKUP": "true",
     "CORS_ORIGINS": "http://localhost:5173",
     "MONGO_ENSURE_INDEXES_ON_STARTUP": "false",
     "FAIL_INTERRUPTED_JOBS_ON_STARTUP": "false",

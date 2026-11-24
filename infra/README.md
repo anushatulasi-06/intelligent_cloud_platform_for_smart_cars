@@ -83,15 +83,11 @@ In `backend/.env`, set these values:
 | 1. MinIO | `MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin minio server ~/minio-data --console-address :9001` |
 | 2. API | `cd backend && source .venv/bin/activate && export AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin && uvicorn app.main:app --reload` |
 | 3. UI | `cd frontend && npm run dev` |
-| 4. Edge client (car 1) | `cd backend && source .venv/bin/activate && EDGE_API_URL=http://localhost:8000 EDGE_CAR_ID=1 EDGE_DEVICE_ID=1 EDGE_DEVICE_KEY=dev-device-key-mic-1 EDGE_CAMERA_DEVICE_ID=5 EDGE_CAMERA_DEVICE_KEY=dev-device-key-cam-1 python -m edge.replay_client --no-audio-playback` |
-| 5. Map positions | `cd backend && source .venv/bin/activate && python ../scripts/demo_data.py --live --offline 1 4` |
+| 4. Edge client (car 1) | `cd backend && source .venv/bin/activate && EDGE_API_URL=http://localhost:8000 EDGE_CAR_ID=1 EDGE_DEVICE_ID=1 EDGE_DEVICE_KEY=dev-device-key-mic-1 EDGE_CAMERA_DEVICE_ID=5 EDGE_CAMERA_DEVICE_KEY=dev-device-key-cam-1 python -m edge.demo_client` |
+| 5. Map positions | `cd backend && source .venv/bin/activate && python ../scripts/demo_data.py --demo-only --live --offline 1 4` |
 
 The backend reads S3 credentials from the shell environment, not from `.env`, so keep the
 `export` in terminal 2.
-
-Terminal 4 runs the **CARLA replay client**: each scenario in F11 plays a recorded CARLA drive,
-with its sound at the event. For a virtual car you can drive with Start/Stop route instead, use
-`python -m edge.demo_client`. See [Edge clients and CARLA](#edge-clients-and-carla).
 
 **First time only**, and again after a database reset: run these in terminal 2 before `uvicorn`.
 ```bash
@@ -159,8 +155,8 @@ Besides the seed, these give each component something to show:
 
 | Data | For | How |
 |---|---|---|
-| **Car positions** | C1 Map (F9), Tracking (F10), "today" counts | `python scripts/demo_data.py` writes 2 hours of routes for every car and moves the seeded alerts to "now". Add `--live` to keep cars moving, `--offline 1 4` to leave cars 1 and 4 grey, `--minutes N` for a different history length, and `--keep-alerts` to leave alert times alone. A car is online while its last position is under 90 s old. |
-| **Live Simulator, F13 records, new alerts** | C2, C3, C4 | Run an edge client (the replay client plays recorded CARLA drives), then trigger the five sound scenarios in F11 (`/simulator?car_id=1`). |
+| **Car positions** | C1 Map (F9), Tracking (F10), "today" counts | `python scripts/demo_data.py --demo-only` creates marked synthetic history only for seed-matching cars with no positions. Add `--live` for ongoing demo points, `--offline 1 4` to omit those cars from live updates, and `--minutes N` for the initial history length. Existing history and every alert timestamp stay intact. Cars with real or legacy unmarked telemetry are skipped; the feed stops for a car when real telemetry appears. A car is online while its last position is under 90 s old. |
+| **Live Simulator, F13 records, new alerts** | C2, C3, C4 | Run an edge client, then trigger the five sound scenarios in F11 (`/simulator?car_id=1`). |
 | **Audio for the 25 seeded alerts** | C4 F7 | The seed creates no audio. Upload the clips from `backend/.local_audio/` (created by `python scripts/make_local_audio.py`, which needs `model/data/`) to the bucket, using the backend's own S3 settings. See below. |
 | **Subscriptions** | C4 notifications | None are seeded. Sign in as an owner, open **Dashboard → Subscriptions (F3)**, and turn categories on. |
 | **Backup jobs** | C5 F14 | Click **Run backup now**. |
@@ -177,7 +173,7 @@ for p in files: s3.upload_file(str(p), p.relative_to(root).as_posix(), 'audio/wa
 print('uploaded', len(files), 'clips')"
 ```
 
-When the edge client drives car 1, keep car 1 in `demo_data.py --offline`, so the two sources
+When the edge client drives car 1, keep car 1 in `demo_data.py --demo-only --offline`, so the two sources
 never write different routes for the same car.
 
 ---
@@ -203,19 +199,13 @@ processing worker and the deployed model.
 
 ## Edge clients and CARLA
 
-The edge clients send heartbeats, camera frames, command acknowledgements and audio uploads to
+Both edge clients send heartbeats, camera frames, command acknowledgements and audio uploads to
 the API, using the seeded devices `mic-1` (ID 1) and `cam-1` (ID 5) on car 1:
 
-| Client | What it is | Camera | Needs |
-|---|---|---|---|
-| **`edge.replay_client`** | Replays recorded CARLA scenarios (`backend/edge/carla_recordings/`). Each scenario's sound plays at its event. | Real CARLA frames | Nothing extra: no GPU, no CARLA server |
-| `edge.demo_client` | A virtual car driven by Start/Stop route | An illustrated frame drawn in code, labelled "LOCAL EDGE DEMO" | Nothing extra |
-| `edge.carla_demo` / `edge.carla_client` | A live vehicle in a CARLA 0.9.16 world | Live CARLA frames | A CARLA server on an NVIDIA GPU (see below) |
-
-The replay client is the easiest way to show real CARLA footage: you record once on a GPU
-machine with `backend/edge/record_scenarios.py`, then replay anywhere, including AWS. Its
-recordings, sound timing and options are in the
-[edge client guide](../backend/edge/README.md#replay-recorded-carla-scenarios).
+| Client | What it is | Camera |
+|---|---|---|
+| `edge.demo_client` | A virtual car, with no simulator needed | An illustrated frame drawn in code, labelled "LOCAL EDGE DEMO" |
+| `edge.carla_demo` / `edge.carla_client` | A real vehicle in a CARLA 0.9.16 world | Real CARLA RGB frames |
 
 **Run only one edge client at a time** for the same devices.
 
@@ -224,7 +214,7 @@ Configuration, commands, audio scenarios and buffering are covered in the
 in [`demo_clips/README.md`](../backend/edge/demo_clips/README.md).
 
 To use your own recordings, pass `--scenarios <file>.json`. The mapping file has one entry per
-category; copy [`edge_scenarios.json`](../backend/edge/edge_scenarios.json) to start.
+category; copy [`scenarios.example.json`](../backend/edge/scenarios.example.json) to start.
 - Paths in the file are relative to the file itself.
 - Each recording must be a non-empty WAV or MP3, at most 10 MiB and 15 s long.
 

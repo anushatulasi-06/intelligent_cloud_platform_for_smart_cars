@@ -17,8 +17,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.config import Settings, get_settings
 from app.db import mongo
 from app.routers import (admin_config, admin_db, alerts, auth, dashboard, devices,
-                         device_data, fleet, health, local_audio, simulator, subscriptions)
+                         device_data, fleet, health, local_audio, readiness, simulator, subscriptions)
 from app.services.errors import ServiceError
+from app.services.readiness_service import WorkerRuntime
 
 log = logging.getLogger(__name__)
 
@@ -57,13 +58,17 @@ CORS_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 CORS_HEADERS = ["Authorization", "Content-Type", "X-Device-Key"]
 
 
-def _sweep_loop(stop):
+def _sweep_loop(stop, on_cycle=None):
     from app.services.device_service import sweep_devices
     while not stop.is_set():
+        ok = False
         try:
             sweep_devices()
+            ok = True
         except Exception:
             log.warning("Device sweep failed; will retry", exc_info=True)
+        if on_cycle is not None:
+            on_cycle(ok)
         stop.wait(30)
 
 
@@ -71,7 +76,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI):
+    async def lifespan(app: FastAPI):
+        runtime = WorkerRuntime()
+        app.state.worker_runtime = runtime
         if settings.MONGO_ENSURE_INDEXES_ON_STARTUP:
             try:
                 mongo.ensure_indexes()
@@ -95,10 +102,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if settings.PROCESSING_WORKER_ENABLED:
             from app.services.processing_worker import ProcessingWorker
             threads.append(threading.Thread(target=ProcessingWorker().run,
-                                            args=(stop, settings.PROCESSING_WORKER_POLL_SECONDS),
+                                            args=(stop, settings.PROCESSING_WORKER_POLL_SECONDS,
+                                                  lambda ok: runtime.observe("audio-worker", ok)),
                                             name="audio-worker", daemon=True))
         if settings.DEVICE_SWEEPER_ENABLED:
-            threads.append(threading.Thread(target=_sweep_loop, args=(stop,), name="device-sweeper", daemon=True))
+            threads.append(threading.Thread(target=_sweep_loop,
+                                            args=(stop, lambda ok: runtime.observe("device-sweeper", ok)),
+                                            name="device-sweeper", daemon=True))
+        by_name = {thread.name: thread for thread in threads}
+        runtime.register("audio-worker", enabled=settings.PROCESSING_WORKER_ENABLED,
+                         max_age=max(60, settings.PROCESSING_WORKER_POLL_SECONDS * 3),
+                         thread=by_name.get("audio-worker"))
+        runtime.register("device-sweeper", enabled=settings.DEVICE_SWEEPER_ENABLED,
+                         max_age=90, thread=by_name.get("device-sweeper"))
         for thread in threads:
             thread.start()
         try:
@@ -120,6 +136,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     register_error_handlers(app)
     app.include_router(health.router)
+    app.include_router(readiness.router)
     app.include_router(auth.router)
     app.include_router(dashboard.router)
     app.include_router(subscriptions.router)

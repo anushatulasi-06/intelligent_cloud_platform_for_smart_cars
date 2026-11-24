@@ -38,3 +38,4 @@ infra/.env.demo
 .local_evidence/
 # Optional EC2 demo-feed settings (from infra/aws/edge.env.example)
 infra/aws/edge.env
+backend/.local_bootstrap/

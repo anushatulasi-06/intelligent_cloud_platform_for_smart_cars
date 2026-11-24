@@ -5,10 +5,14 @@ Usage:
     settings = get_settings()
     settings.DATABASE_URL
 """
+import base64
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
+from urllib.parse import urlsplit
 
-from pydantic import Field, field_validator
+from cryptography.fernet import Fernet
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/ — relative paths in .env (e.g. MODEL_DIR=../model/artifacts) resolve from here,
@@ -26,10 +30,12 @@ class Settings(BaseSettings):
         env_file=BACKEND_DIR / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        hide_input_in_errors=True,
     )
 
     APP_NAME: str = "Smart Car Platform API"
     APP_VERSION: str = APP_VERSION
+    APP_ENV: Literal["development", "test", "production"] = "development"
 
     # Stores
     DATABASE_URL: str = "postgresql+psycopg2://user:pass@localhost:5432/autosound"
@@ -46,7 +52,7 @@ class Settings(BaseSettings):
 
     # Auth (C1). Change JWT_SECRET in backend/.env before deploying; tokens signed with the
     # default are only safe on a developer machine.
-    JWT_SECRET: str = "dev-only-secret-change-me-before-deploying"   # 32+ bytes, or PyJWT warns
+    JWT_SECRET: str = Field(default="dev-only-secret-change-me-before-deploying", repr=False)
     JWT_ALGORITHM: str = "HS256"
     JWT_TTL_MINUTES: int = 60
 
@@ -103,6 +109,38 @@ class Settings(BaseSettings):
         if not 0.50 <= v <= 0.95:
             raise ValueError("CONFIDENCE_THRESHOLD must be between 0.50 and 0.95")
         return v
+
+    @model_validator(mode="after")
+    def _production_secrets_and_origins(self):
+        """Fail closed for production; local development retains its documented defaults."""
+        if self.APP_ENV != "production":
+            return self
+        secret = self.JWT_SECRET.strip()
+        weak = ("dev-only", "change-me", "changeme", "your-secret", "default", "replace-me")
+        if len(secret.encode()) < 32 or len(set(secret)) < 8 or any(word in secret.lower() for word in weak):
+            raise ValueError("Production requires a unique JWT_SECRET of at least 32 bytes")
+        try:
+            Fernet(self.WIFI_ENCRYPTION_KEY.encode("ascii"))
+            raw_key = base64.b64decode(self.WIFI_ENCRYPTION_KEY, altchars=b"-_", validate=True)
+            if len(set(raw_key)) < 8:
+                raise ValueError
+        except (ValueError, TypeError, UnicodeError):
+            raise ValueError("Production requires a valid, nontrivial WIFI_ENCRYPTION_KEY") from None
+        origins = self.cors_origin_list
+        if not origins:
+            raise ValueError("Production requires explicit CORS_ORIGINS")
+        for origin in origins:
+            try:
+                parsed = urlsplit(origin)
+                parsed.port  # Reject malformed ports before accepting an origin.
+            except ValueError:
+                raise ValueError("Production CORS_ORIGINS must be HTTPS origins or HTTP loopback origins") from None
+            loopback = parsed.hostname in ("localhost", "127.0.0.1", "::1")
+            if (not parsed.hostname or parsed.username or parsed.password or parsed.path or parsed.query
+                    or parsed.fragment or "*" in origin or "<" in origin or ">" in origin
+                    or parsed.scheme not in ("http", "https") or (parsed.scheme == "http" and not loopback)):
+                raise ValueError("Production CORS_ORIGINS must be HTTPS origins or HTTP loopback origins")
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:

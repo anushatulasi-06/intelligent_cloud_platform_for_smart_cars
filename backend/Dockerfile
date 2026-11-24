@@ -46,7 +46,7 @@ COPY model/artifacts/ /app/model/artifacts/
 COPY infra/init_demo_storage.py infra/start_demo_api.sh /app/infra/
 RUN groupadd --gid 10001 autosound \
     && useradd --uid 10001 --gid autosound --home-dir /app/backend autosound \
-    && mkdir -p /app/backend/.local_edge/demo /app/backend/.local_backups \
+    && mkdir -p /app/backend/.local_edge/demo /app/backend/.local_backups /app/backend/.local_bootstrap \
     && chown -R autosound:autosound /app \
     && chmod +x /app/infra/start_demo_api.sh
 USER autosound

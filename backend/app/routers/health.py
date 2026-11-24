@@ -1,7 +1,8 @@
 """GET /health – liveness check for the load balancer (public, no role needed).
 
 200 {status: "ok", version} when PostgreSQL answers; 503 {status: "unavailable", version}
-when it does not. MongoDB and S3 health is reported by GET /admin/db/health (C5), not here.
+when it does not. Full read-only component readiness is staff-only GET /admin/readiness;
+this inexpensive public endpoint deliberately does not probe MongoDB, S3 or model/worker state.
 """
 import logging
 

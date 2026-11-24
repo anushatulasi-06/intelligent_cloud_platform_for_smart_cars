@@ -1,7 +1,8 @@
 # Optional: scripts/demo_data.py --live as a background service, so the other cars move on the
 # C1 Map (F9) and Tracking (F10). Option A only. Installed by
 # `ENABLE_DEMO_DATA=1 bash infra/aws/setup_ec2.sh`. Options come from DEMO_DATA_ARGS in
-# infra/aws/edge.env. Each start rewrites the recent history and moves the seeded alerts to "now".
+# infra/aws/edge.env. --demo-only is mandatory: only untouched demo-tagged car histories are
+# generated/resumed. Existing real history and all alerts are preserved.
 #
 #   journalctl -u autosound-demo-data -f
 

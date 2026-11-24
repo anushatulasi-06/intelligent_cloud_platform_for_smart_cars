@@ -1,16 +1,15 @@
 # Option B: the whole app in Docker on one EC2 instance, using the managed AWS services
 # (RDS PostgreSQL, MongoDB Atlas, S3, SES) instead of local database and MinIO containers.
-# Run through infra/aws/docker/setup_ec2_docker.sh, which also installs Docker. By hand:
-#
-#   sudo docker compose -f infra/aws/docker/docker-compose.yml up --build -d
-#   sudo COMPOSE_PROFILES=edge,demo-data docker compose -f infra/aws/docker/docker-compose.yml up --build -d
-#
-# Addresses: UI at http://<elastic-ip>/ (nginx also forwards /api/ to the API) and the API itself at
-# http://<elastic-ip>:8000 for edge clients such as CARLA. Settings come from backend/.env
+# Run only through setup_ec2_docker.sh after deployment and cost authorization.
+# Do not bypass preflight with direct build/up. The variables below are not a spending cap.
+# UI binds 127.0.0.1:80 and API 127.0.0.1:8000; access both through an SSH tunnel only.
+# Settings come from backend/.env
 # (template: infra/aws/backend.env.production.example). AWS credentials come from the instance's
-# IAM role; containers reach it only when the instance metadata hop limit is 2 (the Amazon Linux
-# 2023 default).
+# IAM role; explicitly configure the instance metadata hop limit as 2 for this container path.
 name: autosound
+x-deployment-acknowledgement: ${ALLOW_AWS_DEPLOYMENT:?Use the guarded setup script with explicit deployment authorization}
+x-cost-acknowledgement: ${AWS_COST_ACK:?Explicit AWS usage-cost acknowledgement is required}
+x-credit-budget: ${AWS_CREDIT_BUDGET_USD:?A positive authorized credit budget is required by the setup guard}
 
 x-backend: &backend
   image: autosound-backend:aws
@@ -27,20 +26,21 @@ services:
     env_file: ../../../backend/.env
     environment:
       MODEL_DIR: /app/model/artifacts
-      SKIP_SEED: ${SKIP_SEED:-0}
-    # Migrate, seed the demo data unless SKIP_SEED=1 (idempotent), then serve with ONE worker:
+      APP_ENV: production
+    # No development seed runs in production. Bootstrap private accounts separately.
+    # Use ONE worker:
     # the C3 processing worker, C2 device sweeper and backup jobs run inside this process.
     command:
       - sh
       - -c
       - >-
         alembic upgrade head &&
-        if [ "$$SKIP_SEED" != "1" ]; then python -m app.db.seed; fi &&
         exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - backups:/app/backend/.local_backups
+      - private-bootstrap:/app/backend/.local_bootstrap
 
   frontend:
     image: autosound-frontend:aws
@@ -48,7 +48,7 @@ services:
       context: ../../..
       dockerfile: frontend/Dockerfile
     ports:
-      - "80:8080"
+      - "127.0.0.1:80:8080"
     depends_on:
       api:
         condition: service_healthy
@@ -57,7 +57,7 @@ services:
   # Optional (profile "edge"): an edge client for car 1, keeps the C2 Simulator live without a
   # CARLA server. EDGE_CLIENT in infra/aws/edge.env: replay_client (default) or demo_client.
   # Stop it before a CARLA client connects with the same devices:
-  #   sudo docker compose -f infra/aws/docker/docker-compose.yml stop edge-demo
+  #   bash infra/aws/docker/compose.sh stop edge-demo
   edge-demo:
     <<: *backend
     profiles: [edge]
@@ -92,3 +92,4 @@ services:
 volumes:
   backups:
   edge-buffer:
+  private-bootstrap:

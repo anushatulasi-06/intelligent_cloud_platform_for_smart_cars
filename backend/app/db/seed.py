@@ -199,8 +199,11 @@ def seed_mongo(db: Database, car_ids: dict[int, int], mic_for_car: dict[int, int
 
 
 def run() -> SeedResult:
+    from app.config import get_settings
     from app.db.postgres import session_scope
 
+    if get_settings().APP_ENV == "production":
+        raise RuntimeError("Development seed is disabled in production; use the private bootstrap instead")
     with session_scope() as session:
         result, car_ids, mic_for_car = seed_postgres(session)
     mongo.ensure_indexes()
