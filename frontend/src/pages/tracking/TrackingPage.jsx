@@ -86,7 +86,6 @@ export default function TrackingPage() {
     <div className="page">
       <div className="page-head">
         <h1>Tracking</h1>
-        <span className="frame-id">F10</span>
       </div>
 
       <form className="filter-bar" onSubmit={show}>

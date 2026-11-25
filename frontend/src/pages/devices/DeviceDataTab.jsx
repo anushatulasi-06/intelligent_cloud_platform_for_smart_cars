@@ -69,9 +69,7 @@ function RecordDetail({ id, onClose, onRetry, retrying }) {
           {audio.error && <p className="state-error" role="alert">{audio.error.message} <button className="btn btn-sm" onClick={reloadAudio}>Retry link</button></p>}
           {audio.data && <>
             <audio key={`${audio.data.url}-${audioVersion}`} aria-label="Raw audio recording" className="audio" controls preload="none" src={audio.data.url} onError={() => setAudioFailed(true)} />
-            {audioFailed && <p className="state-error" role="alert">Audio could not be played. Refresh the link and try again. <button className="btn btn-sm" onClick={reloadAudio}>Refresh audio link</button></p>}
-            <p className="small"><a href={audio.data.url} target="_blank" rel="noreferrer">Open raw audio</a> <span className="muted">· Link expires in {Math.round(audio.data.expires_in / 60)} minutes</span></p>
-          </>}
+            {audioFailed && <p className="state-error" role="alert">Audio could not be played. Refresh the link and try again. <button className="btn btn-sm" onClick={reloadAudio}>Refresh audio link</button></p>}          </>}
         </div>
       </div>
     </Modal>

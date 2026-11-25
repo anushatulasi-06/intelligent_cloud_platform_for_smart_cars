@@ -158,7 +158,7 @@ function Simulator({ role }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingEvent?.status, pendingScenario?.commandId]);
   return <div className="page simulator-page">
-    <div className="page-head"><div><h1>Simulator</h1><p className="muted small">Car telemetry and sound scenarios · C2</p></div><span className="frame-id">F11</span></div>
+    <div className="page-head"><div><h1>Simulator</h1><p className="muted small">Car telemetry and sound scenarios</p></div></div>
     <div className="filter-bar">
       <label className="field"><span>Car</span><select value={carId} onChange={(e) => setParams({ car_id: e.target.value })}>
         {!carChoices.some((c) => c.car_id === carId) && <option value={carId}>Car {carId}</option>}
@@ -171,7 +171,6 @@ function Simulator({ role }) {
     {(state.error || cars.error) && <p role="alert" className="state-error">{(state.error || cars.error).message}</p>}
     {USE_MOCK && <p className="sim-notice">UI prototype data. Start the backend and set VITE_USE_MOCK=false to execute commands.</p>}
     {localDemo && <p className="sim-notice">Local edge demo: illustrated road frames and {s?.audio_source === 'recordings' ? 'recorded sound scenarios' : s?.audio_source === 'synthetic' ? 'synthetic test tones' : 'configured audio scenarios'} exercise the real upload and classification pipeline. Scenario labels describe the input; the model determines the result.</p>}
-    {recordedReplay && <p className="sim-notice sim-replay-notice"><strong>Recorded CARLA replay.</strong> Prerecorded camera frames and telemetry are sent through the current API. Sound events use the real audio upload and classification pipeline. Choose a scenario to begin; Stop route pauses its recording and Start route resumes it.</p>}
     {!s?.online && !state.loading && !state.error && <div className="sim-notice"><strong>Waiting for an edge client.</strong> Start the local demo or CARLA adapter for this car. A recent microphone heartbeat is required to run scenarios. <Link to={`/devices?car_id=${carId}`}>Check devices</Link></div>}
     <div className="sim-main-grid">
       <section className="panel sim-camera" aria-label="Camera and telemetry">
@@ -218,7 +217,7 @@ function Simulator({ role }) {
     <div className="sim-bottom-grid">
       <section className="panel"><h2>Last classification</h2>{s?.last_alert ? <>
         <dl className="kv"><div className="kv-row"><dt>Sound type</dt><dd><SoundType value={s.last_alert.sound_type} /></dd></div><div className="kv-row"><dt>Confidence</dt><dd>{formatPercent(s.last_alert.confidence)}</dd></div><div className="kv-row"><dt>Severity</dt><dd><StatusBadge value={s.last_alert.severity} /></dd></div></dl>
-        <div className="action-row">{role === 'cloud_staff' && <><Link className="btn btn-sm" to={`/alerts/${s.last_alert.id}`}>Open alert (F7)</Link><Link className="btn btn-sm" to={`/map?car_id=${carId}`}>Show on map</Link></>}<Link className="btn btn-sm" to={`/devices?tab=data&car_id=${carId}`}>Device data</Link></div>
+        <div className="action-row">{role === 'cloud_staff' && <><Link className="btn btn-sm" to={`/alerts/${s.last_alert.id}`}>Open alert</Link><Link className="btn btn-sm" to={`/map?car_id=${carId}`}>Show on map</Link></>}<Link className="btn btn-sm" to={`/devices?tab=data&car_id=${carId}`}>Device data</Link></div>
       </> : <p className="muted">No classification for this car yet. Send a scenario and follow its audio record through processing.</p>}</section>
       <section className="sim-event-log"><h2>Event log</h2><DataTable rows={s?.events} loading={state.loading && !s} error={state.error} empty="No commands for this car yet" rowKey={(r) => r.command_id ?? `${r.ts}-${r.command}`} columns={[
         { key: 'ts', header: 'Time', render: (r) => formatDateTime(r.ts) }, { key: 'command', header: 'Command', render: (r) => humanize(r.command) },

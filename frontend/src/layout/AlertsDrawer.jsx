@@ -60,7 +60,7 @@ export default function AlertsDrawer({ open, onClose, seen, onMarkAllSeen }) {
                     </div>
                     <div className="drawer-row">
                       <span className="cell-inline drawer-hint">
-                        {a.status}{linkable ? ' - click to open F7' : ''}
+                        {a.status}{linkable ? ' - click to open' : ''}
                         {a.is_anomaly && <StatusBadge value="review" />}
                       </span>
                       {unread && <span className="unread-dot" title="Unread" />}

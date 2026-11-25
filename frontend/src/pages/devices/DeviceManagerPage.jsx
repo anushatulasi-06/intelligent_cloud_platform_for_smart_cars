@@ -17,7 +17,6 @@ export default function DeviceManagerPage() {
     <div className="page">
       <div className="page-head">
         <h1>Device Manager · {tab === 'data' ? 'Device data' : detail ? 'Device detail and Wi-Fi' : 'Devices'}</h1>
-        <span className="frame-id">{tab === 'data' ? 'F13' : detail ? 'F5' : 'F4'}</span>
       </div>
       {tab === 'data' ? <DeviceDataTab key={role} /> : <DevicesTab key={role} />}
     </div>

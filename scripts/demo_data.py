@@ -16,6 +16,14 @@ Rerunning preserves history and resumes only this feed's marked routes. Legacy u
 positions are intentionally treated as real data. --offline never backdates an existing point;
 an already-online car becomes grey after its normal 90-second freshness window.
 
+For local demos, --refresh restores the original behaviour: it deletes this feed's own marked
+points and writes fresh history ending now, and moves the development seed's 25 alerts into the
+same window (so "Alerts today" and the recent-alert lists fill up). It never touches cars with
+non-demo positions (such as car 1 driven by an edge client) or alerts the seed didn't create, and
+it is refused when APP_ENV=production. Stop any running copy of this feed first.
+
+    python scripts/demo_data.py --demo-only --refresh --live --offline 1 4   # local demo
+
 A car counts as online while its last position is less than 90 seconds old (DT-MV-1), so the
 history alone turns every marker grey after a minute and a half. Use --live during a demo.
 """
@@ -31,9 +39,10 @@ from pymongo.errors import DuplicateKeyError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
 
+from app.config import get_settings                                   # noqa: E402
 from app.db import mongo, postgres                                    # noqa: E402
-from app.db.repositories import CarRepo, PositionRepo                 # noqa: E402
-from app.db.seed import CARS                                         # noqa: E402
+from app.db.repositories import AlertRepo, CarRepo, PositionRepo      # noqa: E402
+from app.db.seed import CARS, load_seed_alerts                       # noqa: E402
 
 CENTRE = (37.3352, -121.8811)          # downtown San Jose, where the seeded cars are
 STEP_SECONDS = 5
@@ -114,6 +123,44 @@ def initialize_routes(repo, cars, now, minutes, offline):
     return state
 
 
+def refresh_demo_history(repo, cars):
+    """--refresh: delete this feed's own marked points, so initialize_routes writes history ending
+    now. A car with any non-demo position (e.g. driven by an edge client) is left untouched."""
+    for car_id, _, _ in cars:
+        try:
+            _require_demo_history(repo, car_id)
+        except RealPositionPresent:
+            print(f"car {car_id}: has non-demo positions; not refreshed")
+            continue
+        removed = repo.collection.delete_many({"car_id": car_id, "source": SOURCE}).deleted_count
+        print(f"car {car_id}: cleared {removed} old demo positions")
+
+
+def retime_seeded_alerts(minutes, now):
+    """--refresh: spread the development seed's alerts over the last `minutes`, each placed on its
+    car's route at that moment. Only alerts whose record_id comes from the seed file change."""
+    alerts, positions = AlertRepo(), PositionRepo()
+    seeded = [doc for doc in (alerts.get_by_record_id(item["record_id"]) for item in load_seed_alerts())
+              if doc is not None]
+    if not seeded:
+        return 0
+    start = now - timedelta(minutes=minutes)
+    seeded.sort(key=lambda alert: alert.get("timestamp") or start)
+    step = (now - start) / len(seeded)
+    routes = {}
+    for index, alert in enumerate(seeded):
+        stamp = start + step * index
+        car_id = alert["car_id"]
+        if car_id not in routes:
+            routes[car_id] = positions.track(car_id, start - timedelta(minutes=5), now)
+        fields = {"timestamp": stamp}
+        if routes[car_id]:
+            near = min(routes[car_id], key=lambda point: abs((point["ts"] - stamp).total_seconds()))
+            fields.update(lat=near["lat"], lon=near["lon"])
+        alerts.update(alert["id"], fields)
+    return len(seeded)
+
+
 def tick_routes(repo, state, now, offline, eligible_ids):
     for car_id, (lat, lon, heading) in list(state.items()):
         if car_id not in eligible_ids:
@@ -136,7 +183,10 @@ def main(argv=None):
     parser.add_argument("--offline", type=int, nargs="*", default=[],
                         help="car ids to leave in the past, so their marker stays grey")
     parser.add_argument("--keep-alerts", action="store_true",
-                        help="compatibility option: all alerts are always preserved")
+                        help="with --refresh, refresh positions only and leave alert times alone")
+    parser.add_argument("--refresh", action="store_true",
+                        help="local demos: rewrite this feed's history to end now and move the development "
+                             "seed's alerts into the same window (refused when APP_ENV=production)")
     parser.add_argument("--live", action="store_true",
                         help="after the history, keep adding a position every few seconds")
     args = parser.parse_args(argv)
@@ -146,6 +196,8 @@ def main(argv=None):
         parser.error("--minutes must be between 1 and 1440")
     if any(car_id < 1 for car_id in args.offline):
         parser.error("--offline car IDs must be positive")
+    if args.refresh and get_settings().APP_ENV == "production":
+        parser.error("--refresh is for local development; it is refused when APP_ENV=production")
 
     cars = load_cars()
     if not cars:
@@ -155,8 +207,14 @@ def main(argv=None):
     mongo.ensure_indexes()
     repo = PositionRepo()
     now = datetime.now(timezone.utc)
+    if args.refresh:
+        refresh_demo_history(repo, cars)
     state = initialize_routes(repo, cars, now, args.minutes, set(args.offline))
-    print("All existing positions and alert timestamps preserved.")
+    if args.refresh and not args.keep_alerts:
+        moved = retime_seeded_alerts(args.minutes, now)
+        print(f"Moved {moved} development-seed alerts into the last {args.minutes} minutes.")
+    elif not args.refresh:
+        print("All existing positions and alert timestamps preserved.")
 
     if not args.live:
         print("Done. Markers go grey after 90 s; re-run with --live to keep them moving.")

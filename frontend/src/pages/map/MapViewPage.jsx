@@ -49,7 +49,6 @@ export default function MapViewPage() {
     <div className="page">
       <div className="page-head">
         <h1>Map View</h1>
-        <span className="frame-id">F9</span>
       </div>
 
       <div className="filter-bar">

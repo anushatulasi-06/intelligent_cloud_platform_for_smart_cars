@@ -2,7 +2,6 @@
 // owners to F2, IoT staff to F4 and cloud staff to F6.
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { DEV_LOGINS, USE_MOCK } from '../../api/endpoints.js';
 import { ROLE_HOME } from '../../config/access.js';
 import { useRole } from '../../config/RoleContext.jsx';
 
@@ -74,27 +73,6 @@ export default function LoginPage() {
         <button type="submit" className="btn btn-primary login-submit" disabled={busy}>
           {busy ? 'Signing in...' : 'Sign in'}
         </button>
-
-        <p className="muted small">
-          Your role is read from your token and sets the menu: owners, IoT staff or cloud staff.
-        </p>
-
-        {import.meta.env.DEV && (
-          <div className="login-hint">
-            <strong>Development accounts</strong>
-            {DEV_LOGINS.map((a) => (
-              <button
-                key={a.email}
-                type="button"
-                className="login-hint-row"
-                onClick={() => { setEmail(a.email); setPassword(a.password); }}
-              >
-                {a.email} · {a.role}
-              </button>
-            ))}
-            <span className="small">{USE_MOCK ? 'Mock mode: any password works.' : 'Passwords come from the backend seed.'}</span>
-          </div>
-        )}
       </form>
     </div>
   );
