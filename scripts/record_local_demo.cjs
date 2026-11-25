@@ -345,7 +345,7 @@ function executable(command) {
     }
     phase = 'C5 model management'; await go('/config?tab=models');
     const models = await body('/admin/models'); assert(models.some(row => row.is_active));
-    await caption('C4/C5: the packaged CNN model is active and its threshold is managed in the UI. Predictions shown in this rehearsal came from that loaded model.', 8000); await shot('08-active-model');
+    await caption('C4/C5: the packaged CNN model is active and its threshold is managed in the UI. The five NEW replay predictions came from this model; historical probabilities remain imported facts.', 8000); await shot('08-active-model');
     phase = 'C5 alert configuration'; await go('/config?tab=alert-types');
     await caption('C5: Cloud Staff manage alert categories and severity configuration. These controls are protected by the same authenticated role checks.', 6500);
     phase = 'C5 database and backup'; await go('/config?tab=database');
