@@ -13,8 +13,10 @@ import './simulator.css';
 
 const SCENARIOS = [
   ['emergency', 'Siren', 'Emergency vehicle'], ['in_vehicle', 'Glass / crash', 'In-vehicle incident'],
-  ['human', 'Scream / cry', 'Human sound'], ['traffic', 'Horn', 'Traffic'], ['environmental', 'Rain / wind', 'Environmental'],
+  ['human', 'Scream', 'Human sound'], ['traffic', 'Road traffic', 'Traffic'], ['environmental', 'Thunderstorm', 'Environmental'],
 ];
+// Longest recorded scenario is 35 s; keep the faster refresh a little beyond that.
+const SCENARIO_FAST_POLL_MS = 45000;
 export default function SimulatorPage() {
   const { role } = useRole();
   return <Simulator key={role} role={role} />;
@@ -34,7 +36,10 @@ function Simulator({ role }) {
   const state = useAsync(() => getSimulatorState(carId), [carId, role]);
   const cars = useAsync(getSimulatorCars, [role]);
   const devices = useAsync(() => listDevices({ car_id: carId, page_size: 100 }), [carId, role]);
-  usePolling(state.reload, 2000, !state.loading);
+  // Refresh every second while a scenario plays, so recorded frames and its sound event show promptly.
+  const fastPoll = !!pendingScenario && Date.now() - pendingScenario.sentAt < SCENARIO_FAST_POLL_MS;
+  const pollSeconds = fastPoll ? 1 : 2;
+  usePolling(state.reload, pollSeconds * 1000, !state.loading);
   usePolling(devices.reload, 15000, !devices.loading);
   const rows = (devices.data?.items || []).filter((d) => d.car_id === carId && d.device_type === 'microphone');
   const targetId = rows.some((d) => d.id === Number(deviceId)) ? Number(deviceId) : rows[0]?.id;
@@ -63,7 +68,8 @@ function Simulator({ role }) {
       request.url = null;
     };
   }, [carId]);
-  async function startPreview(category) {
+  // autoplay=false only loads the recording; it is played when the edge reports the sound event.
+  async function startPreview(category, { autoplay = true } = {}) {
     const request = previewRequest.current;
     const id = ++request.id;
     request.controller?.abort();
@@ -80,6 +86,10 @@ function Simulator({ role }) {
       const audio = previewAudio.current;
       audio.src = request.url;
       audio.load();
+      if (!autoplay) {
+        setPreview({ category, status: 'waiting' });
+        return;
+      }
       setPreview({ category, status: 'ready' });
       try {
         await audio.play();
@@ -98,17 +108,29 @@ function Simulator({ role }) {
     if (!canSend || !targetId) return;
     // Preview and edge execution are independent: a browser audio problem must
     // never discard the normal queued command or its C3 upload.
-    if (scenario) void startPreview(scenario);
+    // The sound is only loaded now; it plays when the edge acknowledges the command at the event time.
+    if (scenario) void startPreview(scenario, { autoplay: false });
     setBusy(scenario || command);
     try {
       const result = await queueDeviceCommand(targetId, { command, ...(scenario ? { payload: { scenario } } : {}) });
-      if (scenario) setPendingScenario({ category: scenario, commandId: result.command_id });
+      if (scenario) setPendingScenario({ category: scenario, commandId: result.command_id, sentAt: Date.now() });
       toast(`${scenario ? humanize(scenario) : humanize(command)} queued for ${target.name}`);
       state.reload();
     } catch (e) { toast(e.message, 'error'); }
     finally { setBusy(''); }
   }
   const pendingEvent = s?.events?.find((e) => e.command_id === pendingScenario?.commandId);
+  // The edge acknowledges a scenario at its sound event (the replay client waits for the recorded
+  // event time), so that is when the browser plays the sound.
+  const eventPlayed = useRef(null);
+  useEffect(() => {
+    if (!pendingScenario || pendingEvent?.status !== 'acknowledged') return;
+    if (eventPlayed.current === pendingScenario.commandId) return;
+    eventPlayed.current = pendingScenario.commandId;
+    if (preview?.category === pendingScenario.category && previewRequest.current.url) void replayPreview();
+    else void startPreview(pendingScenario.category);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingEvent?.status, pendingScenario?.commandId]);
   return <div className="page simulator-page">
     <div className="page-head"><div><h1>Simulator</h1><p className="muted small">Car telemetry and sound scenarios · C2</p></div><span className="frame-id">F11</span></div>
     <div className="filter-bar">
@@ -117,7 +139,7 @@ function Simulator({ role }) {
         {carChoices.map((c) => <option value={c.car_id} key={c.car_id}>C-{String(c.car_id).padStart(3, '0')} · {c.make} {c.model}{c.plate ? ` · ${c.plate}` : ''}</option>)}
       </select></label>
       <StatusBadge value={s?.online ? 'online' : 'offline'} label={s?.online ? 'Client online' : 'Client offline'} />
-      <span className="sim-source">{sourceLabel}</span><span className="muted small">Updates every 2 s</span>
+      <span className="sim-source">{sourceLabel}</span><span className="muted small">Updates every {pollSeconds} s</span>
       <button className="btn btn-sm" disabled={state.loading} onClick={() => { state.reload(); devices.reload(); cars.reload(); }}>Refresh</button>
     </div>
     {(state.error || cars.error) && <p role="alert" className="state-error">{(state.error || cars.error).message}</p>}
@@ -140,7 +162,7 @@ function Simulator({ role }) {
           <label className="field"><span>Microphone device</span><select value={targetId ?? ''} onChange={(e) => setDeviceId(e.target.value)} disabled={!rows.length}><option disabled value="">No microphone on this car</option>{rows.map((d) => <option value={d.id} key={d.id}>{d.name}</option>)}</select></label>
           {devices.error && <p className="state-error">{devices.error.message}</p>}
           <div className="sim-route-actions"><button className="btn btn-primary" disabled={!canSend} onClick={() => send('start_route')}>Start route</button><button className="btn" disabled={!canSend} onClick={() => send('stop_route')}>Stop route</button></div>
-          <p className="muted small">Play a sound event in the car:</p>
+          <p className="muted small">Choose a scenario to play</p>
           <div className="sim-scenarios">{SCENARIOS.map(([category, label, description]) => <button key={category} className={`sim-scenario sim-scenario-${category}`} disabled={!canSend} onClick={() => send('simulate_event', category)}><span className="sound-dot" /><span><strong>{busy === category ? 'Queuing…' : label}</strong><small>{description}</small></span><span aria-hidden="true">↗</span></button>)}</div>
           <div className="sim-audio-preview" hidden={!preview}>
             <div className="sim-preview-heading"><strong>Browser sound preview</strong><span className="small">{SCENARIOS.find(([category]) => category === preview?.category)?.[1]}</span></div>
@@ -149,18 +171,16 @@ function Simulator({ role }) {
               onPause={() => setPreview((current) => current && current.status === 'playing' ? { ...current, status: 'paused' } : current)}
               onEnded={() => setPreview((current) => current && { ...current, status: 'ended' })}
               onError={() => { if (previewRequest.current.url) setPreview((current) => current && { ...current, status: 'error', message: 'The recording could not be played. Retry the preview.' }); }} />
-            <p className="small" role="status">{preview?.message || ({ loading: 'Loading the matching recording…', ready: 'Recording ready.', playing: 'Playing the matching recording.', paused: 'Preview paused.', ended: 'Preview finished.' }[preview?.status])}</p>
+            <p className="small" role="status">{preview?.message || ({ loading: 'Loading the matching recording…', waiting: 'Scenario playing. The sound plays when its event happens.', ready: 'Recording ready.', playing: 'Playing the matching recording.', paused: 'Preview paused.', ended: 'Preview finished.' }[preview?.status])}</p>
             {preview?.status === 'blocked' && <button className="btn btn-sm" onClick={replayPreview}>Play preview</button>}
             {preview?.status === 'error' && <button className="btn btn-sm" onClick={() => startPreview(preview.category)}>Retry preview</button>}
-            <p className="muted small">This browser plays the bundled recording. An edge client with a custom scenario mapping can upload a different clip.</p>
+            <p className="muted small">This browser plays the bundled recording at the scenario's sound event. An edge client with a custom scenario mapping can upload a different clip.</p>
           </div>
           <details className="sim-recording-credits"><summary>Recording credits · CC BY-NC 3.0</summary>
-            <p>Five <a href="https://github.com/karolpiczak/ESC-50" target="_blank" rel="noreferrer">ESC-50</a> recordings, curated by Karol J. Piczak, are used unchanged for this educational demo under <a href="https://creativecommons.org/licenses/by-nc/3.0/" target="_blank" rel="noreferrer">CC BY-NC 3.0</a>.</p>
+            <p>Two <a href="https://github.com/karolpiczak/ESC-50" target="_blank" rel="noreferrer">ESC-50</a> recordings, curated by Karol J. Piczak, are used unchanged for this educational demo under <a href="https://creativecommons.org/licenses/by-nc/3.0/" target="_blank" rel="noreferrer">CC BY-NC 3.0</a>.</p>
             <ul><li>Siren: <a href="https://freesound.org/people/guitarguy1985/sounds/54084/" target="_blank" rel="noreferrer">civildefense.wav</a> by guitarguy1985 (CC0).</li>
               <li>Glass breaking: <a href="https://freesound.org/people/gezortenplotz/sounds/20133/" target="_blank" rel="noreferrer">breaking_glass.wav</a> by gezortenplotz (CC BY 3.0).</li>
-              <li>Human: <a href="https://freesound.org/people/the_yura/sounds/211527/" target="_blank" rel="noreferrer">Crying newborn baby child 3.WAV</a> by the_yura (CC0).</li>
-              <li>Horn: <a href="https://freesound.org/people/cognito%20perceptu/sounds/17124/" target="_blank" rel="noreferrer">car sharp horn.wav</a> by cognito perceptu (CC0).</li>
-              <li>Rain: <a href="https://freesound.org/people/cognito%20perceptu/sounds/17367/" target="_blank" rel="noreferrer">unlocki door to mod rain.wav</a> by cognito perceptu (CC0).</li></ul>
+              <li>Scream, road traffic and thunderstorm: from the CMPE 281 course-provided Audio_Datasets (not ESC-50).</li></ul>
             <a href="https://github.com/karolpiczak/ESC-50/blob/33c8ce9eb2cf0b1c2f8bcf322eb349b6be34dbb6/LICENSE" target="_blank" rel="noreferrer">Complete upstream notices</a>
           </details>
           {!targetOnline && <p className="muted small">Controls become available when this microphone reports a heartbeat.</p>}

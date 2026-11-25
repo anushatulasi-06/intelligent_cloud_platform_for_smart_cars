@@ -54,7 +54,8 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Optional (profile "edge"): local edge client, keeps the C2 Simulator live without CARLA.
+  # Optional (profile "edge"): an edge client for car 1, keeps the C2 Simulator live without a
+  # CARLA server. EDGE_CLIENT in infra/aws/edge.env: replay_client (default) or demo_client.
   # Stop it before a CARLA client connects with the same devices:
   #   sudo docker compose -f infra/aws/docker/docker-compose.yml stop edge-demo
   edge-demo:
@@ -63,7 +64,7 @@ services:
     env_file: ../edge.env
     environment:
       EDGE_API_URL: http://api:8000
-    command: [python, -m, edge.demo_client, --no-audio-playback, --buffer-dir, /app/backend/.local_edge/demo]
+    command: [sh, -c, 'exec python -m "edge.$${EDGE_CLIENT:-replay_client}" --no-audio-playback --buffer-dir /app/backend/.local_edge/demo']
     volumes:
       - edge-buffer:/app/backend/.local_edge/demo
     healthcheck:

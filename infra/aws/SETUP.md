@@ -268,11 +268,19 @@ The second run:
 
 | Option | Effect |
 |---|---|
-| `ENABLE_EDGE_DEMO=1` | Runs **`autosound-edge`**: a virtual car 1 with an illustrated camera. The Simulator (F11) is live, and its sound scenarios feed C3 and C4, without CARLA. |
+| `ENABLE_EDGE_DEMO=1` | Runs **`autosound-edge`**, car 1's edge client. By default it's the **CARLA replay client**: each scenario in F11 plays a recorded CARLA drive, with its sound at the event, feeding C3 and C4 without a GPU or CARLA server. |
 | `ENABLE_DEMO_DATA=1` | Runs **`autosound-demo-data`**: cars 2–3 keep moving on Map (F9) and Tracking (F10), and car 4 shows as offline. |
 | `SKIP_SEED=1` | Skips the demo data. The demo passwords and device keys are public in the repository. |
 
 The demo feeds read `infra/aws/edge.env`, which is created automatically and gitignored.
+
+**Which edge client runs** is set by `EDGE_CLIENT` in `infra/aws/edge.env`:
+- `replay_client` (default) replays the recordings in `backend/edge/carla_recordings/`. They ship
+  with the code, so commit them before deploying.
+- `demo_client` is a virtual car with an illustrated camera, driven by Start/Stop route.
+
+After changing it: `sudo systemctl restart autosound-edge`. Details:
+[edge client guide](../../backend/edge/README.md#replay-recorded-carla-scenarios).
 
 From your laptop, `curl http://<elastic-ip>:8000/health` should return `{"status":"ok",...}`.
 The API docs are at `http://<elastic-ip>:8000/docs`.
@@ -404,7 +412,7 @@ so alert emails are sent.
 | Component | Account | Check |
 |---|---|---|
 | **C1** | each role | Login sends each role to its home page. Dashboard F2 (owner) and F6 (cloud) show data. F3 toggles. Map F9 and Tracking F10 show green moving cars and a grey car 4. |
-| **C2** | `iot@` | F4: add a device with Wi-Fi (shows the key once) and edit it. F5: configuration and command history. **F11** (`/simulator?car_id=1`): live frame and position, **Start/Stop route**. |
+| **C2** | `iot@` | F4: add a device with Wi-Fi (shows the key once) and edit it. F5: configuration and command history. **F11** (`/simulator?car_id=1`): click a scenario, and the recorded CARLA drive plays with its sound at the event. Start/Stop route pauses and resumes it. |
 | **C3** | `iot@` / `cloud@` | Trigger a sound scenario in F11. **F13** (Device Manager → Device data) shows the record as processed, and its audio plays. As cloud, **Retry** works on a failed record. |
 | **C4** | `cloud@`, then `owner@` | The new alert appears in the drawer and F12. F7 shows class probabilities and plays the audio, for new alerts and seeded ones (step 7.2). Ack/Resolve work. **An email arrives** at your step 7.3 address. `owner2` sees only car 4. |
 | **C5** | `cloud@` | F8a severity edits and F8b threshold (0.50–0.95) save. **F14** shows PostgreSQL, MongoDB and S3 **Healthy**. **Run backup now** succeeds, and the files appear in `<data-bucket>` under `backups/`. |
@@ -506,5 +514,5 @@ For a bad **model**, there's no redeploy: reactivate the previous version in F8b
 | F14 shows S3 unhealthy, or uploads fail | The IAM role isn't attached (EC2 → Actions → Security → Modify IAM role), or the policy still says `<bucket>`. |
 | No alert emails | The owner's email wasn't changed to your verified address (step 7.3), `DEV_FAKE_EMAIL` is still `true`, the sender or recipient isn't verified in SES, or the owner's subscription is off in F3. |
 | Backup fails | Check `journalctl -u autosound-api`. It needs `pg_dump` 16 and `mongodump`; rerun `setup_ec2.sh`. |
-| Simulator says "Waiting for an edge client" | `sudo systemctl status autosound-edge`. It must be enabled (`ENABLE_EDGE_DEMO=1`), and stopped only while CARLA is connected. |
+| Simulator says "Waiting for an edge client" | `sudo systemctl status autosound-edge` and `journalctl -u autosound-edge -n 50`. It must be enabled (`ENABLE_EDGE_DEMO=1`), stopped only while CARLA is connected, and `EDGE_CLIENT` in `edge.env` must be `replay_client` or `demo_client`. The replay client also needs the recordings in `backend/edge/carla_recordings/`. |
 | `deploy_frontend.sh` fails with AccessDenied | The laptop's IAM user is missing a permission from step 2.8, or Block Public Access is still on for the frontend bucket. |

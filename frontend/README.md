@@ -81,10 +81,16 @@ For data on every page (car positions, live Simulator, records, seeded alert aud
 - **F11 Simulator** (`/simulator?car_id=1`):
   - live camera frame and telemetry
   - **Start/Stop route**
-  - the five sound scenarios, with their classification and recent events
+  - five scenario buttons (Siren, Glass / crash, Scream, Road traffic, Thunderstorm), with
+    the last classification and an event log
 
-  It polls every 2 s and labels its source: *Local edge demo*, *CARLA* or *Edge client*. It shows
-  "Waiting for an edge client" when no device is sending heartbeats.
+  **Clicking a scenario** loads its sound, and plays it when the edge acknowledges the
+  command. With the CARLA replay client, that's at the scenario's event: the recorded drive
+  plays first, then the sound.
+
+  It polls every 2 s, and every 1 s for 45 s after a scenario click. It labels its source:
+  *Local edge demo*, *CARLA* (also for the replay client) or *Edge client*. It shows "Waiting
+  for an edge client" when no device is sending heartbeats.
 
 ### C3 – Data Management
 - **F13 Device data** (`/devices?tab=data`):

@@ -63,8 +63,7 @@ def test_synthetic_fixtures_are_distinct_valid_labeled_and_preserve_existing_fil
 
 def test_bundled_recordings_match_attributed_manifest_and_upload_limits():
     scenarios = load_scenarios(BUNDLED_SCENARIOS)
-    assert load_scenarios(BUNDLED_SCENARIOS.parent.parent / "edge_scenarios.json") == scenarios
-    manifest = json.loads(BUNDLED_SCENARIOS.with_name("manifest.json").read_text())
+    manifest = json.loads((BUNDLED_SCENARIOS.parent / "demo_clips" / "manifest.json").read_text())
     assert set(scenarios) == set(SOUND_CATEGORIES)
     assert len(manifest["clips"]) == 5
     assert manifest["dataset_license_url"] == "https://creativecommons.org/licenses/by-nc/3.0/"
@@ -72,7 +71,9 @@ def test_bundled_recordings_match_attributed_manifest_and_upload_limits():
         audio = scenarios[clip["scenario"]].read_bytes()
         assert hashlib.sha256(audio).hexdigest() == clip["sha256"]
         assert validate_audio(audio, "audio/wav") == ("wav", "audio/wav", 5.0)
-        assert clip["original_author"] and clip["original_source_url"] and clip["esc50_source_url"]
+        # Every clip names its source: an ESC-50 recording, or a file in the course-provided dataset.
+        assert clip["original_author"] and clip["original_source_url"]
+        assert clip.get("esc50_source_url") or clip.get("source_dataset_path")
 
 
 @pytest.mark.parametrize("synthetic_audio", [False, True], ids=["bundled-recordings", "synthetic-fixtures"])

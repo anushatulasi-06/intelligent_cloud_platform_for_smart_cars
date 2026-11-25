@@ -1,5 +1,21 @@
 # Edge clients for C2/C3
 
+An edge client plays the role of a car's microphone and camera: it sends heartbeats with the car's
+position, uploads camera frames, runs the commands queued in F4/F5/F11, and uploads sound clips
+to C3 (`POST /device-data`), which C4 classifies into alerts. Run **one** edge client at a time for
+the same devices.
+
+| Client | What it is | Camera in F11 | Needs |
+|---|---|---|---|
+| [`edge.replay_client`](#replay-recorded-carla-scenarios) | Replays recorded CARLA scenarios from `carla_recordings/` | Real CARLA frames | Nothing extra |
+| [`edge.demo_client`](#runnable-local-component-demo) | A virtual car driving a loop | Illustrated frame drawn in code | Nothing extra |
+| [`edge.carla_demo`](#owned-vehicle-demo-runner) | Live CARLA: spawns its own car and camera | Live CARLA frames | A CARLA 0.9.16 server with an NVIDIA GPU |
+| [`edge.carla_client`](#attach-to-an-existing-vehicle) | Live CARLA: attaches to an existing car | Live CARLA frames | A CARLA server |
+
+[`record_scenarios.py`](record_scenarios.py) makes new recordings for the replay client, on a
+CARLA machine. All clients share [`edge_scenarios.json`](edge_scenarios.json), which maps each sound
+class to its clip in [`demo_clips/`](demo_clips/README.md).
+
 ## Runnable local component demo
 
 `edge.demo_client` is the local alternative when a CARLA server is unavailable. It
@@ -31,13 +47,12 @@ with the route stopped; open Simulator as IoT Staff and click **Start route** to
 the position, speed and illustrated road change. **Stop route** halts movement.
 `--heartbeat-seconds 2` is the default; valid values are 0.2 to 30 seconds.
 
-Five attributed, unchanged 5-second **ESC-50 recordings** are bundled in
-`demo_clips/`: a siren, glass breaking, a crying baby, a car horn, and rain. The
-default client needs no runtime download. See [the recording credits and
-license](demo_clips/README.md) for the CC BY-NC 3.0 educational-use terms and original
-creators. Selecting a scenario sends that category as `trigger` metadata; the CNN
-predicts independently. These few clips do not establish model accuracy, and no
-claim is made that they were excluded from model training.
+Five 5-second clips are bundled in `demo_clips/`, one per class: a siren and glass
+breaking (ESC-50), and a scream, road traffic and a thunderstorm (from the course
+dataset's validation and test splits, which `cnn-v1` never trained on). All five are
+classified correctly by `cnn-v1`. The default client needs no runtime download. See
+[the recording credits and license](demo_clips/README.md). Selecting a scenario sends
+that category as `trigger` metadata; the CNN predicts independently.
 
 To use your own recordings, supply a five-category JSON mapping as described below:
 
@@ -62,6 +77,78 @@ The integration test in `tests/test_demo_edge.py` drives real HTTP routes for
 registration, encrypted configuration, movement, camera frames, all five uploads,
 queue processing and the shipped `cnn-v1` model. Stores are isolated in that test;
 the runnable client always uses the configured API and its actual services.
+
+## Replay recorded CARLA scenarios
+
+`edge.replay_client` shows **real CARLA footage without a GPU or CARLA server**. It replays the
+recordings in [`carla_recordings/`](carla_recordings/) as car 1. Run it in place of the demo client,
+with the same `EDGE_*` settings:
+
+```bash
+# From backend/, with the API running:
+export EDGE_API_URL=http://localhost:8000 EDGE_CAR_ID=1 \
+       EDGE_DEVICE_ID=1 EDGE_DEVICE_KEY=dev-device-key-mic-1 \
+       EDGE_CAMERA_DEVICE_ID=5 EDGE_CAMERA_DEVICE_KEY=dev-device-key-cam-1
+python -m edge.replay_client --no-audio-playback
+```
+
+**What happens when you click a scenario in F11:**
+1. The recording for that class starts. Every heartbeat (1 s) sends the recorded position, speed
+   and heading, plus that moment's camera frame, so F11 and the Map follow the recorded drive.
+2. At the scenario's **sound event**, it uploads the class's clip from `edge_scenarios.json` (C3 →
+   C4 → alert), and only then acknowledges the command.
+3. F11 plays the sound when it sees the acknowledgement, so you hear it at the event, not on the
+   click.
+4. When the recording ends, the camera stays on the last frame at 0 km/h.
+
+**Other behaviour:**
+- **Start/Stop route** resume and pause the current recording.
+- **A new scenario** replaces the one playing.
+- **Before any click**, F11 shows the first recording's opening frame, standing still.
+
+| Button | Recording | Sound plays at |
+|---|---|---|
+| Siren (emergency) | `emergency` | 0.7 s, the ambulance just ahead (recorded) |
+| Glass / crash (in_vehicle) | `in_vehicle_crash` | 6.0 s, one frame after hitting the parked car |
+| Scream (human) | `human_pullover` | 15.0 s, stopped beside the wall |
+| Road traffic (traffic) | `traffic` | 6.0 s, when other cars appear on the street |
+| Thunderstorm (environmental) | `environmental` | on click (the storm is there from the start) |
+
+- **Which recording per class:** `RECORDINGS` at the top of `replay_client.py`.
+- **When the sound plays:** `EVENT_TIME_OVERRIDES` sets the sound time per class. Classes not
+  listed use the event time in their `scenario.json`. The recordings themselves are never changed.
+- **Frames** are stored as quality-90 JPEGs and uploaded unchanged (about 75 KB each).
+
+| Option | Default | Purpose |
+|---|---|---|
+| `--recordings-dir` | `edge/carla_recordings` | Where the recordings are |
+| `--scenarios` | `edge/edge_scenarios.json` | Sound clip per class |
+| `--heartbeat-seconds` | `1.0` | Heartbeat, frame and playback step |
+| `--buffer-dir` | `.local_edge/replay` | Persistent buffer for clips waiting to upload |
+| `--no-audio-playback` | off | Don't also play the sound on this machine. Use it when F11 runs on the same computer, or you hear it twice. |
+
+Its firmware string, `carla-replay-v1`, makes F11 label the source **CARLA**.
+
+### Recordings and making new ones
+
+Each recording folder holds:
+- `frames/000001.jpg …`: 640 × 360 frames, one per second
+- `telemetry.csv`: one row per frame, with `t_s`, `file`, `lat`, `lon`, `speed_kmh`, `heading`, …
+- `scenario.json`: the sound class, town and `events` (`t_s`, `label`)
+
+Positions are already on the San Jose map, where the seeded cars are.
+
+To record more, run [`record_scenarios.py`](record_scenarios.py) on a machine with a CARLA 0.9.16
+server, copy its output folder into `carla_recordings/`, and point `RECORDINGS` at it:
+```bash
+python record_scenarios.py --scenario all --tm-port 8001 --interval 1.0
+```
+
+- **Frame size:** CARLA saves frames at near-maximum JPEG quality, with padding the API rejects.
+  The replay client re-encodes such frames at quality 90 automatically. You can also re-save them
+  once, to keep the repository small.
+- **Not the same as live CARLA:** the replay always shows the same drive. For a live car you can
+  steer from F11, use `edge.carla_demo` below.
 
 ## CARLA client
 
@@ -133,8 +220,8 @@ and stops/destroys only that sensor on exit.
 
 ## Audio scenarios and buffering
 
-`edge_scenarios.json` defaults to the same five bundled, attributed ESC-50
-recordings. Edit it, or pass `--scenarios /path/to/scenarios.json`, to use your own
+`edge_scenarios.json` maps each class to its bundled clip in `demo_clips/`, and every edge
+client uses it by default. Edit it, or pass `--scenarios /path/to/scenarios.json`, to use your own
 WAV/MP3 recordings. Paths are relative to the JSON file. Clips must be non-empty,
 at most 10 MiB, and at most 15 seconds. A `simulate_event` payload uses
 `{"scenario": "emergency"}` (or another category). The CARLA client forwards the
@@ -142,9 +229,10 @@ selected recording; it does not synthesize sound or record a physical microphone
 
 ### Audible scenario output
 
-Clicking a sound scenario in F11 also plays the matching bundled recording in the
-browser. The UI fetches the fixed WAV through a staff-only JWT endpoint and uses a
-temporary Blob URL; tokens are never placed in audio URLs. If browser autoplay is
+F11 plays the matching bundled recording in the browser **when the edge acknowledges the
+scenario**: at its sound event with the replay client, and almost at once with the other
+clients, which acknowledge straight away. The UI loads the WAV on click, through a staff-only
+JWT endpoint, as a temporary Blob URL; tokens are never placed in audio URLs. If browser autoplay is
 blocked, **Play preview** and normal audio controls remain visible. Audio errors
 and retries are independent of the queued edge command and its C3 upload. The
 browser labels this as a bundled preview: custom edge mappings and synthetic mode
@@ -163,7 +251,8 @@ On the microphone, `start_capture` and `stop_capture` enable/disable accepting t
 explicit scenario captures. On the camera, they toggle frame forwarding. Both start
 enabled. Accepted clips are first saved to the persistent
 FIFO in `.local_edge/`, then uploaded with a stable `clip_id`. A scenario ACK means
-the clip is saved locally; classification remains asynchronous. Upload failures keep
+the clip is saved locally (for the replay client, at the sound event); classification remains
+asynchronous. Upload failures keep
 the clip for the next pass. Restart with the same buffer directory and device ids to
 resume. The buffer holds 200 clips; when full, new scenarios fail rather than drop
 recordings. Each heartbeat pass uploads at most one buffered clip and retries at

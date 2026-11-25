@@ -252,12 +252,20 @@ Containers restart by themselves after a crash or a reboot.
 
 | Option | Effect |
 |---|---|
-| `ENABLE_EDGE_DEMO=1` | Runs **`edge-demo`**: a virtual car 1 with an illustrated camera. The Simulator (F11) is live, and its sound scenarios feed C3 and C4, without CARLA. |
+| `ENABLE_EDGE_DEMO=1` | Runs **`edge-demo`**, car 1's edge client. By default it's the **CARLA replay client**: each scenario in F11 plays a recorded CARLA drive, with its sound at the event, feeding C3 and C4 without a GPU or CARLA server. |
 | `ENABLE_DEMO_DATA=1` | Runs **`demo-data`**: cars 2–3 keep moving on Map (F9) and Tracking (F10), and car 4 shows as offline. |
 | `SKIP_SEED=1` | Skips the demo data. The demo passwords and device keys are public in the repository. |
 
 **Pass the same options on every run** of the script. The demo feeds read `infra/aws/edge.env`,
 which is created automatically and gitignored.
+
+**Which edge client runs** is set by `EDGE_CLIENT` in `infra/aws/edge.env`:
+- `replay_client` (default) replays the recordings in `backend/edge/carla_recordings/`. They ship
+  with the code, so commit them before deploying.
+- `demo_client` is a virtual car with an illustrated camera, driven by Start/Stop route.
+
+After changing it: rerun the setup script with the same options, which recreates `edge-demo`. Details:
+[edge client guide](../../../backend/edge/README.md#replay-recorded-carla-scenarios).
 
 From your laptop, open `http://<elastic-ip>/`, and check that
 `curl http://<elastic-ip>:8000/health` returns `{"status":"ok",...}`.
@@ -372,7 +380,7 @@ so alert emails are sent.
 | Component | Account | Check |
 |---|---|---|
 | **C1** | each role | Login sends each role to its home page. Dashboard F2 (owner) and F6 (cloud) show data. F3 toggles. Map F9 and Tracking F10 show green moving cars and a grey car 4. |
-| **C2** | `iot@` | F4: add a device with Wi-Fi (shows the key once) and edit it. F5: configuration and command history. **F11** (`/simulator?car_id=1`): live frame and position, **Start/Stop route**. |
+| **C2** | `iot@` | F4: add a device with Wi-Fi (shows the key once) and edit it. F5: configuration and command history. **F11** (`/simulator?car_id=1`): click a scenario, and the recorded CARLA drive plays with its sound at the event. Start/Stop route pauses and resumes it. |
 | **C3** | `iot@` / `cloud@` | Trigger a sound scenario in F11. **F13** shows the record as processed, and its audio plays. As cloud, **Retry** works on a failed record. |
 | **C4** | `cloud@`, then `owner@` | The new alert appears in the drawer and F12. F7 shows class probabilities and plays the audio, for new alerts and seeded ones (step 7.2). Ack/Resolve work. **An email arrives** at your step 7.3 address. `owner2` sees only car 4. |
 | **C5** | `cloud@` | F8a and F8b edits save. **F14** shows PostgreSQL, MongoDB and S3 **Healthy**. **Run backup now** succeeds, and the files appear in `<data-bucket>` under `backups/`. |
@@ -479,5 +487,5 @@ For a bad **model**, there's no redeploy: reactivate the previous version in F8b
 | F14 shows S3 unhealthy, "Unable to locate credentials" | Set the metadata hop limit to 2 (EC2 → Actions → Instance settings → Modify instance metadata options), and check the IAM role is attached. |
 | Page doesn't load at `http://<elastic-ip>/` | Security group port 80 is missing, or `$C ps` shows `frontend` isn't running (it waits for `api` to be healthy). |
 | No alert emails | The owner's email wasn't changed to your verified address (step 7.3), `DEV_FAKE_EMAIL` is still `true`, SES identities aren't verified, or the owner's subscription is off in F3. |
-| Simulator says "Waiting for an edge client" | `edge-demo` isn't running: run the script with `ENABLE_EDGE_DEMO=1`, and check `$C logs edge-demo`. |
+| Simulator says "Waiting for an edge client" | `edge-demo` isn't running: run the script with `ENABLE_EDGE_DEMO=1`, and check `$C logs edge-demo`. `EDGE_CLIENT` in `edge.env` must be `replay_client` or `demo_client`, and the replay client needs the recordings committed in `backend/edge/carla_recordings/` (they're built into the image). |
 | "No space left on device" | `sudo docker system prune -f`, or increase the EBS volume size. |

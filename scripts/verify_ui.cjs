@@ -1,4 +1,6 @@
-// Live C2/C3 browser regression. Start the real stack and edge demo before running.
+// Live C2/C3 browser regression. Start the real stack and the local edge demo (edge.demo_client) first:
+// it checks that Start route moves the car, which the CARLA replay client only does during a recording.
+// The Simulator plays each scenario's sound when the edge acknowledges it (the event time).
 const path = require('node:path');
 const fs = require('node:fs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || require.resolve('playwright', { paths: [path.join(__dirname, '../frontend')] }));
@@ -20,9 +22,10 @@ const assert = require('node:assert/strict');
  await page.getByRole('button',{name:'Start route',exact:true}).click();
  await page.waitForFunction(()=>parseFloat(document.querySelector('.sim-telemetry strong')?.textContent)>0);
  assert(parseFloat(await page.locator('.sim-telemetry strong').innerText()) > 0);
- for(const name of ['Siren','Glass / crash','Scream','Horn','Rain / wind']) {
+ for(const name of ['Siren','Glass / crash','Scream','Road traffic','Thunderstorm']) {
   await page.getByRole('button',{name:new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).click();
-  await page.waitForFunction(()=>{const a=document.querySelector('.sim-audio-preview audio');return a && a.currentTime>0 && a.duration===5 && a.src.startsWith('blob:')});
+  // Up to 45 s: with the replay client a sound waits for its event (the scream plays at 15 s).
+  await page.waitForFunction(()=>{const a=document.querySelector('.sim-audio-preview audio');return a && a.currentTime>0 && a.duration===5 && a.src.startsWith('blob:')},null,{timeout:45000});
   await page.waitForTimeout(3000);
  }
  await page.getByRole('button',{name:'Stop route',exact:true}).click();

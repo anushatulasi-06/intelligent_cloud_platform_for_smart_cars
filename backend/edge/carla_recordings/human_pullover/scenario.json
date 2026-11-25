@@ -1,0 +1,23 @@
+{
+  "scenario": "human_pullover",
+  "sound_class": "human",
+  "clip_hint": "crying baby",
+  "town": "Carla/Maps/Town03_Opt",
+  "seconds": 30,
+  "interval_s": 1.0,
+  "frames": 30,
+  "camera": "640x360",
+  "events": [
+    {
+      "t_s": 12.0,
+      "label": "car pulls over; baby crying",
+      "sound_class": "human"
+    }
+  ],
+  "map_origin": {
+    "lat": 37.3333,
+    "lon": -121.8907,
+    "meaning": "CARLA (0,0) placed here; lat/lon columns are on the real map"
+  },
+  "note": "Send one clip of this sound class at each event time when replaying."
+}
