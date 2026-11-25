@@ -29,6 +29,10 @@ const evidence = { author: 'Rishi Sheth', started_at: new Date().toISOString(), 
   scope: 'Isolated local recorded-CARLA replay; real API, C3 storage and model; separate preview fault injections',
   not_verified: ['Live CARLA server or physical vehicle', 'AWS deployment or SES delivery', 'Held-out model accuracy'],
   scenarios: [], preview_fault_injections: [], page_errors: [] };
+function safeError(error) {
+  return String(error.message).replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+/g, '<jwt>')
+    .replace(/X-Amz-Signature=[a-f0-9]{64}/gi, 'X-Amz-Signature=<signature>');
+}
 
 async function until(label, probe, timeout = 60000) {
   const deadline = Date.now() + timeout;
@@ -49,9 +53,10 @@ async function until(label, probe, timeout = 60000) {
   fs.mkdirSync(OUTPUT, { recursive: true });
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'],
     ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {}) });
+  let page;
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1080 } });
-    const page = await context.newPage();
+    page = await context.newPage();
     page.on('pageerror', error => evidence.page_errors.push(error.message));
     await page.addInitScript(() => {
       window.__qaPreviewEvents = [];
@@ -134,6 +139,7 @@ async function until(label, probe, timeout = 60000) {
       });
     }
     for (const [category, label, recordingName, override] of scenarios) {
+      evidence.phase = `real scenario: ${category}`;
       const folder = path.join(EDGE, 'carla_recordings', recordingName);
       const metadata = JSON.parse(fs.readFileSync(path.join(folder, 'scenario.json')));
       const firstTime = Number(fs.readFileSync(path.join(folder, 'telemetry.csv'), 'utf8').split(/\r?\n/)[1].split(',')[0]);
@@ -219,6 +225,7 @@ async function until(label, probe, timeout = 60000) {
     // Fault injection is restricted to this page's command responses/event rows. These
     // synthetic commands never reach the real edge or create audio records.
     const commandPattern = `**/devices/${mic.id}/commands`;
+    evidence.phase = 'preview fault: rejected queue request';
     await page.route(commandPattern, route => route.request().method() === 'POST'
       ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Focused queue failure' }) })
       : route.continue());
@@ -240,6 +247,7 @@ async function until(label, probe, timeout = 60000) {
       await route.fulfill({ response: real, json: data });
     });
     for (const status of ['failed', 'expired']) {
+      evidence.phase = `preview fault: ${status} command`;
       fakeStatus = 'delivered';
       await page.locator('.sim-scenario-emergency').click();
       await page.locator('.sim-audio-preview [role="status"]').filter({ hasText: 'Waiting for the edge' }).waitFor();
@@ -250,6 +258,7 @@ async function until(label, probe, timeout = 60000) {
       evidence.preview_fault_injections.push(`${status} command cancels its waiting preview`);
     }
     fakeStatus = 'delivered';
+    evidence.phase = 'preview fault: autoplay fallback';
     await page.evaluate(() => { window.__qaBlockPreviewOnce = true; });
     await page.locator('.sim-scenario-emergency').click();
     await page.locator('.sim-audio-preview [role="status"]').filter({ hasText: 'Waiting for the edge' }).waitFor();
@@ -265,6 +274,7 @@ async function until(label, probe, timeout = 60000) {
       return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Focused audio failure' }) });
     });
     fakeStatus = 'delivered'; rejectAudio = true;
+    evidence.phase = 'preview fault: download retry before acknowledgement';
     await page.locator('.sim-scenario-traffic').click();
     await page.getByRole('button', { name: 'Retry preview', exact: true }).click();
     await page.locator('.sim-audio-preview [role="status"]').filter({ hasText: 'Waiting for the edge' }).waitFor();
@@ -276,6 +286,7 @@ async function until(label, probe, timeout = 60000) {
     await page.unroute(audioPattern); await page.unroute(commandPattern); await page.unroute(statePattern);
 
     await page.getByRole('button', { name: 'Log out', exact: true }).click();
+    evidence.phase = 'Cloud Staff read-only replay';
     await login('cloud');
     await page.goto(UI + `/simulator?car_id=${CAR}`);
     await page.locator('.sim-replay-notice').waitFor();
@@ -285,14 +296,20 @@ async function until(label, probe, timeout = 60000) {
     await page.screenshot({ path: path.join(OUTPUT, 'cloud-replay-monitor.png'), fullPage: true });
     assert.deepEqual(evidence.page_errors, []);
     evidence.result = 'PASS'; evidence.finished_at = new Date().toISOString();
+    evidence.phase = 'complete';
     evidence.cloud_read_only = true;
     console.log('PASS replay UI: five real pipelines, pause/resume, truthful recorded labels, Cloud read-only and separate preview failure recovery');
+  } catch (error) {
+    evidence.result = 'FAIL'; evidence.failure = safeError(error); evidence.finished_at = new Date().toISOString();
+    if (page) {
+      try { await page.screenshot({ path: path.join(OUTPUT, 'replay-failure.png'), fullPage: true }); }
+      catch { /* Preserve the original failure if the browser already disconnected. */ }
+    }
+    throw error;
   } finally {
     await browser.close();
     fs.writeFileSync(path.join(OUTPUT, 'replay-browser-verification.json'), JSON.stringify(evidence, null, 2));
   }
 })().catch(error => {
-  const message = String(error.message).replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+/g, '<jwt>')
-    .replace(/X-Amz-Signature=[a-f0-9]{64}/gi, 'X-Amz-Signature=<signature>');
-  console.error(message); process.exitCode = 1;
+  console.error(safeError(error)); process.exitCode = 1;
 });

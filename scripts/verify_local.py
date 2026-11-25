@@ -321,10 +321,13 @@ def run_inside(args):
         # Unit tests have neither a real TEST_DATABASE_URL nor running stores. Their conftest
         # explicitly replaces application URLs with SQLite/mongomock configuration.
         unit_env = {**env, "APP_ENV": "test"}
-        processes.run("unit-tests", [py, "-m", "pytest", "-o", "addopts=", "-q", "-p", "no:cacheprovider",
-                                      "backend/tests", f"--junitxml={output / 'unit-tests.xml'}"],
-                      source, unit_env, timeout=1800)
-        report["unit_tests"] = junit_summary(output / "unit-tests.xml")
+        if args.application_only:
+            report["unit_tests"] = {"status": "not_run", "reason": "--application-only; use separate backend test evidence"}
+        else:
+            processes.run("unit-tests", [py, "-m", "pytest", "-o", "addopts=", "-q", "-p", "no:cacheprovider",
+                                          "backend/tests", f"--junitxml={output / 'unit-tests.xml'}"],
+                          source, unit_env, timeout=1800)
+            report["unit_tests"] = junit_summary(output / "unit-tests.xml")
 
         pgdata, pgsocket = runtime / "postgres", runtime / "pgsocket"
         pgsocket.mkdir()
@@ -341,10 +344,13 @@ def run_inside(args):
         wait_for("PostgreSQL", pg_ready, job=pg)
         processes.run("migration-db-create", [args.postgres_bin / "createdb", *connection, DATABASE], runtime)
         migration_env = {**unit_env, "TEST_DATABASE_URL": env["DATABASE_URL"]}
-        processes.run("postgres-migrations", [py, "-m", "pytest", "-o", "addopts=", "-q", "-p", "no:cacheprovider",
-                       "backend/tests/test_migration_pg.py", f"--junitxml={output / 'postgres-migrations.xml'}"],
-                      source, migration_env)
-        report["postgres_migrations"] = junit_summary(output / "postgres-migrations.xml")
+        if args.application_only:
+            report["postgres_migrations"] = {"status": "not_run", "reason": "--application-only; use separate migration test evidence"}
+        else:
+            processes.run("postgres-migrations", [py, "-m", "pytest", "-o", "addopts=", "-q", "-p", "no:cacheprovider",
+                           "backend/tests/test_migration_pg.py", f"--junitxml={output / 'postgres-migrations.xml'}"],
+                          source, migration_env)
+            report["postgres_migrations"] = junit_summary(output / "postgres-migrations.xml")
         # Destructive migration tests touched only our fresh cluster. Recreate its owned DB so
         # neither their seed rows nor alembic state leak into the subsequent live checks.
         processes.run("live-db-drop", [args.postgres_bin / "dropdb", *connection, "--force", DATABASE], runtime)
@@ -515,6 +521,8 @@ def parse_args():
     parser.add_argument("--node", type=Path, default=Path(shutil.which("node") or "/usr/bin/node"))
     parser.add_argument("--chromium", type=Path, required=True, help="installed Playwright Chromium executable")
     parser.add_argument("--output", type=Path, required=True, help="new/empty directory for JSON, JUnit, logs and screenshots")
+    parser.add_argument("--application-only", action="store_true",
+                        help="Re-run the application/UI on fresh stores, omitting backend unit/migration tests. Omissions are recorded; keep separate passing test evidence.")
     parser.add_argument("--_inside", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--_host-netns", default="", help=argparse.SUPPRESS)
     args = parser.parse_args()
