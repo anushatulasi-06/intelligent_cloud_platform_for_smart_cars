@@ -134,6 +134,12 @@ the actual demo date/duration, and a reviewed credit allowance for that window. 
 resource settings, permissions and connections are established and verified only during the
 authorized trial. Keep all credentials and account identifiers out of group text and evidence.
 
+There is now a private `--owner-emails-file` bootstrap option: notification recipients come
+from the actual car owner's database address, not `SES_FROM_EMAIL`. Configure that file
+before the empty-database bootstrap and keep email subscriptions off during bulk checks.
+[SES_TEST.md](SES_TEST.md) describes the separate one-event delivery procedure. No identities
+have been verified and no real email has been sent by this preparation.
+
 The account owner chooses the credit allowance after these decisions; a teammate's deployment
 request does not authorize credit use. Current instruction prohibits all further AWS actions,
 including read-only console/API work. This packet is preparation only.
@@ -153,6 +159,12 @@ including read-only console/API work. This packet is preparation only.
 
 The historical follow-up is implemented locally on the review branch; its evidence and rehearsal
 are documented in [HISTORICAL_IMPORT.md](HISTORICAL_IMPORT.md).
+
+Its production-image checkpoint passed 724 backend tests, 10 separate PostgreSQL migration
+tests, 18 infrastructure tests, the complete 25-alert/byte-identical-audio import and five new
+replay results, plus real backup/restore. The full local walkthrough video remains uncompleted;
+only recorder privacy/audio smoke checks passed. A real AWS/tunnel recording belongs to the
+later authorized trial, not to this local evidence.
 
 Ready for a controlled AWS attempt means local evidence is green, the written configuration
 choices are settled, the branch/revision is agreed, and the private configuration prerequisites

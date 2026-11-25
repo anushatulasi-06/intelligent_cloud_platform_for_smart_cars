@@ -42,6 +42,12 @@ For the local evidence matrix, proposed test window, credit-per-trial arithmetic
 questions to settle before any launch, read [AWS test readiness](AWS_TEST_READINESS.md).
 Preparing that packet does not authorize AWS actions or credit use.
 
+The required 25-alert follow-up is documented in [historical import](HISTORICAL_IMPORT.md),
+with [sanitized local production results](evidence/historical-local-nov24.json). Its historical
+audio, five new replay scenarios, and real backup/restore passed locally; an actual AWS run
+and full walkthrough recording have not been completed. The earlier reviewed `cd5b022`
+baseline is merged into main; the historical follow-up remains on the review branch.
+
 ## Account plan and resource sizing
 
 Both guides use **us-west-2**, a Linux **x86_64** EC2 instance, private **Single-AZ RDS

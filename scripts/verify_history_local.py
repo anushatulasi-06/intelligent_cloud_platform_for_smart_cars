@@ -69,7 +69,17 @@ def stage_audio(directory, destination, *, readable_mount=False):
 def credentials_env(bundle):
     env = {}
     owners = sorted((row for row in bundle["users"] if row["role"] == "owner"), key=lambda row: row["id"])
-    roles = {"OWNER": owners[0], "OWNER2": owners[1],
+    ensure(len(owners) == 2, "Private bootstrap must identify exactly two owners")
+    if any("bootstrap_identity" in row for row in owners):
+        identities = {row.get("bootstrap_identity"): row for row in owners}
+        ensure(set(identities) == {"owner@autosound.dev", "owner2@autosound.dev"},
+               "Private bootstrap owner logical identities are incomplete or conflicting")
+        primary, secondary = identities["owner@autosound.dev"], identities["owner2@autosound.dev"]
+    else:
+        # Legacy bundles created the two owners in canonical seed order. Actual
+        # login addresses may be private overrides, so never infer identity from email.
+        primary, secondary = owners
+    roles = {"OWNER": primary, "OWNER2": secondary,
              "IOT": next(row for row in bundle["users"] if row["role"] == "iot_staff"),
              "CLOUD": next(row for row in bundle["users"] if row["role"] == "cloud_staff")}
     for name, row in roles.items():
@@ -171,9 +181,14 @@ def verify_history(base_url, directory, bundle, *, object_origin, fixtures=None,
                 "car_id": mic["car_id"], "device_id": mic["id"], "s3_object_key": key,
                 "audio_sha256": expected_media["sha256"], "size_bytes": expected_media["bytes"]})
         if replay is not None:
-            scenarios = replay["scenarios"]
+            ensure(replay.get("result") == "PASS" or replay.get("status") == "passed",
+                   "Successful replay/recording evidence is required")
+            scenarios = replay.get("scenarios", replay.get("replay_records", []))
             historical_ids = {row["id"] for row in evidence["alerts"]}
             ensure(len(scenarios) == 5 and len({row["alert_id"] for row in scenarios}) == 5
+                   and len({row["record_id"] for row in scenarios}) == 5
+                   and {row.get("category", row.get("scenario")) for row in scenarios}
+                       == {"emergency", "in_vehicle", "human", "traffic", "environmental"}
                    and not historical_ids.intersection(row["alert_id"] for row in scenarios),
                    "Expected five distinct new replay alerts in addition to the historical 25")
             for row in scenarios:

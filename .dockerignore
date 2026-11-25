@@ -12,6 +12,8 @@
 **/.local_audio
 **/.local_backups
 **/.local_bootstrap
+# Private owner login/SES recipient mappings must never enter an image.
+**/owner-emails*.json
 **/.local_evidence
 infra/aws/edge.env
 frontend/dist

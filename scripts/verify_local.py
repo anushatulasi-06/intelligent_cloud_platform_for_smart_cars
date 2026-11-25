@@ -282,6 +282,17 @@ def run_inside(args):
                               "Five bundled scenario clips are inference regressions, not a dataset accuracy evaluation",
                               "No AWS deployment or credit eligibility verified"],
               "checks": []}
+    report["mode"] = "record_only" if args.record_only else "application_only" if args.application_only else "full"
+    if args.record_only:
+        report["omitted_checks"] = {
+            "reason": "--record-only is a focused video rehearsal, not a rerun of the full regression suite",
+            "checks": ["backend unit tests", "PostgreSQL migration regression tests", "virtual edge route regression",
+                       "live component API regression", "live platform API regression", "baseline UI regression",
+                       "dedicated replay UI regression"],
+            "retained_checks": ["kernel network isolation", "fresh owned stores and migrations", "private bootstrap",
+                                "authenticated readiness and actual local S3 outage", "historical25 import and signed-byte proof",
+                                "built frontend", "real replay edge", "recorder roles and five new replay flows",
+                                "historical25 signed-byte proof after recording", "owned resource cleanup"]}
     processes = None
     code = 1
     private_values = []
@@ -477,13 +488,15 @@ print('PASS private bootstrap: 4 matching private logins, 5 matching private dev
                     "EDGE_CAMERA_DEVICE_KEY": "dev-device-key-cam-1"}
         if args.private_bootstrap:
             edge_env.update({key: value for key, value in env.items() if key.startswith("EDGE_")})
-        edge = processes.start("virtual-edge", [py, "-m", "edge.demo_client", "--no-audio-playback",
+        edge = None
+        if not args.record_only:
+            edge = processes.start("virtual-edge", [py, "-m", "edge.demo_client", "--no-audio-playback",
                                                 "--buffer-dir", runtime / "edge-buffer"], backend, edge_env)
-        wait_for("virtual edge and camera", lambda: (lambda result: result[0] == 200 and result[1].get("online")
+            wait_for("virtual edge and camera", lambda: (lambda result: result[0] == 200 and result[1].get("online")
                   and result[1].get("frame_url"))(http("GET", "/simulator/1/state", token=iot)), job=edge)
-        processes.run("live-components", [py, source / "scripts" / "verify_components.py", "--base-url", API,
+            processes.run("live-components", [py, source / "scripts" / "verify_components.py", "--base-url", API,
                                            "--output", output / "live-component-verification.json"], source)
-        processes.run("live-platform", [py, source / "scripts" / "verify_platform_local.py", "--base-url", API,
+            processes.run("live-platform", [py, source / "scripts" / "verify_platform_local.py", "--base-url", API,
                                         "--s3-endpoint-url", S3, "--s3-bucket", env["S3_BUCKET"],
                                         "--host-netns", args._host_netns,
                                         "--output", output / "platform-verification.json", "--component-evidence",
@@ -498,20 +511,23 @@ print('PASS private bootstrap: 4 matching private logins, 5 matching private dev
         ui = processes.start("frontend", [args.node, vite, "preview", "--configLoader", "runner", "--host",
                                           "127.0.0.1", "--port", UI_PORT, "--strictPort"], frontend, browser_env)
         wait_for("built frontend", lambda: http("GET", "/", base=UI)[0] == 200, job=ui)
-        processes.run("browser-components", [args.node, source / "scripts" / "verify_ui.cjs"], source,
-                      browser_env, timeout=300)
+        if not args.record_only:
+            processes.run("browser-components", [args.node, source / "scripts" / "verify_ui.cjs"], source,
+                          browser_env, timeout=300)
         # No two producers may share the registered devices. Keep the virtual-car route
         # regression above, then independently exercise the default AWS recorded-replay feed.
-        processes.stop(edge)
+        if edge is not None:
+            processes.stop(edge)
         replay = processes.start("replay-edge", [py, "-m", "edge.replay_client", "--no-audio-playback",
                                                   "--buffer-dir", runtime / "replay-buffer"], backend, edge_env)
         wait_for("recorded CARLA edge and camera", lambda: (lambda result: result[0] == 200
                  and result[1].get("edge_mode") == "carla_replay" and result[1].get("frame_url"))(
                      http("GET", "/simulator/1/state", token=iot)), job=replay)
         replay_env = {**browser_env, "API_BASE_URL": API, "UI_EVIDENCE_DIR": str(output / "replay")}
-        processes.run("browser-replay", [args.node, source / "scripts" / "verify_replay_ui.cjs"],
-                      source, replay_env, timeout=420)
-        if args.historical_audio_dir:
+        if not args.record_only:
+            processes.run("browser-replay", [args.node, source / "scripts" / "verify_replay_ui.cjs"],
+                          source, replay_env, timeout=420)
+        if args.historical_audio_dir and not args.record_only:
             processes.run("historical-preserved-after-replay", [*history_command, "--replay-evidence",
                           output / "replay" / "replay-browser-verification.json", "--output",
                           output / "historical-after-replay.json"], backend)
@@ -523,6 +539,10 @@ print('PASS private bootstrap: 4 matching private logins, 5 matching private dev
             processes.run("record-private-demo", [args.node, source / "scripts" / "record_local_demo.cjs"],
                           source, recording_env, timeout=600)
             report["demo_recording"] = "video"
+            processes.run("historical-preserved-after-recording", [*history_command, "--replay-evidence",
+                          output / "video" / "recording-verification.json", "--output",
+                          output / "historical-after-recording.json"], backend)
+            report["historical_after_recording"] = json.loads((output / "historical-after-recording.json").read_text())
         report["network_after"] = network_evidence(args.ip, args._host_netns)
         report["status"] = "passed"
         code = 0
@@ -574,9 +594,14 @@ def parse_args():
     parser.add_argument("--private-bootstrap", action="store_true", help="Keep private bootstrap accounts/keys for all live checks; do not restore public development seed")
     parser.add_argument("--historical-audio-dir", type=Path, help="Private directory containing all 25 historical WAV files; implies --private-bootstrap")
     parser.add_argument("--record-demo", action="store_true", help="Record the private historical/replay UI before cleanup; requires --historical-audio-dir")
+    parser.add_argument("--record-only", action="store_true", help="Focused fresh private video rehearsal; skip previously verified API/UI regressions and unit/migration tests; requires --historical-audio-dir")
     parser.add_argument("--_inside", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--_host-netns", default="", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    check(not args.record_only or args.historical_audio_dir is not None,
+          "--record-only requires --historical-audio-dir")
+    if args.record_only:
+        args.application_only = args.private_bootstrap = args.record_demo = True
     check(not args.record_demo or args.historical_audio_dir is not None,
           "--record-demo requires --historical-audio-dir")
     if args.historical_audio_dir:

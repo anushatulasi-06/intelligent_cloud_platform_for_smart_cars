@@ -133,7 +133,12 @@ function executable(command) {
             || /X-Amz-(?:Credential|Signature)=|Bearer eyJ/.test(document.body?.innerText || '');
           if (!sensitive) return;
           const curtain = parent.document.querySelector('#privacy');
-          if (curtain) { curtain.hidden = false; curtain.textContent = 'Private authentication or credentials are concealed'; }
+          if (curtain) {
+            curtain.hidden = false;
+            // Initial /login loads before the user begins recording. Keep its start button
+            // intact; subsequent private transitions use a plain opaque status curtain.
+            if (!curtain.querySelector('#start')) curtain.textContent = 'Private authentication or credentials are concealed';
+          }
           parent.document.querySelector('iframe')?.style.setProperty('visibility', 'hidden');
         } catch { /* The wrapper and its app are same-origin; unrelated frames get no access. */ }
       };

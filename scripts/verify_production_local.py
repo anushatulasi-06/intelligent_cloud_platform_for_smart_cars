@@ -320,8 +320,42 @@ try:
     client.create_bucket(Bucket=bucket,CreateBucketConfiguration={'LocationConstraint':'us-west-2'})
     tool('migrations',[sys.executable,'-m','alembic','upgrade','head'])
     bundle_path=WORK/'bootstrap.json'
-    tool('private-bootstrap',[sys.executable,'-m','app.db.bootstrap','--initialize-empty-database','--credentials-file',str(bundle_path)])
+    # Synthetic recipient overrides exercise production bootstrap without verifying or sending mail.
+    owner_emails={'owner@autosound.dev':'primary-bootstrap-qa@example.invalid',
+                  'owner2@autosound.dev':'secondary-bootstrap-qa@example.invalid'}
+    private_values.extend(owner_emails.values())
+    owner_emails_path=WORK/'owner-emails.json'
+    owner_fd=os.open(owner_emails_path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+    with os.fdopen(owner_fd,'w') as stream:
+        json.dump(owner_emails,stream)
+    tool('private-bootstrap',[sys.executable,'-m','app.db.bootstrap','--initialize-empty-database',
+                              '--credentials-file',str(bundle_path),'--owner-emails-file',str(owner_emails_path)])
     bundle=json.loads(bundle_path.read_text())
+    expected_roles={'owner@autosound.dev':'owner','owner2@autosound.dev':'owner',
+                    'iot@autosound.dev':'iot_staff','cloud@autosound.dev':'cloud_staff'}
+    by_identity={row['bootstrap_identity']:row for row in bundle['users']}
+    ensure(set(by_identity)==set(expected_roles),'Private bootstrap logical identities differ')
+    with pg('autosound_source') as connection,connection.cursor() as cursor:
+        cursor.execute('SELECT id,email,role FROM users ORDER BY id')
+        sql_users={row[0]:(row[1],row[2]) for row in cursor.fetchall()}
+        for identity,role in expected_roles.items():
+            row=by_identity[identity]
+            ensure(row['email']==owner_emails.get(identity,identity) and row['role']==role
+                   and sql_users.get(row['id'])==(row['email'],role),
+                   'Private bootstrap recipient/login, role or logical identity differs')
+        cursor.execute('SELECT COUNT(*) FROM subscriptions')
+        ensure(cursor.fetchone()[0]==0,'Private bootstrap unexpectedly created subscriptions')
+        from app.db.seed import CARS
+        for source in CARS:
+            cursor.execute('SELECT owner_id FROM cars WHERE plate=%s',(source['plate'],))
+            ensure(cursor.fetchone()==(by_identity[source['owner']]['id'],),'Private bootstrap car ownership differs')
+    ensure(owner_emails_path.stat().st_mode&0o777==0o600,'Private recipient input permissions differ')
+    ensure(get_settings().DEV_FAKE_EMAIL,'Production QA must not send SES email')
+    REPORT['private_owner_email_configuration']={
+        'synthetic_addresses_only':True,'private_input_mode_0600':True,'two_owner_overrides_applied':True,
+        'sql_and_private_bundle_login_emails_match':True,'canonical_bootstrap_identity_preserved':True,
+        'car_ownership_preserved':True,'staff_identities_and_roles_unchanged':True,
+        'no_subscriptions_created':True,'ses_sending_disabled':True}
     private_values.extend(row['password'] for row in bundle['users'])
     private_values.extend(row['device_key'] for row in bundle['devices'])
     ensure(len(bundle['users'])==4 and len(bundle['devices'])==5 and bundle_path.stat().st_mode&0o777==0o600,
@@ -617,7 +651,7 @@ def main():
     report={'status':'running','started_at':datetime.now(timezone.utc).isoformat(),
             'scope':'Local prebuilt production Docker image and recorded CARLA replay; no pulls/builds/AWS/SES/live CARLA',
             'run_label':{LABEL:run_id},'images':{},'cleanup':{}}
-    secret_values=[]
+    secret_values=['primary-bootstrap-qa@example.invalid','secondary-bootstrap-qa@example.invalid']
 
     def redact(text):
         for value in secret_values:

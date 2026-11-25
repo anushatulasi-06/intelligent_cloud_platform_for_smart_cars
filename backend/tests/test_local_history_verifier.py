@@ -81,3 +81,39 @@ def test_idempotent_import_passes_explicit_reviewed_manifest(monkeypatch, tmp_pa
     assert helper.apply_local_history(tmp_path)['repeat_idempotent'] is True
     assert len(calls) == 2
     assert all(call == {'apply': True, 'local': True, 'manifest': manifest} for call in calls)
+
+
+def identity_bundle(*, logical_identity=True):
+    users = [
+        {'id': 20 if logical_identity else 1, 'role': 'owner', 'email': 'primary@example.invalid',
+         'password': 'private-primary', 'bootstrap_identity': 'owner@autosound.dev'},
+        {'id': 10 if logical_identity else 2, 'role': 'owner', 'email': 'secondary@example.invalid',
+         'password': 'private-secondary', 'bootstrap_identity': 'owner2@autosound.dev'},
+        {'id': 30, 'role': 'iot_staff', 'email': 'iot@example.invalid', 'password': 'private-iot'},
+        {'id': 40, 'role': 'cloud_staff', 'email': 'cloud@example.invalid', 'password': 'private-cloud'},
+    ]
+    if not logical_identity:
+        for user in users:
+            user.pop('bootstrap_identity', None)
+    return {'users': list(reversed(users)), 'devices': [
+        {'id': 51, 'car_id': 61, 'name': 'mic-1', 'device_key': 'private-mic'},
+        {'id': 52, 'car_id': 61, 'name': 'cam-1', 'device_key': 'private-camera'}]}
+
+
+@pytest.mark.parametrize('logical_identity', [True, False])
+def test_private_owner_login_addresses_do_not_change_owner_identity(logical_identity):
+    bundle = identity_bundle(logical_identity=logical_identity)
+    env = helper.credentials_env(bundle)
+    assert env['VERIFY_OWNER_EMAIL'] == 'primary@example.invalid'
+    assert env['VERIFY_OWNER_PASSWORD'] == 'private-primary'
+    assert env['VERIFY_OWNER2_EMAIL'] == 'secondary@example.invalid'
+    assert env['VERIFY_OWNER2_PASSWORD'] == 'private-secondary'
+    assert env['VERIFY_CAR_ID'] == '61'
+    assert env['EDGE_DEVICE_KEY'] == 'private-mic'
+
+
+def test_incomplete_logical_owner_mapping_fails_closed():
+    bundle = identity_bundle()
+    next(user for user in bundle['users'] if user['email'] == 'secondary@example.invalid')['bootstrap_identity'] = 'owner@autosound.dev'
+    with pytest.raises(RuntimeError, match='logical identities'):
+        helper.credentials_env(bundle)

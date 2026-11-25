@@ -39,3 +39,5 @@ infra/.env.demo
 # Optional EC2 demo-feed settings (from infra/aws/edge.env.example)
 infra/aws/edge.env
 backend/.local_bootstrap/
+# Private owner login/SES recipient mappings (see infra/aws/SES_TEST.md).
+owner-emails*.json

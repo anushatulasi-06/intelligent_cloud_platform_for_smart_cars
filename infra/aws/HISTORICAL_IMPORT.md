@@ -83,9 +83,28 @@ One complete historical verification phase performs 75 authenticated audio downl
 (Cloud Staff, IoT Staff and the correct owner), streaming **639,020,388 bytes** with bounded
 memory. Three phases stream about 1.92 GB; allow for this in later cloud transfer planning.
 
-The rehearsal shows C1–C5, short historical samples and all five audible replay events. All 25
-files are independently verified; the video does not claim to play all five 21-minute clips.
+The optional recorder is designed to show C1–C5, short historical samples and all five audible
+replay events. **A full C1–C5 rehearsal video has not been completed or validated.** Filming is
+paused; only the isolated encoder/audio/privacy smoke checks passed. All 25 files are
+independently verified; a later video need not play all five 21-minute clips.
 The persistent local-rehearsal label identifies the environment. Authentication and sensitive
 dialogs are covered before recording; only selected application audio is captured, with no
 desktop or microphone capture. The actual AWS trial/tunnel video remains a later task after
 explicit authorization. SES delivery remains untested until that authorized setup.
+
+## Verified local checkpoint
+
+The historical follow-up passed **724 backend tests** in the final production image, all
+**10 PostgreSQL migration tests** separately, and **18 offline infrastructure tests**. The
+production run imported all 25 alerts/records and original WAVs, inserted zero additional
+objects/records/alerts on repeat, and verified their signed bytes and owner restrictions before
+replay, after five distinct new replay scenarios, and after actual database restores. Strict
+SQL schema/data/index/sequence and MongoDB BSON/index comparisons passed; source data and
+private login/device/Wi-Fi/model behavior remained intact, including privately configured owner
+email identities. No SES delivery was attempted. All owned test resources were removed.
+
+See [sanitized core evidence](evidence/historical-local-nov24.json). Full local evidence is in
+`historical-local-nov24/final-image-unit/`, `native/` (earlier unit/migration/application checks;
+its optional recording stage failed), and `final-production/` (complete production run passed). Failed video
+attempts are retained as failures and are not deliverable demo videos. The historical follow-up
+is on the review branch; main contains the earlier approved baseline `cd5b022`.

@@ -50,11 +50,14 @@ bash infra/aws/setup_ec2.sh
 
 The script first validates settings, then installs Python 3.12 and backup tools/dependencies,
 migrates PostgreSQL, and starts one `autosound-api` systemd worker bound to **127.0.0.1:8000**.
-It never creates public demo accounts. Initialize a new empty database privately:
+It never creates public demo accounts. Before the first bootstrap, prepare the private owner
+recipient file described in [SES preparation](SES_TEST.md); do not substitute a development
+address for the intended verified recipient. Initialize a new empty database privately:
 
 ```bash
 cd backend
-.venv/bin/python -m app.db.bootstrap --initialize-empty-database
+.venv/bin/python -m app.db.bootstrap --initialize-empty-database \
+  --owner-emails-file "$HOME/.autosound-private/owner-emails.json"
 cd ..
 SKIP_PULL=1 bash infra/aws/deploy_backend.sh
 ```
@@ -67,9 +70,10 @@ registers the trained model, alert types, cars and devices, and refuses nonempty
 stores. It creates no historical MongoDB alerts/audio. Do not run the development seed in
 production or retain its public passwords/device keys.
 
-For optional historical seeded-alert migration, the supplied Drive folder and local key/hash
-validation are in [Supplied historical audio](README.md#supplied-historical-audio). No automatic
-Drive download or S3 upload is part of setup. Fresh scenario audio comes from the edge client.
+The agreed demo requires a separate import of 25 historical alerts/audio before five fresh replay
+results. Follow [historical import](HISTORICAL_IMPORT.md), using the validated source WAVs and
+reviewed manifest; no automatic Drive download or S3 upload is part of setup. Leave email
+subscriptions disabled through bulk checks, then follow [the separate SES trial](SES_TEST.md).
 
 ## 3. Private frontend and SSH tunnel
 

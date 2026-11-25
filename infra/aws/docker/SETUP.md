@@ -79,11 +79,15 @@ bash infra/aws/docker/setup_ec2_docker.sh
 
 This installs/builds dependencies, migrates the schema and starts **API + frontend only**.
 No public demo users, historical alerts, camera feed or position feed are created. With a new
-empty database, initialize private accounts, cars, devices, alert types and the trained model:
+empty database, initialize private accounts, cars, devices, alert types and the trained model.
+The planned SES trial needs real owner-recipient configuration: first follow
+[the private owner-email staging procedure](../SES_TEST.md), before the first bootstrap.
+No recipient address is supplied in this repository. Then, only in the authorized window:
 
 ```bash
 bash infra/aws/docker/compose.sh exec -T api \
-  python -m app.db.bootstrap --initialize-empty-database
+  python -m app.db.bootstrap --initialize-empty-database \
+  --owner-emails-file /app/backend/.local_bootstrap/owner-emails.json
 bash infra/aws/docker/compose.sh restart api
 ```
 
@@ -108,8 +112,10 @@ their contents in logs/screenshots, commit them, or reuse development passwords.
 reports an uncertain database commit, preserve the prepared credential bundle and inspect the
 database privately before retrying; never delete the only credential copy. Existing data must
 use an explicit migration/admin process; bootstrap never overwrites it. It creates no historical
-MongoDB alerts, so seeded alert audio upload is unnecessary for this clean setup. For an optional
-historical migration, follow [the local audio manifest procedure](../README.md#supplied-historical-audio).
+MongoDB alerts. This project's demo separately requires the 25 historical alerts and original
+audio: follow [the reviewed historical import](../HISTORICAL_IMPORT.md), verify all 25 and its
+idempotent repeat, then enable the replay feed for five new results. Keep email subscriptions
+disabled during bulk verification; [the SES check](../SES_TEST.md) is a separate bounded phase.
 
 Keep the deployment variables in the current SSH shell. `docker/compose.sh` forwards them
 explicitly through sudo for exec/cp/logs/ps/stop and the scoped `restart api` command. Use the
