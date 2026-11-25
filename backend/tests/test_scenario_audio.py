@@ -24,7 +24,12 @@ def test_staff_get_exact_attributed_wav_and_other_roles_cannot(client, category)
         assert response.headers["content-type"] == "audio/wav"
         assert response.headers["cache-control"].startswith("private")
         assert response.headers["x-content-type-options"] == "nosniff"
-        assert "creativecommons.org/licenses/by-nc/3.0/" in response.headers["link"]
+        if category in ("emergency", "in_vehicle"):
+            assert response.headers["x-recording-source"] == "ESC-50"
+            assert "creativecommons.org/licenses/by-nc/3.0/" in response.headers["link"]
+        else:
+            assert response.headers["x-recording-source"] == "CMPE281-course-dataset"
+            assert "link" not in response.headers  # No original license was supplied for these clips.
         assert hashlib.sha256(response.content).hexdigest() == clip["sha256"]
         with wave.open(BytesIO(response.content)) as audio:
             assert audio.getnframes() / audio.getframerate() == 5.0

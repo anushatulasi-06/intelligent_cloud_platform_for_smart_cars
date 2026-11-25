@@ -4,8 +4,8 @@ Each scenario button in the Simulator (F11) sends `simulate_event`. This client 
 recording for that sound class:
   - every heartbeat it reports the recorded position, speed and heading, and uploads the recorded
     camera frame for that moment;
-  - at each event time in scenario.json it uploads the sound clip for the class (C3 -> C4 alert)
-    and only then acknowledges the command, so the Simulator plays the sound at the event time.
+  - at each sound event it durably buffers the clip, then acknowledges the command;
+    the normal FIFO upload and C3/C4 processing follow independently. ACK is not proof of processing.
 Start route / Stop route resume and pause the current recording.
 
 Recordings come from record_scenarios.py, one folder per scenario:
@@ -19,8 +19,10 @@ Stop any other edge client using the same devices first.
 """
 import argparse
 import csv
+import hashlib
 import json
 import logging
+import math
 import os
 import time
 from dataclasses import dataclass, field
@@ -39,7 +41,7 @@ from app.services.edge_buffer import EdgeBuffer
 from app.services.errors import ServiceError
 from app.services.ingest_service import MAX_AUDIO_BYTES, validate_audio
 from edge.audio_playback import SystemAudioPlayer
-from edge.carla_client import CarlaEdgeClient, CloudTransport, _device_from_env, load_scenarios
+from edge.carla_client import CarlaEdgeClient, CloudTransport, _device_from_env, _write_private, load_scenarios
 
 log = logging.getLogger(__name__)
 
@@ -65,6 +67,27 @@ IDLE_FRAME_SECONDS = 5.0    # re-send the still frame this often when nothing is
 DEFERRED = object()           # _execute result: acknowledge later, at the event time
 
 
+def _frame_path(directory: Path, name: str) -> Path:
+    if not isinstance(name, str) or not name:
+        raise ValueError("Recording frame filename is missing")
+    relative = Path(name)
+    path = (directory / relative).resolve()
+    if (relative.is_absolute() or ".." in relative.parts or not path.is_relative_to(directory.resolve())
+            or not path.is_file()):
+        raise ValueError("Recording frame must be an existing file inside its recording directory")
+    return path
+
+
+def _finite(value, description):
+    try:
+        result = float(value)
+    except (ValueError, TypeError):
+        raise ValueError(f"Recording {description} must be numeric") from None
+    if not math.isfinite(result):
+        raise ValueError(f"Recording {description} must be finite")
+    return result
+
+
 @dataclass
 class Recording:
     name: str
@@ -79,7 +102,7 @@ class Recording:
         return self.rows[-1]["t_s"] if self.rows else 0.0
 
     def frame_bytes(self, index: int) -> bytes:
-        path = self.directory / self.rows[index]["file"]
+        path = _frame_path(self.directory, self.rows[index]["file"])
         data = path.read_bytes()
         # Stored frames are clean quality-90 JPEGs: send them unchanged, without a second compression.
         if data.startswith(b"\xff\xd8\xff") and data.endswith(b"\xff\xd9"):
@@ -93,28 +116,45 @@ class Recording:
 
 
 def load_recording(directory: Path, category: str) -> Recording:
+    directory = directory.resolve()
     meta = json.loads((directory / "scenario.json").read_text())
+    if not isinstance(meta, dict) or category not in SOUND_CATEGORIES or meta.get("sound_class") != category:
+        raise ValueError("Recording sound class must match its configured category")
     rows = []
     with (directory / "telemetry.csv").open(newline="") as stream:
         for raw in csv.DictReader(stream):
-            if not raw.get("file") or not (directory / raw["file"]).is_file():
-                continue
-            rows.append({"t_s": float(raw["t_s"]), "file": raw["file"],
-                         "lat": float(raw["lat"]), "lon": float(raw["lon"]),
-                         "speed_kmh": max(0.0, float(raw.get("speed_kmh") or 0.0)),
-                         "heading": float(raw.get("heading") or 0.0) % 360})
+            path = _frame_path(directory, raw["file"])
+            with Image.open(path) as image:
+                if image.format != "JPEG":
+                    raise ValueError("Recording frames must be JPEG images")
+                image.verify()
+            stamp = _finite(raw["t_s"], "frame time")
+            lat, lon = _finite(raw["lat"], "latitude"), _finite(raw["lon"], "longitude")
+            speed = _finite(raw.get("speed_kmh") or 0.0, "speed")
+            if (stamp < 0 or (rows and stamp <= rows[-1]["t_s"]) or not -90 <= lat <= 90
+                    or not -180 <= lon <= 180 or speed < 0):
+                raise ValueError("Recording times must increase and telemetry must have valid coordinates/speed")
+            rows.append({"t_s": stamp, "file": raw["file"], "lat": lat, "lon": lon,
+                         "speed_kmh": speed, "heading": _finite(raw.get("heading") or 0.0, "heading") % 360})
     if not rows:
         raise ValueError(f"{directory.name}: no frames listed in telemetry.csv")
-    rows.sort(key=lambda r: r["t_s"])
     # Time 0 is the first recorded frame, so replay starts immediately.
     start = rows[0]["t_s"]
     for row in rows:
         row["t_s"] = round(row["t_s"] - start, 3)
-    events = sorted(({"t_s": max(0.0, float(e["t_s"]) - start), "label": e.get("label") or category}
-                     for e in meta.get("events", [])), key=lambda e: e["t_s"])
+    raw_events = meta.get("events")
+    if (not isinstance(raw_events, list) or not 1 <= len(raw_events) <= 1000
+            or any(not isinstance(event, dict) or "t_s" not in event for event in raw_events)):
+        raise ValueError("A sound scenario needs valid event metadata")
+    events = sorted(({"t_s": max(0.0, _finite(e["t_s"], "event time") - start), "label": e.get("label") or category}
+                     for e in raw_events), key=lambda e: e["t_s"])
+    if not events or rows[-1]["t_s"] <= 0:
+        raise ValueError("A sound scenario needs a positive recording duration and at least one event")
     if category in EVENT_TIME_OVERRIDES:
         for event in events:
             event["t_s"] = EVENT_TIME_OVERRIDES[category]
+    if any(event["t_s"] > rows[-1]["t_s"] for event in events):
+        raise ValueError("Recording sound events must fall inside the recorded duration")
     town = str(meta.get("town") or "CARLA").rsplit("/", 1)[-1][:100]
     return Recording(directory.name, category, town, rows, events, directory)
 
@@ -130,6 +170,7 @@ class Playback:
     paused: bool = False
     fired: set = field(default_factory=set)
     acknowledged: bool = False
+    sound_cancelled: bool = False
 
 
 class ReplayEdgeClient(CarlaEdgeClient):
@@ -143,6 +184,66 @@ class ReplayEdgeClient(CarlaEdgeClient):
         self.playback = Playback(first, playing=False)
         self._frame_index = None
         self._frame_sent_at = 0.0
+        self._journal_path = self.buffer.directory / "replay-commands.json"
+        self._journal = {}
+        self._journal_identity = hashlib.sha256(
+            f"{self.cloud.base_url}|{car_id}|{mic.id}|{camera.id if camera else None}".encode()).hexdigest()
+        self._restore_commands()
+
+    def _persist_commands(self):
+        _write_private(self._journal_path, {"version": 1, "identity": self._journal_identity,
+                                          "commands": list(self._journal.values())})
+
+    def _save_outcome(self, identity, ok, detail):
+        row = self._journal.setdefault(identity, {"device_id": identity[0], "command_id": identity[1], "events": 0})
+        row.update(ok=bool(ok), detail=detail)
+        self._persist_commands()
+
+    def _restore_commands(self):
+        if not self._journal_path.exists():
+            return
+        document = json.loads(self._journal_path.read_text())
+        devices = {device.id: device for device in (self.mic, self.camera) if device is not None}
+        if (not isinstance(document, dict) or document.get("version") != 1
+                or document.get("identity") != self._journal_identity):
+            raise ValueError("Replay command journal belongs to another API/device configuration; use a separate buffer")
+        if not isinstance(document.get("commands"), list):
+            raise ValueError("Replay command journal is invalid")
+        for row in document["commands"]:
+            if (not isinstance(row, dict) or type(row.get("command_id")) is not int or row["command_id"] <= 0
+                    or row.get("device_id") not in devices or (row.get("ok") is not None and type(row["ok"]) is not bool)
+                    or type(row.get("events")) is not int or not 0 <= row["events"] <= 1000):
+                raise ValueError("Replay command journal is invalid")
+            identity = (row["device_id"], row["command_id"])
+            if row["ok"] is None:
+                # A crash can occur between FIFO fsync and outcome fsync. Recover
+                # that buffered receipt, otherwise explicitly fail the interrupted replay.
+                buffered = any((self.buffer.directory / (str(uuid5(NAMESPACE_URL,
+                    f"{self.cloud.base_url}/devices/{self.mic.id}/commands/{row['command_id']}/events/{number}"))
+                    + ".clip")).is_file() for number in range(row["events"]))
+                row.update(ok=buffered, detail=("Buffered sound recovered; upload/processing follow separately" if buffered
+                           else "Replay interrupted before its sound event; choose the scenario again"))
+            self._journal[identity] = row
+            self._results[identity] = (row["ok"], row["detail"])
+            self._acks[identity] = (devices[row["device_id"]], row["ok"], row["detail"])
+        self._persist_commands()
+
+    def _retry_acks(self):
+        # The API delivers commands once. Keep outcomes until the edge receives
+        # an ACK response; an ambiguous response/restart must not silently lose them.
+        if self._journal:
+            self._persist_commands()
+        devices = {device.id: device for device in (self.mic, self.camera) if device is not None}
+        for identity, row in self._journal.items():
+            if row["ok"] is not None:
+                self._acks[identity] = (devices[row["device_id"]], row["ok"], row["detail"])
+        before = set(self._acks)
+        super()._retry_acks()
+        completed = before - set(self._acks)
+        for identity in completed:
+            self._journal.pop(identity, None)
+        if completed:
+            self._persist_commands()
 
     # ---- telemetry -------------------------------------------------------------------------
     def telemetry(self):
@@ -154,6 +255,8 @@ class ReplayEdgeClient(CarlaEdgeClient):
 
     # ---- playback --------------------------------------------------------------------------
     def advance(self, seconds: float):
+        if not math.isfinite(seconds) or seconds < 0:
+            raise ValueError("Replay elapsed time must be finite and nonnegative")
         pb = self.playback
         if not pb.playing or pb.paused:
             return
@@ -165,10 +268,6 @@ class ReplayEdgeClient(CarlaEdgeClient):
             if number not in pb.fired and event["t_s"] <= pb.elapsed:
                 self._fire(pb, number, event)
         if pb.elapsed >= pb.recording.duration:
-            # A late event still produces its clip, so every scenario creates an alert.
-            for number, event in enumerate(pb.recording.events):
-                if number not in pb.fired:
-                    self._fire(pb, number, event)
             pb.playing = False
             if not pb.acknowledged:
                 self._acknowledge(pb, True, f"Replayed {pb.recording.name}; it has no sound event")
@@ -176,6 +275,9 @@ class ReplayEdgeClient(CarlaEdgeClient):
 
     def _fire(self, pb: Playback, number: int, event: dict):
         pb.fired.add(number)
+        if pb.sound_cancelled or not self.capture_enabled:
+            self._acknowledge(pb, False, "Replay sound cancelled because microphone capture stopped")
+            return
         source = self.scenarios.get(pb.recording.category)
         row = pb.recording.rows[pb.index]
         try:
@@ -200,14 +302,17 @@ class ReplayEdgeClient(CarlaEdgeClient):
             except Exception:  # local speakers are optional
                 pass
         log.info("%s at %.1f s: %s (clip buffered)", pb.recording.name, event["t_s"], event["label"])
-        self._acknowledge(pb, True, f"Sound at {event['t_s']:.1f} s: {event['label']}")
+        self._acknowledge(pb, True, f"Sound buffered at {event['t_s']:.1f} s; upload/processing follow separately")
 
     def _acknowledge(self, pb: Playback, ok: bool, detail: str):
         if pb.acknowledged or pb.device is None or pb.command_id is None:
             pb.acknowledged = True
             return
         identity = (pb.device.id, pb.command_id)
+        self._save_outcome(identity, ok, detail)
         self._results[identity] = (ok, detail)
+        if len(self._results) > 256:
+            self._results.popitem(last=False)
         self._acks[identity] = (pb.device, ok, detail)
         pb.acknowledged = True
 
@@ -219,16 +324,23 @@ class ReplayEdgeClient(CarlaEdgeClient):
             if name == "stop_route":
                 pb.paused = True
                 return True, f"Paused {pb.recording.name}" if pb.playing else "Car stopped"
+            if not pb.playing:
+                return False, "Choose a sound scenario first; Start route only resumes a paused recording"
             pb.paused = False
-            return True, (f"Resumed {pb.recording.name}" if pb.playing
-                          else "No recording is playing; choose a sound scenario")
+            return True, f"Resumed {pb.recording.name}"
         if name == "reboot":
             self._acknowledge(pb, False, "Replay client restarted")
             self.playback = Playback(pb.recording, playing=False)
+            self._frame_index = None
             self.capture_enabled = self.camera_capture_enabled = True
             return True, "Replay client restarted; host machine was not rebooted"
         if name != "simulate_event":
+            if name == "stop_capture" and device.id == self.mic.id:
+                pb.sound_cancelled = True
+                self._acknowledge(pb, False, "Replay sound cancelled because microphone capture stopped")
             ok, detail = super()._execute(device, command, position)   # capture, sync_config, unsupported
+            if name == "start_capture" and self.camera and device.id == self.camera.id:
+                self._frame_index = None
             if name == "sync_config" and ok:
                 detail = "Virtual Wi-Fi configuration accepted; host network unchanged"
             return ok, detail
@@ -239,6 +351,10 @@ class ReplayEdgeClient(CarlaEdgeClient):
         if recording is None:
             return False, f"No CARLA recording is configured for {category}"
         self._acknowledge(pb, False, "Replaced by another scenario before its sound event")
+        self._journal[(device.id, command["command_id"])] = {"device_id": device.id,
+            "command_id": command["command_id"], "ok": None, "detail": None,
+            "events": len(recording.events)}
+        self._persist_commands()
         self.playback = Playback(recording, device=device, command_id=command["command_id"])
         self._frame_index = None
         log.info("Replaying %s for %s (%d frames, events at %s s)", recording.name, category,
@@ -246,7 +362,8 @@ class ReplayEdgeClient(CarlaEdgeClient):
         return DEFERRED
 
     # ---- one heartbeat ---------------------------------------------------------------------
-    def step(self):
+    def step(self, elapsed_seconds=0.0):
+        previous_playback = self.playback
         position = self.telemetry()
         for device in (self.mic, self.camera):
             if device is None:
@@ -263,12 +380,15 @@ class ReplayEdgeClient(CarlaEdgeClient):
                 except (OSError, ValueError, RuntimeError, BufferError, InvalidToken, ServiceError):
                     result = (False, "Command failed; check the recordings and configuration")
                 if result is DEFERRED:
-                    self.advance(0.0)   # a sound event at 0 s fires in this same heartbeat
                     continue
+                self._save_outcome(identity, *result)
                 self._results[identity] = result
                 if len(self._results) > 256:
                     self._results.popitem(last=False)
                 self._acks[identity] = (device, *result)
+        # Apply stop/pause commands before firing newly due events. A scenario received
+        # in this heartbeat starts at zero, rather than inheriting the preceding interval.
+        self.advance(elapsed_seconds if self.playback is previous_playback else 0.0)
         self._retry_acks()
 
         def send(metadata, audio):
@@ -285,20 +405,11 @@ class ReplayEdgeClient(CarlaEdgeClient):
                 self._frame_index, self._frame_sent_at = pb.index, now
 
     def tick(self, seconds: float):
-        self.advance(seconds)
-        self.step()
+        self.step(seconds)
 
 
 def load_recordings(directory: Path) -> dict[str, Recording]:
-    recordings = {}
-    for category, name in RECORDINGS.items():
-        try:
-            recordings[category] = load_recording(directory / name, category)
-        except (OSError, ValueError, KeyError) as exc:
-            log.warning("Skipping %s: %s", name, exc)
-    if not recordings:
-        raise ValueError(f"No usable recordings in {directory}")
-    return recordings
+    return {category: load_recording(directory / name, category) for category, name in RECORDINGS.items()}
 
 
 def main():
@@ -336,9 +447,6 @@ def main():
                               camera=camera, play_audio=audio_player)
     log.info("CARLA replay: car %s, %d recordings (%s)", car_id, len(recordings),
              ", ".join(f"{c}={r.name}" for c, r in recordings.items()))
-    missing = [c for c in SOUND_CATEGORIES if c not in recordings]
-    if missing:
-        log.warning("No recording for: %s (those buttons will fail)", ", ".join(missing))
     log.info("Open the Simulator as IoT Staff and choose a sound scenario.")
     stop, previous = Event(), time.monotonic()
     try:

@@ -82,6 +82,24 @@ class ProductionSettingsTests(unittest.TestCase):
         self.assertIn("--demo-only", text)
         self.assertNotIn("=dev-device-key-", text)
 
+    def test_edge_selector_accepts_only_replay_or_virtual_demo(self):
+        settings = {"EDGE_CAR_ID": "1", "EDGE_DEVICE_ID": "1", "EDGE_CAMERA_DEVICE_ID": "5",
+                    "EDGE_DEVICE_KEY": "private-test-microphone-key-abcdefghijklmnopqrstuvwxyz",
+                    "EDGE_CAMERA_DEVICE_KEY": "private-test-camera-key-abcdefghijklmnopqrstuvwxyz",
+                    "DEMO_DATA_ARGS": "--demo-only --live --offline 1 4"}
+        with tempfile.TemporaryDirectory() as temp:
+            file = Path(temp) / "edge-settings"
+            for selector in [None, "", "replay_client", "demo_client"]:
+                with self.subTest(selector=selector):
+                    values = dict(settings)
+                    if selector is not None: values["EDGE_CLIENT"] = selector
+                    write_settings(file, values)
+                    self.assertEqual(config.validate_edge(file), [])
+            for selector in ["carla_demo", "unknown", "replay_client; echo unexpected"]:
+                with self.subTest(selector=selector):
+                    write_settings(file, {**settings, "EDGE_CLIENT": selector})
+                    self.assertIn("EDGE_CLIENT must be replay_client or demo_client.", config.validate_edge(file))
+
 
 class DeploymentGuardTests(unittest.TestCase):
     def setUp(self):
@@ -158,6 +176,10 @@ class DeploymentGuardTests(unittest.TestCase):
         (self.bin / "sudo").write_text('#!/bin/sh\nexec "$@"\n')
         (self.bin / "systemctl").write_text('#!/bin/sh\nexit 0\n')
         (self.bin / "curl").write_text('#!/bin/sh\nprintf "{}"\n')
+        # Test the x86 AWS target independently of the developer's host (e.g. Apple Silicon).
+        # The real installer must keep rejecting ARM because its backup image is amd64-only.
+        (self.bin / "uname").write_text('#!/bin/sh\nprintf "x86_64\\n"\n')
+        (self.bin / "uname").chmod(0o755)
         (self.bin / "docker").write_text(
             '#!/bin/sh\nprintf "%s|%s|%s|%s|%s\\n" "$*" "$ALLOW_AWS_DEPLOYMENT" '
             '"$AWS_COST_ACK" "$AWS_CREDIT_BUDGET_USD" "$COMPOSE_PROFILES" >> "$TEST_MARKER"\n')
@@ -171,6 +193,34 @@ class DeploymentGuardTests(unittest.TestCase):
         for call in controls:
             self.assertTrue(call.endswith("|I_ACCEPT_AWS_RESOURCE_CHANGES|I_ACCEPT_AWS_USAGE_COSTS|1|"), call)
         self.assertFalse((self.root / "infra/aws/edge.env").exists())
+
+    def test_arm_target_is_rejected_before_any_install_or_start(self):
+        write_settings(self.root / "backend/.env", valid_settings())
+        (self.bin / "uname").write_text('#!/bin/sh\nprintf "aarch64\\n"\n')
+        (self.bin / "uname").chmod(0o755)
+        consent = {"ALLOW_AWS_DEPLOYMENT": "I_ACCEPT_AWS_RESOURCE_CHANGES",
+                   "AWS_COST_ACK": "I_ACCEPT_AWS_USAGE_COSTS", "AWS_CREDIT_BUDGET_USD": "1"}
+        result = self.run_script("docker/setup_ec2_docker.sh", consent)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Use an x86_64 instance", result.stderr)
+        self.assertFalse(self.marker.exists())
+
+    def test_unknown_edge_selector_blocks_both_installers_before_external_commands(self):
+        write_settings(self.root / "backend/.env", valid_settings())
+        write_settings(self.root / "infra/aws/edge.env", {
+            "EDGE_CLIENT": "unknown", "EDGE_CAR_ID": "1", "EDGE_DEVICE_ID": "1",
+            "EDGE_CAMERA_DEVICE_ID": "5", "EDGE_DEVICE_KEY": "private-test-mic-key-abcdefghijklmnopqrstuvwxyz",
+            "EDGE_CAMERA_DEVICE_KEY": "private-test-cam-key-abcdefghijklmnopqrstuvwxyz",
+            "DEMO_DATA_ARGS": "--demo-only --live --offline 1 4",
+        })
+        consent = {"ALLOW_AWS_DEPLOYMENT": "I_ACCEPT_AWS_RESOURCE_CHANGES",
+                   "AWS_COST_ACK": "I_ACCEPT_AWS_USAGE_COSTS", "AWS_CREDIT_BUDGET_USD": "1",
+                   "ENABLE_EDGE_DEMO": "1", "ALLOW_AWS_DEMO_FEEDS": "I_UNDERSTAND_REQUEST_COSTS"}
+        for installer in ["setup_ec2.sh", "docker/setup_ec2_docker.sh"]:
+            result = self.run_script(installer, consent)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("EDGE_CLIENT must be replay_client or demo_client.", result.stdout)
+            self.assertFalse(self.marker.exists())
 
     def test_ports_and_bootstrap_volume_are_private(self):
         text = (AWS / "docker/docker-compose.yml").read_text()

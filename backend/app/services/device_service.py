@@ -285,10 +285,15 @@ def simulator_state(car_id):
         recent_devices = [device for device in devices
                           if device.last_seen and _utc(device.last_seen) >= now - timedelta(seconds=90)]
         online = bool(recent_devices)
-        edge_mode = ("local_demo" if any((device.firmware or "").startswith("local-demo") for device in recent_devices)
-                     else "carla" if any((device.firmware or "").startswith("carla") for device in recent_devices)
+        # Keep the last observed source label when a client disconnects: a retained replay
+        # frame must not become a generic/live CARLA frame merely because its heartbeat aged out.
+        observed_devices = recent_devices or sorted(
+            (device for device in devices if device.last_seen), key=lambda device: _utc(device.last_seen), reverse=True)[:1]
+        edge_mode = ("local_demo" if any((device.firmware or "").startswith("local-demo") for device in observed_devices)
+                     else "carla_replay" if any((device.firmware or "").startswith("carla-replay") for device in observed_devices)
+                     else "carla" if any((device.firmware or "").startswith("carla") for device in observed_devices)
                      else "edge")
-        audio_source = ("recordings" if any(device.firmware == "local-demo-real-v1" for device in recent_devices)
+        audio_source = ("recordings" if edge_mode == "carla_replay" or any(device.firmware == "local-demo-real-v1" for device in recent_devices)
                         else "synthetic" if any(device.firmware == "local-demo-synth-v1" for device in recent_devices)
                         else None)
         camera_seen = max((_utc(device.last_seen) for device in devices

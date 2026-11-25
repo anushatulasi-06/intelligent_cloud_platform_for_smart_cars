@@ -101,9 +101,18 @@ Use [Option B private edge settings and verification guidance](docker/SETUP.md#6
 For native deployment, the corresponding optional services are `autosound-edge` and
 `autosound-demo-data`. They require explicit feed cost acknowledgement and enable flags on
 setup runs; omission stops/disables a previously enabled feed. `--demo-only` position history
-preserves real history and all alerts. A two-second camera costs about $0.009/hour in S3 PUTs
-alone. Real CARLA must run on a separately reviewed machine and use private registered device
-keys through an SSH API tunnel; no CARLA/cloud graphics configuration is selected here.
+preserves real history and all alerts. In private `infra/aws/edge.env`, `EDGE_CLIENT=replay_client`
+is the default, matching the Docker option. It plays bundled recorded CARLA frames/telemetry,
+needs no GPU/server, and captures audio at the recording's event. Choose a scenario first;
+Start/Stop route then resume/pause playback. Set `EDGE_CLIENT=demo_client` for the illustrated
+virtual car. The shared preflight rejects unknown selectors before service changes; rerun the
+guarded setup with the desired feed flags after changing the private file.
+
+Replay camera PUTs occur up to every second while frames advance and every five seconds while
+idle/paused (about $0.018/$0.0036 per hour at the reviewed rate). The virtual alternative keeps
+its two-second camera (about $0.009/hour). These exclude other usage and are planning assumptions,
+not spending caps; no AWS activity is authorized at budget zero. Live CARLA, unlike replay, needs
+a separately reviewed simulator machine and private device keys through an SSH API tunnel.
 
 After authorization, `deploy_backend.sh` checks consent and production settings before git
 pulls, dependency changes, migrations and service restarts. It does not seed accounts. Retain

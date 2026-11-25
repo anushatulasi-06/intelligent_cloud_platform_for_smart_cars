@@ -134,19 +134,33 @@ Private S3 signed URLs still require internet connectivity in the browser and co
 ## 6. Optional feeds and verification after authorization
 
 Use private credentials from bootstrap (or F4 registration) in gitignored `infra/aws/edge.env`.
-The supplied template contains placeholders, not working public keys. Validate it locally:
+The supplied template contains placeholders, not working public keys. `EDGE_CLIENT=replay_client`
+is the default: it replays bundled CARLA camera frames and telemetry with sound at the recorded
+event, without a GPU or CARLA server. Set `EDGE_CLIENT=demo_client` for an illustrated virtual
+car. Unknown selectors fail preflight; use the setup wrapper after a change, not a direct start.
+Validate the private file locally:
 
 ```bash
 python3 infra/aws/validate_production_env.py --edge-settings infra/aws/edge.env
 ```
 
 Only after approving continuing request costs, rerun the wrapper with
-`ALLOW_AWS_DEMO_FEEDS=I_UNDERSTAND_REQUEST_COSTS ENABLE_EDGE_DEMO=1`. A virtual camera
-PUT occurs about every two seconds: $0.009/hour before other usage. `ENABLE_DEMO_DATA=1`
+`ALLOW_AWS_DEMO_FEEDS=I_UNDERSTAND_REQUEST_COSTS ENABLE_EDGE_DEMO=1`. In replay, choose a
+scenario to start its recording; Start/Stop route resume/pause it. A new scenario replaces the
+previous recording. Sound capture/ACK happens at its event; classification is asynchronous.
+This is recorded footage, not a live simulated vehicle. The local recordings are copied into the
+backend image, so rebuild locally after source changes before claiming verification.
+
+Replay sends a camera PUT up to every second while frames advance, and resends a still frame
+every five seconds when idle/paused: about $0.018/hour active or $0.0036/hour idle at the reviewed
+S3 request rate, before other usage. The virtual alternative sends every two seconds ($0.009/hour).
+See [planning assumptions](../README.md#planning-costs-before-credits); no AWS activity is
+authorized under the current zero-credit budget. `ENABLE_DEMO_DATA=1`
 separately requests `--demo-only` position history for untouched demo-tagged cars; real histories
 and all alerts remain unchanged. It is off by default. Pass desired feed flags on every rerun;
 feeds omitted on a later setup run are stopped. Stop edge-demo before a real CARLA client uses
-those devices. CARLA's machine, map, graphics requirements and hosting are a separate decision.
+those devices. A live CARLA server's machine, map, graphics and hosting are a separate decision;
+recorded replay requires none of those resources.
 
 Using private logins, check F4/F5 Wi-Fi/device commands, F11 edge status, F13 upload/process/audio,
 C4 classification/alerts and F14 storage/backup. A successful HTTP request is not proof of physical

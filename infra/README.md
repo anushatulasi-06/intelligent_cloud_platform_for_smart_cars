@@ -10,8 +10,8 @@ clients, including CARLA.
 | **Local, no Docker** | Homebrew PostgreSQL and MongoDB, MinIO for S3, backend and frontend in terminals | macOS with Homebrew | [Local setup without Docker](#local-setup-without-docker-homebrew--minio) |
 | **Local, Docker databases** | `docker-compose.yml` runs PostgreSQL and MongoDB; backend and frontend in terminals | Docker | `docker compose -f infra/docker-compose.yml up -d`, then [backend README → Run it](../backend/README.md#run-it) |
 | **Local, all in Docker** | `demo-compose.yml` runs everything: databases, MinIO, API, frontend and edge client | Docker | [Full local stack (Docker)](#full-local-stack-docker) |
-| **AWS, option A** | EC2 scripts, frontend on an S3 website | AWS account | [`aws/SETUP.md`](aws/SETUP.md) |
-| **AWS, option B** | Docker on EC2 | AWS account | [`aws/docker/SETUP.md`](aws/docker/SETUP.md) |
+| **AWS, option A** | Native API on EC2, local frontend through SSH | Separate authorization and positive approved credit budget | [`aws/SETUP.md`](aws/SETUP.md) |
+| **AWS, option B** | API/UI on EC2 loopback through SSH | Separate authorization and positive approved credit budget | [`aws/docker/SETUP.md`](aws/docker/SETUP.md) |
 
 ## What's in this folder
 
@@ -26,8 +26,9 @@ clients, including CARLA.
 
 ## Seeded accounts
 
-`python -m app.db.seed` (run by every setup path) creates these **development** accounts. Their
-passwords are public in the repository.
+`python -m app.db.seed` creates these **local development** accounts. Their passwords are public
+in the repository. AWS production setup refuses that seed and uses the private empty-database
+bootstrap described in the AWS guides; never deploy these known credentials publicly.
 
 | Account | Password | Role | Can open |
 |---|---|---|---|
@@ -83,11 +84,16 @@ In `backend/.env`, set these values:
 | 1. MinIO | `MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin minio server ~/minio-data --console-address :9001` |
 | 2. API | `cd backend && source .venv/bin/activate && export AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin && uvicorn app.main:app --reload` |
 | 3. UI | `cd frontend && npm run dev` |
-| 4. Edge client (car 1) | `cd backend && source .venv/bin/activate && EDGE_API_URL=http://localhost:8000 EDGE_CAR_ID=1 EDGE_DEVICE_ID=1 EDGE_DEVICE_KEY=dev-device-key-mic-1 EDGE_CAMERA_DEVICE_ID=5 EDGE_CAMERA_DEVICE_KEY=dev-device-key-cam-1 python -m edge.demo_client` |
+| 4. Edge client (car 1) | `cd backend && source .venv/bin/activate && EDGE_API_URL=http://localhost:8000 EDGE_CAR_ID=1 EDGE_DEVICE_ID=1 EDGE_DEVICE_KEY=dev-device-key-mic-1 EDGE_CAMERA_DEVICE_ID=5 EDGE_CAMERA_DEVICE_KEY=dev-device-key-cam-1 python -m edge.replay_client --no-audio-playback` |
 | 5. Map positions | `cd backend && source .venv/bin/activate && python ../scripts/demo_data.py --demo-only --live --offline 1 4` |
 
 The backend reads S3 credentials from the shell environment, not from `.env`, so keep the
 `export` in terminal 2.
+
+Terminal 4 plays bundled CARLA recordings, with sound captured at each scenario's event. It
+needs no GPU or CARLA server. For the illustrated virtual car and independent Start/Stop route,
+use `python -m edge.demo_client` instead. The full local Docker stack keeps that virtual client
+as its default; stop its edge-demo before running replay against the same devices.
 
 **First time only**, and again after a database reset: run these in terminal 2 before `uvicorn`.
 ```bash
@@ -199,13 +205,22 @@ processing worker and the deployed model.
 
 ## Edge clients and CARLA
 
-Both edge clients send heartbeats, camera frames, command acknowledgements and audio uploads to
+The edge clients send heartbeats, camera frames, command acknowledgements and audio uploads to
 the API, using the seeded devices `mic-1` (ID 1) and `cam-1` (ID 5) on car 1:
 
-| Client | What it is | Camera |
-|---|---|---|
-| `edge.demo_client` | A virtual car, with no simulator needed | An illustrated frame drawn in code, labelled "LOCAL EDGE DEMO" |
-| `edge.carla_demo` / `edge.carla_client` | A real vehicle in a CARLA 0.9.16 world | Real CARLA RGB frames |
+| Client | What it is | Camera | Needs |
+|---|---|---|---|
+| `edge.replay_client` | Replays bundled CARLA scenarios; choose a scenario, then Start/Stop route resume/pause it | Recorded CARLA RGB frames | No GPU or CARLA server |
+| `edge.demo_client` | An illustrated virtual car driven by Start/Stop route | Illustration labelled "LOCAL EDGE DEMO" | No simulator |
+| `edge.carla_demo` / `edge.carla_client` | A live vehicle in a CARLA 0.9.16 world | Live CARLA RGB frames | A working compatible CARLA server |
+
+Both AWS options default to `EDGE_CLIENT=replay_client` when the optional edge feed is explicitly
+enabled. `EDGE_CLIENT=demo_client` selects the virtual alternative; other selectors are rejected.
+The AWS installers keep feeds off until their separate cost acknowledgement is supplied. Replay
+heartbeats every second, uploads changing frames up to once per second, and resends a still frame
+every five seconds while idle/paused. This differs from the virtual client's two-second cadence.
+See [replay timing and recordings](../backend/edge/README.md#replay-recorded-carla-scenarios)
+and [AWS request-cost assumptions](aws/README.md#planning-costs-before-credits).
 
 **Run only one edge client at a time** for the same devices.
 
@@ -214,7 +229,7 @@ Configuration, commands, audio scenarios and buffering are covered in the
 in [`demo_clips/README.md`](../backend/edge/demo_clips/README.md).
 
 To use your own recordings, pass `--scenarios <file>.json`. The mapping file has one entry per
-category; copy [`scenarios.example.json`](../backend/edge/scenarios.example.json) to start.
+category; copy [`edge_scenarios.json`](../backend/edge/edge_scenarios.json) to start.
 - Paths in the file are relative to the file itself.
 - Each recording must be a non-empty WAV or MP3, at most 10 MiB and 15 s long.
 
@@ -251,7 +266,7 @@ Then stop any other edge client using the same devices, and connect CARLA to the
 |---|---|---|
 | Local, no Docker | Ctrl+C in terminal 4 | `http://localhost:8000` (on the same machine) |
 | Full local Docker stack | `docker compose --env-file infra/.env.demo -f infra/demo-compose.yml stop edge-demo` | `http://localhost:8000` |
-| AWS | see the CARLA step of [`aws/SETUP.md`](aws/SETUP.md) or [`aws/docker/SETUP.md`](aws/docker/SETUP.md) | `http://<elastic-ip>:8000` |
+| AWS | use an authorized private SSH API tunnel from [`aws/SETUP.md`](aws/SETUP.md) or [`aws/docker/SETUP.md`](aws/docker/SETUP.md) | `http://127.0.0.1:8000` through SSH |
 
 ```bash
 cd backend

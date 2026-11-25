@@ -1,13 +1,6 @@
 {
-  "dataset": "ESC-50: Dataset for Environmental Sound Classification",
-  "dataset_curator": "Karol J. Piczak",
-  "repository": "https://github.com/karolpiczak/ESC-50",
-  "source_commit": "33c8ce9eb2cf0b1c2f8bcf322eb349b6be34dbb6",
-  "dataset_license": "Creative Commons Attribution-NonCommercial 3.0 Unported",
-  "dataset_license_url": "https://creativecommons.org/licenses/by-nc/3.0/",
+  "dataset": "Mixed sources: ESC-50 and CMPE 281 course-provided Audio_Datasets",
   "upstream_notices": "ESC-50-LICENSE.txt",
-  "source_metadata": "esc50-selected.csv",
-  "retrieved_on": "2026-11-10",
   "intended_use": "CMPE281 noncommercial educational component demonstration",
   "classification_note": "Scenario triggers are selected metadata, not predicted labels or model accuracy evidence.",
   "clips": [
@@ -28,7 +21,12 @@
       "original_source_url": "https://freesound.org/people/guitarguy1985/sounds/54084/",
       "original_license_as_listed_by_ESC50": "CC0",
       "original_license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "changes_after_ESC50": "None; original ESC-50 WAV bytes retained."
+      "changes_after_ESC50": "None; original ESC-50 WAV bytes retained.",
+      "source_dataset": "ESC-50: Dataset for Environmental Sound Classification",
+      "dataset_curator": "Karol J. Piczak",
+      "source_commit": "33c8ce9eb2cf0b1c2f8bcf322eb349b6be34dbb6",
+      "dataset_license": "Creative Commons Attribution-NonCommercial 3.0 Unported",
+      "dataset_license_url": "https://creativecommons.org/licenses/by-nc/3.0/"
     },
     {
       "scenario": "in_vehicle",
@@ -47,7 +45,12 @@
       "original_source_url": "https://freesound.org/people/gezortenplotz/sounds/20133/",
       "original_license_as_listed_by_ESC50": "CC-BY",
       "original_license_url": "https://creativecommons.org/licenses/by/3.0/",
-      "changes_after_ESC50": "None; original ESC-50 WAV bytes retained."
+      "changes_after_ESC50": "None; original ESC-50 WAV bytes retained.",
+      "source_dataset": "ESC-50: Dataset for Environmental Sound Classification",
+      "dataset_curator": "Karol J. Piczak",
+      "source_commit": "33c8ce9eb2cf0b1c2f8bcf322eb349b6be34dbb6",
+      "dataset_license": "Creative Commons Attribution-NonCommercial 3.0 Unported",
+      "dataset_license_url": "https://creativecommons.org/licenses/by-nc/3.0/"
     },
     {
       "scenario": "human",
@@ -101,5 +104,6 @@
       "changes": "16 kHz mono as prepared by model/dataset_prep.py; trimmed/padded by a few samples to exactly 5.0 s."
     }
   ],
-  "other_sources_note": "The human, traffic and environmental clips are not from ESC-50: they come from the CMPE 281 course-provided Audio_Datasets (see their entries)."
+  "other_sources_note": "The human, traffic and environmental clips are not from ESC-50: they come from the CMPE 281 course-provided Audio_Datasets (see their entries).",
+  "license_note": "ESC-50 distribution terms apply only to the emergency and in_vehicle clips. License and creator metadata for the three course-provided clips was not supplied; no Creative Commons license is asserted for them."
 }

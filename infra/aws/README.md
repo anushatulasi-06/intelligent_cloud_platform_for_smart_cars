@@ -30,7 +30,12 @@ Defaults are no development seed and no feeds. `SKIP_SEED=0` is refused in produ
 empty database uses private bootstrap credentials, not public repository passwords/device keys.
 Optional feeds require `ALLOW_AWS_DEMO_FEEDS=I_UNDERSTAND_REQUEST_COSTS` and explicit
 `ENABLE_EDGE_DEMO=1` or `ENABLE_DEMO_DATA=1` on each setup run. Omitted feeds are stopped on
-subsequent setup runs. The position feed also requires `--demo-only` and preserves real history
+subsequent setup runs. For the edge feed, `EDGE_CLIENT=replay_client` is the default in both
+the native systemd service and AWS Docker option; set `EDGE_CLIENT=demo_client` for the
+illustrated virtual car. The shared preflight rejects other selectors. Replay uses bundled CARLA
+camera/telemetry recordings and needs no GPU or CARLA server. It does not operate a live CARLA
+world: choose a scenario to begin playback, then Start/Stop route resume/pause that recording.
+The position feed also requires `--demo-only` and preserves real history
 and all alerts; it is a demonstration of untouched demo cars, not live CARLA data.
 
 ## Account plan and resource sizing
@@ -85,15 +90,23 @@ Formula: `hours × (EC2 + .016 RDS + .005 IPv4) + hours/730 × (EBS + 2.30 RDS s
 |---|---:|---:|---:|---:|
 | A, 20 GiB EC2 disk, fixed resources | $0.111 | $0.889 | $2.667 | $81.127 |
 | B, 30 GiB EC2 disk, fixed resources | $0.112 | $0.898 | $2.693 | $81.927 |
-| One camera refreshing every 2 seconds, PUT requests only | $0.009 | $0.072 | $0.216 | $6.570 |
+| Replay camera idle/paused, every 5 seconds, PUT only | $0.0036 | $0.0288 | $0.0864 | $2.628 |
+| Replay camera advancing, up to once per second, PUT only | $0.018 | $0.144 | $0.432 | $13.140 |
+| Virtual demo camera, every 2 seconds, PUT only | $0.009 | $0.072 | $0.216 | $6.570 |
 
-Thus B with one continuous demo camera is about **$88.497/month before other usage**.
+At the reviewed request rate, B with one replay camera is approximately **$84.555/month idle**
+or **$95.067/month continuously advancing**, before other usage. These are planning bounds,
+not a measured bill: frame changes, playback duty cycle, retries and camera capture state matter.
+The virtual demo alternative remains about **$88.497/month** with its two-second camera.
 The original t3.medium A/B figures would be $49.598/$50.398 fixed, or $56.168/$56.968 with
-that camera, but are not a Free-plan deployment recommendation. The 8 GiB m7i candidate adds
+that virtual camera, but are not a Free-plan deployment recommendation. The 8 GiB m7i candidate adds
 $0.01097/hour (about $8.008/month) over c7i. S3 audio and backups grow with use; overwriting
 `latest.jpg` avoids accumulated frames only when bucket versioning is off. Retries, HEAD/GET
 polling and viewers add requests. One viewer fetching every two seconds adds about $0.526/month
-in GETs, plus transfer. No camera/request activity is enabled automatically.
+in GETs, plus transfer. Replay heartbeats run every second; the UI also polls every second for
+45 seconds after a scenario click. Idle replay resends its still frame every five seconds, so a
+two-second cost assumption must not be applied to all clients. No feed or camera/request activity
+is enabled automatically by these AWS installers, and no AWS usage is authorized at budget zero.
 
 First 100 GB/month internet egress is aggregated across AWS services/regions (not per bucket);
 then the first Oregon paid tier is $0.09/GB. Inbound internet transfer is free, but uploads still
@@ -209,7 +222,11 @@ The evidence bundle is `production-docker-local-nov23/`, specifically
 `verification-final/verification.json`, `image-unit/` (JUnit, logs, versions) and
 `context-safety.json`.
 
-**Remaining:** Anusha's CARLA integration; AWS instance capacity, IAM/network/S3/SES delivery
+The November 24 upstream update adds recorded CARLA replay and new audio fixtures; the
+November 23 image IDs and test counts above describe the earlier source snapshot, not proof of
+that update. Replay needs no GPU/server; live CARLA remains a separate integration.
+
+**Remaining:** live CARLA if required; AWS instance capacity, IAM/network/S3/SES delivery
 and public TLS after separate authorization. Email stayed logged locally. These are small local
 fixtures, not an AWS load/capacity test or a model training/accuracy evaluation. Backups are
 sequential logical database dumps taken with application writes quiescent, **not an atomic

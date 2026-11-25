@@ -47,9 +47,11 @@ function Simulator({ role }) {
   const targetOnline = !!target?.last_seen && Date.now() - Date.parse(target.last_seen) < 90000;
   const s = state.data?.car_id === carId ? state.data : null;
   const frameUrl = s?.frame_url;
-  const frameLive = !!frameUrl && !!s?.frame_at && Date.now() - Date.parse(s.frame_at) < 10000 && !frameError;
+  const frameAge = Date.now() - Date.parse(s?.frame_at);
+  const frameFresh = !!frameUrl && !!s?.frame_at && frameAge >= -2000 && frameAge < 10000 && !frameError;
   const localDemo = s?.edge_mode === 'local_demo';
-  const sourceLabel = USE_MOCK ? 'UI prototype' : localDemo ? 'Local edge demo' : s?.edge_mode === 'carla' ? 'CARLA' : 'Edge client';
+  const recordedReplay = s?.edge_mode === 'carla_replay';
+  const sourceLabel = USE_MOCK ? 'UI prototype' : localDemo ? 'Local edge demo' : recordedReplay ? 'CARLA recorded replay' : s?.edge_mode === 'carla' ? 'Live CARLA' : 'Edge client';
   const canSend = !USE_MOCK && role === 'iot_staff' && !busy && targetOnline && !state.error;
   const position = s?.position;
   const carChoices = cars.data || [];
@@ -101,22 +103,41 @@ function Simulator({ role }) {
     }
   }
   async function replayPreview() {
+    const id = previewRequest.current.id;
     try { await previewAudio.current?.play(); }
-    catch { setPreview((current) => current && { ...current, status: 'blocked', message: 'Press the audio player’s Play control to hear this recording.' }); }
+    catch { if (id === previewRequest.current.id) setPreview((current) => current && { ...current, status: 'blocked', message: 'Press the audio player’s Play control to hear this recording.' }); }
+  }
+  function stopPreview(category, message) {
+    const request = previewRequest.current;
+    request.id += 1;
+    request.controller?.abort();
+    previewAudio.current?.pause();
+    previewAudio.current?.removeAttribute('src');
+    if (request.url) URL.revokeObjectURL(request.url);
+    request.url = null;
+    setPreview({ category, status: 'command_error', message });
   }
   async function send(command, scenario) {
     if (!canSend || !targetId) return;
     // Preview and edge execution are independent: a browser audio problem must
     // never discard the normal queued command or its C3 upload.
     // The sound is only loaded now; it plays when the edge acknowledges the command at the event time.
-    if (scenario) void startPreview(scenario, { autoplay: false });
+    let previewId;
+    if (scenario) {
+      setPendingScenario(null);
+      void startPreview(scenario, { autoplay: false });
+      previewId = previewRequest.current.id;
+    }
     setBusy(scenario || command);
     try {
       const result = await queueDeviceCommand(targetId, { command, ...(scenario ? { payload: { scenario } } : {}) });
-      if (scenario) setPendingScenario({ category: scenario, commandId: result.command_id, sentAt: Date.now() });
+      if (scenario && previewRequest.current.id === previewId) setPendingScenario({ category: scenario, commandId: result.command_id, sentAt: Date.now() });
       toast(`${scenario ? humanize(scenario) : humanize(command)} queued for ${target.name}`);
       state.reload();
-    } catch (e) { toast(e.message, 'error'); }
+    } catch (e) {
+      if (scenario && previewRequest.current.id === previewId) stopPreview(scenario, `Scenario was not queued: ${e.message}. Choose a scenario to try again.`);
+      toast(e.message, 'error');
+    }
     finally { setBusy(''); }
   }
   const pendingEvent = s?.events?.find((e) => e.command_id === pendingScenario?.commandId);
@@ -124,7 +145,12 @@ function Simulator({ role }) {
   // event time), so that is when the browser plays the sound.
   const eventPlayed = useRef(null);
   useEffect(() => {
-    if (!pendingScenario || pendingEvent?.status !== 'acknowledged') return;
+    if (!pendingScenario) return;
+    if (pendingEvent?.status === 'failed' || pendingEvent?.status === 'expired') {
+      stopPreview(pendingScenario.category, `Scenario ${pendingEvent.status}. The sound event was not confirmed. Choose a scenario to try again.`);
+      return;
+    }
+    if (pendingEvent?.status !== 'acknowledged') return;
     if (eventPlayed.current === pendingScenario.commandId) return;
     eventPlayed.current = pendingScenario.commandId;
     if (preview?.category === pendingScenario.category && previewRequest.current.url) void replayPreview();
@@ -145,16 +171,17 @@ function Simulator({ role }) {
     {(state.error || cars.error) && <p role="alert" className="state-error">{(state.error || cars.error).message}</p>}
     {USE_MOCK && <p className="sim-notice">UI prototype data. Start the backend and set VITE_USE_MOCK=false to execute commands.</p>}
     {localDemo && <p className="sim-notice">Local edge demo: illustrated road frames and {s?.audio_source === 'recordings' ? 'recorded sound scenarios' : s?.audio_source === 'synthetic' ? 'synthetic test tones' : 'configured audio scenarios'} exercise the real upload and classification pipeline. Scenario labels describe the input; the model determines the result.</p>}
+    {recordedReplay && <p className="sim-notice sim-replay-notice"><strong>Recorded CARLA replay.</strong> Prerecorded camera frames and telemetry are sent through the current API. Sound events use the real audio upload and classification pipeline. Choose a scenario to begin; Stop route pauses its recording and Start route resumes it.</p>}
     {!s?.online && !state.loading && !state.error && <div className="sim-notice"><strong>Waiting for an edge client.</strong> Start the local demo or CARLA adapter for this car. A recent microphone heartbeat is required to run scenarios. <Link to={`/devices?car_id=${carId}`}>Check devices</Link></div>}
     <div className="sim-main-grid">
       <section className="panel sim-camera" aria-label="Camera and telemetry">
-        <div className="sim-section-head"><h2>Camera · Car {carId}</h2><span className={`sim-live ${frameLive ? 'sim-live-on' : ''}`}>{frameLive ? 'LIVE' : 'NO LIVE FEED'}</span></div>
+        <div className="sim-section-head"><h2>Camera · Car {carId}</h2><span className={`sim-live ${frameFresh ? 'sim-live-on' : ''}`}>{recordedReplay ? frameFresh ? 'RECORDED REPLAY' : 'REPLAY OFFLINE' : frameFresh ? 'LIVE' : 'NO LIVE FEED'}</span></div>
         <div className="sim-frame-wrap">
-          {frameUrl && !frameError ? <img className="simulator-frame" src={frameUrl} alt={`Latest ${sourceLabel} camera frame from car ${carId}`} onError={() => setFrameError(true)} /> : <div className="simulator-empty"><span className="sim-camera-symbol" aria-hidden="true">▣</span><strong>{state.loading && !s ? 'Connecting to simulator…' : frameError ? 'Camera frame unavailable' : 'Waiting for camera frames'}</strong><span className="small">The camera device uploads a JPEG every 2 seconds.</span></div>}
-          {frameUrl && !frameLive && <span className="sim-stale">Last received frame · feed stale</span>}
+          {frameUrl && !frameError ? <img className="simulator-frame" src={frameUrl} alt={`Latest ${sourceLabel} camera frame from car ${carId}`} onError={() => setFrameError(true)} /> : <div className="simulator-empty"><span className="sim-camera-symbol" aria-hidden="true">▣</span><strong>{state.loading && !s ? 'Connecting to simulator…' : frameError ? 'Camera frame unavailable' : 'Waiting for camera frames'}</strong><span className="small">The registered camera uploads its latest JPEG frame.</span></div>}
+          {frameUrl && !frameFresh && <span className="sim-stale">Last received frame · feed stale</span>}
         </div>
         <div className="sim-telemetry" aria-label="Position"><span>{position?.town || sourceLabel}</span><strong>{position?.speed_kmh?.toFixed(1) ?? '—'} km/h</strong><span>Heading {position?.heading?.toFixed(0) ?? '—'}°</span><span>{position ? `${position.lat?.toFixed(5)}, ${position.lon?.toFixed(5)}` : 'No position yet'}</span></div>
-        <div className="sim-camera-footer muted small">Position: {formatDateTime(position?.ts)} · Frame: {formatDateTime(s?.frame_at)}</div>
+        <div className="sim-camera-footer muted small">{recordedReplay ? 'Telemetry received' : 'Position'}: {formatDateTime(position?.ts)} · Frame received: {formatDateTime(s?.frame_at)}</div>
         {frameError && <button className="btn btn-sm" onClick={() => { setFrameError(false); state.reload(); }}>Reload frame</button>}
       </section>
       <section className="panel sim-controls"><h2>Scenario controls</h2>
@@ -166,26 +193,26 @@ function Simulator({ role }) {
           <div className="sim-scenarios">{SCENARIOS.map(([category, label, description]) => <button key={category} className={`sim-scenario sim-scenario-${category}`} disabled={!canSend} onClick={() => send('simulate_event', category)}><span className="sound-dot" /><span><strong>{busy === category ? 'Queuing…' : label}</strong><small>{description}</small></span><span aria-hidden="true">↗</span></button>)}</div>
           <div className="sim-audio-preview" hidden={!preview}>
             <div className="sim-preview-heading"><strong>Browser sound preview</strong><span className="small">{SCENARIOS.find(([category]) => category === preview?.category)?.[1]}</span></div>
-            <audio ref={previewAudio} controls preload="metadata" aria-label="Scenario preview audio"
+            <audio ref={previewAudio} controls preload="metadata" aria-label="Scenario preview audio" hidden={preview?.status === 'command_error'}
               onPlay={() => setPreview((current) => current && { ...current, status: 'playing', message: null })}
               onPause={() => setPreview((current) => current && current.status === 'playing' ? { ...current, status: 'paused' } : current)}
               onEnded={() => setPreview((current) => current && { ...current, status: 'ended' })}
               onError={() => { if (previewRequest.current.url) setPreview((current) => current && { ...current, status: 'error', message: 'The recording could not be played. Retry the preview.' }); }} />
-            <p className="small" role="status">{preview?.message || ({ loading: 'Loading the matching recording…', waiting: 'Scenario playing. The sound plays when its event happens.', ready: 'Recording ready.', playing: 'Playing the matching recording.', paused: 'Preview paused.', ended: 'Preview finished.' }[preview?.status])}</p>
+            <p className="small" role={preview?.status === 'command_error' ? 'alert' : 'status'}>{preview?.message || ({ loading: 'Loading the matching recording…', waiting: 'Waiting for the edge to confirm the sound event.', ready: 'Recording ready.', playing: 'Playing the matching recording.', paused: 'Preview paused.', ended: 'Preview finished.' }[preview?.status])}</p>
             {preview?.status === 'blocked' && <button className="btn btn-sm" onClick={replayPreview}>Play preview</button>}
-            {preview?.status === 'error' && <button className="btn btn-sm" onClick={() => startPreview(preview.category)}>Retry preview</button>}
+            {preview?.status === 'error' && <button className="btn btn-sm" onClick={() => startPreview(preview.category, { autoplay: !pendingScenario || pendingEvent?.status === 'acknowledged' })}>Retry preview</button>}
             <p className="muted small">This browser plays the bundled recording at the scenario's sound event. An edge client with a custom scenario mapping can upload a different clip.</p>
           </div>
-          <details className="sim-recording-credits"><summary>Recording credits · CC BY-NC 3.0</summary>
+          <details className="sim-recording-credits"><summary>Recording sources and credits</summary>
             <p>Two <a href="https://github.com/karolpiczak/ESC-50" target="_blank" rel="noreferrer">ESC-50</a> recordings, curated by Karol J. Piczak, are used unchanged for this educational demo under <a href="https://creativecommons.org/licenses/by-nc/3.0/" target="_blank" rel="noreferrer">CC BY-NC 3.0</a>.</p>
             <ul><li>Siren: <a href="https://freesound.org/people/guitarguy1985/sounds/54084/" target="_blank" rel="noreferrer">civildefense.wav</a> by guitarguy1985 (CC0).</li>
               <li>Glass breaking: <a href="https://freesound.org/people/gezortenplotz/sounds/20133/" target="_blank" rel="noreferrer">breaking_glass.wav</a> by gezortenplotz (CC BY 3.0).</li>
-              <li>Scream, road traffic and thunderstorm: from the CMPE 281 course-provided Audio_Datasets (not ESC-50).</li></ul>
+              <li>Scream, road traffic and thunderstorm: from the CMPE 281 course-provided Audio_Datasets. Their original creators and license terms are not recorded in the supplied metadata.</li></ul>
             <a href="https://github.com/karolpiczak/ESC-50/blob/33c8ce9eb2cf0b1c2f8bcf322eb349b6be34dbb6/LICENSE" target="_blank" rel="noreferrer">Complete upstream notices</a>
           </details>
           {!targetOnline && <p className="muted small">Controls become available when this microphone reports a heartbeat.</p>}
           {pendingScenario && <p className="small" role="status">{humanize(pendingScenario.category)} · command #{pendingScenario.commandId}: <strong>{pendingEvent ? humanize(pendingEvent.status) : 'Queued'}</strong>. <Link to={`/devices?tab=data&car_id=${carId}`}>View audio processing</Link></p>}
-        </> : <p className="muted">Cloud Staff can monitor the live feed and classifications. Sign in as IoT Staff to control the route and scenarios.</p>}
+        </> : <p className="muted">Cloud Staff can monitor the camera feed and classifications. Sign in as IoT Staff to control the route and scenarios.</p>}
       </section>
     </div>
     <div className="sim-bottom-grid">

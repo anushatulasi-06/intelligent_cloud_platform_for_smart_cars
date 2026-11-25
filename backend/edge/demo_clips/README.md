@@ -46,8 +46,10 @@ They come from the CMPE 281 course-provided `Audio_Datasets`, which was used to 
 ## Notes
 
 - **Files:** [manifest.json](manifest.json) lists every clip's SHA-256 checksum,
-  duration, source and license. [esc50-selected.csv](esc50-selected.csv) keeps the
-  upstream metadata for the ESC-50 clips.
+  duration and available source/license metadata. The two ESC-50 entries retain
+  their original filenames, creator attribution and pinned upstream source URLs.
+  The course-provided clips have no supplied license metadata; the ESC-50 license
+  does not cover those three files.
 - **Glass breaking** stands in for an in-vehicle incident; it wasn't recorded in a car.
 - **Scenario vs. prediction:** a scenario is the selected recording plus the upload's
   `trigger` metadata. The CNN predicts independently, so its result may differ from

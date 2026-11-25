@@ -106,6 +106,9 @@ def validate_edge(path: Path) -> list[str]:
     except (OSError, UnicodeError, ValueError):
         return ["Private edge settings cannot be parsed."]
     errors = []
+    selector = values.get("EDGE_CLIENT", "replay_client").strip().strip("\"'") or "replay_client"
+    if selector not in {"replay_client", "demo_client"}:
+        errors.append("EDGE_CLIENT must be replay_client or demo_client.")
     for name in ("EDGE_CAR_ID", "EDGE_DEVICE_ID", "EDGE_CAMERA_DEVICE_ID"):
         if not values.get(name, "").isdigit() or int(values[name]) < 1:
             errors.append(f"{name} must be a positive private device/car ID.")

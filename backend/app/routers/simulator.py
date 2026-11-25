@@ -37,11 +37,14 @@ def scenario_audio(category: Scenario):
                 raise ValueError("Empty recording")
     except (OSError, EOFError, ValueError, wave.Error):
         raise Unavailable("The bundled scenario recording is unavailable") from None
+    headers = {"Cache-Control": "private, max-age=3600", "X-Content-Type-Options": "nosniff",
+               "X-Recording-Source": "ESC-50" if category in ("emergency", "in_vehicle") else "CMPE281-course-dataset"}
+    # The three course-provided clips have no original license recorded in the supplied
+    # metadata. Do not apply ESC-50's collection license to those unrelated recordings.
+    if category in ("emergency", "in_vehicle"):
+        headers["Link"] = '<https://creativecommons.org/licenses/by-nc/3.0/>; rel="license"'
     return FileResponse(path, media_type="audio/wav", filename=f"scenario-{category}.wav",
-                        content_disposition_type="inline", headers={
-                            "Cache-Control": "private, max-age=3600", "X-Content-Type-Options": "nosniff",
-                            "Link": '<https://creativecommons.org/licenses/by-nc/3.0/>; rel="license"',
-                        })
+                        content_disposition_type="inline", headers=headers)
 
 
 @router.get("/cars")

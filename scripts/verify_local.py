@@ -128,7 +128,9 @@ def snapshot_source(destination):
                 "README.md", ".gitignore", "pyproject.toml", "pytest.ini", "requirements.txt"}:
             continue
         if any(part in {".git", "node_modules", ".venv", "__pycache__", ".pytest_cache", "data",
-                        ".local_audio", ".local_edge", ".local_backups", ".local_bootstrap"} for part in relative.parts):
+                        ".local_audio", ".local_edge", ".local_backups", ".local_bootstrap", ".local_evidence"} for part in relative.parts):
+            continue
+        if relative.as_posix() == "infra/aws/edge.env":
             continue
         if relative.name == ".env" or (relative.name.startswith(".env.") and not relative.name.endswith("example")):
             continue
@@ -143,6 +145,7 @@ def snapshot_source(destination):
         shutil.copymode(source, target)
         count += 1
     check(not (destination / "backend" / ".env").exists(), "Source snapshot unexpectedly includes an environment file")
+    check(not (destination / "infra" / "aws" / "edge.env").exists(), "Source snapshot unexpectedly includes private edge settings")
     return count
 
 
@@ -273,7 +276,7 @@ def run_inside(args):
     report = {"status": "running", "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
               "scope": "Disposable local QA; no AWS/Docker/CARLA; no external network route",
               "limitations": ["SES email is simulated", "Backups use DEV_FAKE_BACKUP, not pg_dump/mongodump",
-                              "Original model smoke tests use one bundled clip in the temporary snapshot; no accuracy claim",
+                              "Five bundled scenario clips are inference regressions, not a dataset accuracy evaluation",
                               "No AWS deployment or credit eligibility verified"],
               "checks": []}
     processes = None
@@ -309,20 +312,17 @@ def run_inside(args):
         report["python_dependencies"] = json.loads((output / "logs" / "python-dependencies.log").read_text())
         check("PostgreSQL) 16." in report["versions"]["postgres"], "This harness requires PostgreSQL 16")
         check("v7." in report["versions"]["mongodb"], "This harness requires MongoDB 7")
-        # Four original model/orchestrator smoke tests need an input file, not the full training
-        # corpus. Copy a tracked five-second recording ONLY into this disposable snapshot.
-        smoke_clip = source / "model" / "data" / "emergency" / "qa-smoke.wav"
-        smoke_clip.parent.mkdir(parents=True)
-        bundled_clip = source / "backend" / "edge" / "demo_clips" / "1-54084-A-42.wav"
-        shutil.copyfile(bundled_clip, smoke_clip)
-        report["model_smoke_input"] = {"source": bundled_clip.relative_to(source).as_posix(),
-                                       "temporary_copy": "model/data/emergency/qa-smoke.wav",
-                                       "purpose": "Original checkpoint inference smoke tests only; no training/accuracy claim"}
+        # Upstream removed model/orchestrator.py and its obsolete model/tests. The production
+        # preprocessing/model tests live in backend/tests/test_ml.py; the five current bundled
+        # clips are also checked against the exported weights by test_scenario_model.py.
+        report["model_regression_scope"] = {
+            "tests": ["backend/tests/test_ml.py", "backend/tests/test_scenario_model.py"],
+            "purpose": "Production inference and five bundled clips; no training/accuracy claim"}
         # Unit tests have neither a real TEST_DATABASE_URL nor running stores. Their conftest
         # explicitly replaces application URLs with SQLite/mongomock configuration.
         unit_env = {**env, "APP_ENV": "test"}
         processes.run("unit-tests", [py, "-m", "pytest", "-o", "addopts=", "-q", "-p", "no:cacheprovider",
-                                      "backend/tests", "model/tests", f"--junitxml={output / 'unit-tests.xml'}"],
+                                      "backend/tests", f"--junitxml={output / 'unit-tests.xml'}"],
                       source, unit_env, timeout=1800)
         report["unit_tests"] = junit_summary(output / "unit-tests.xml")
 
@@ -468,9 +468,17 @@ print('PASS private bootstrap: 4 matching private logins, 5 matching private dev
         wait_for("built frontend", lambda: http("GET", "/", base=UI)[0] == 200, job=ui)
         processes.run("browser-components", [args.node, source / "scripts" / "verify_ui.cjs"], source,
                       browser_env, timeout=300)
-        audio_env = {**browser_env, "UI_EVIDENCE_DIR": str(output / "audio")}
-        processes.run("browser-scenario-audio", [args.node, source / "scripts" / "verify_scenario_audio.cjs"],
-                      source, audio_env, timeout=180)
+        # No two producers may share the registered devices. Keep the virtual-car route
+        # regression above, then independently exercise the default AWS recorded-replay feed.
+        processes.stop(edge)
+        replay = processes.start("replay-edge", [py, "-m", "edge.replay_client", "--no-audio-playback",
+                                                  "--buffer-dir", runtime / "replay-buffer"], backend, edge_env)
+        wait_for("recorded CARLA edge and camera", lambda: (lambda result: result[0] == 200
+                 and result[1].get("edge_mode") == "carla_replay" and result[1].get("frame_url"))(
+                     http("GET", "/simulator/1/state", token=iot)), job=replay)
+        replay_env = {**browser_env, "API_BASE_URL": API, "UI_EVIDENCE_DIR": str(output / "replay")}
+        processes.run("browser-replay", [args.node, source / "scripts" / "verify_replay_ui.cjs"],
+                      source, replay_env, timeout=420)
         report["network_after"] = network_evidence(args.ip, args._host_netns)
         report["status"] = "passed"
         code = 0
