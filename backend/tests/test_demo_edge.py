@@ -66,8 +66,12 @@ def test_bundled_recordings_match_attributed_manifest_and_upload_limits():
     manifest = json.loads((BUNDLED_SCENARIOS.parent / "demo_clips" / "manifest.json").read_text())
     assert set(scenarios) == set(SOUND_CATEGORIES)
     assert len(manifest["clips"]) == 5
-    assert manifest["dataset_license_url"] == "https://creativecommons.org/licenses/by-nc/3.0/"
+    assert "dataset_license_url" not in manifest  # mixed sources do not share one license
     for clip in manifest["clips"]:
+        if clip["scenario"] in ("emergency", "in_vehicle"):
+            assert clip["dataset_license_url"] == "https://creativecommons.org/licenses/by-nc/3.0/"
+        else:
+            assert "dataset_license_url" not in clip
         audio = scenarios[clip["scenario"]].read_bytes()
         assert hashlib.sha256(audio).hexdigest() == clip["sha256"]
         assert validate_audio(audio, "audio/wav") == ("wav", "audio/wav", 5.0)

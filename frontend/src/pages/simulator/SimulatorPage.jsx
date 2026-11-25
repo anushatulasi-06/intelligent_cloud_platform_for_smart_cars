@@ -200,7 +200,7 @@ function Simulator({ role }) {
               onError={() => { if (previewRequest.current.url) setPreview((current) => current && { ...current, status: 'error', message: 'The recording could not be played. Retry the preview.' }); }} />
             <p className="small" role={preview?.status === 'command_error' ? 'alert' : 'status'}>{preview?.message || ({ loading: 'Loading the matching recording…', waiting: 'Waiting for the edge to confirm the sound event.', ready: 'Recording ready.', playing: 'Playing the matching recording.', paused: 'Preview paused.', ended: 'Preview finished.' }[preview?.status])}</p>
             {preview?.status === 'blocked' && <button className="btn btn-sm" onClick={replayPreview}>Play preview</button>}
-            {preview?.status === 'error' && <button className="btn btn-sm" onClick={() => startPreview(preview.category, { autoplay: !pendingScenario || pendingEvent?.status === 'acknowledged' })}>Retry preview</button>}
+            {preview?.status === 'error' && <button className="btn btn-sm" onClick={() => startPreview(preview.category, { autoplay: (!pendingScenario && !busy) || pendingEvent?.status === 'acknowledged' })}>Retry preview</button>}
             <p className="muted small">This browser plays the bundled recording at the scenario's sound event. An edge client with a custom scenario mapping can upload a different clip.</p>
           </div>
           <details className="sim-recording-credits"><summary>Recording sources and credits</summary>
