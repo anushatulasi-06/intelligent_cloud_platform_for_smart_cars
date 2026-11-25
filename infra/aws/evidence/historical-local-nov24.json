@@ -1,0 +1,522 @@
+{
+  "author": "Rishi Sheth",
+  "verified_on": "2026-11-24 America/Los_Angeles",
+  "scope": "Core local production-image verification only; no AWS deployment or live CARLA proof",
+  "status": "passed",
+  "reviewed_baseline_merged_to_main": "cd5b022",
+  "historical_implementation_commit": "9fac741",
+  "images": {
+    "api": "sha256:49cc6ec81f6ed991af33dec947c3539d8a3256dfb4011c2937e28a4673e134f3",
+    "postgres": "sha256:74b11758bfe1b381b55d2628584c663bac5d029c7e40b15ee00ec631134eb2bc",
+    "mongo": "sha256:11426daab9bc9efd469d663da0bd9cf10320e42cb25058f7219a6f513aeaae80",
+    "minio": "sha256:be5e85e455b5c3b793baeaaaca37602d9f7f1e81dc262dda6c234aba13b0809a",
+    "frontend": "sha256:9a102f6c1e3475a6c53366b977db84e444d8244602ee1a2012617f2c6417eb4e"
+  },
+  "backend_tests": {
+    "total": 734,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 10,
+    "passed": 724
+  },
+  "postgres_migration_tests": {
+    "tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 10,
+    "skip_reasons": []
+  },
+  "offline_infrastructure_tests_passed": 18,
+  "historical_import": {
+    "first": {
+      "mode": "local_apply",
+      "historical_alerts": 25,
+      "historical_records": 25,
+      "objects_inserted": 25,
+      "alerts_inserted": 25,
+      "records_inserted": 25,
+      "verified_audio_bytes": 213006796,
+      "prediction_origin": "historical_fixture_not_reinferred"
+    },
+    "repeat": {
+      "mode": "local_apply",
+      "historical_alerts": 25,
+      "historical_records": 25,
+      "objects_inserted": 0,
+      "alerts_inserted": 0,
+      "records_inserted": 0,
+      "verified_audio_bytes": 213006796,
+      "prediction_origin": "historical_fixture_not_reinferred"
+    },
+    "repeat_idempotent": true
+  },
+  "historical_phases": {
+    "historical_before": {
+      "status": "passed",
+      "count": 25,
+      "prediction_origin": "preserved historical fixtures; not new model inference",
+      "signed_downloads_verified": 75,
+      "signed_download_bytes": 639020388,
+      "unique_audio_bytes": 213006796
+    },
+    "historical_after_replay": {
+      "status": "passed",
+      "count": 25,
+      "prediction_origin": "preserved historical fixtures; not new model inference",
+      "signed_downloads_verified": 75,
+      "signed_download_bytes": 639020388,
+      "unique_audio_bytes": 213006796
+    },
+    "historical_restored": {
+      "status": "passed",
+      "count": 25,
+      "prediction_origin": "preserved historical fixtures; not new model inference",
+      "signed_downloads_verified": 75,
+      "signed_download_bytes": 639020388,
+      "unique_audio_bytes": 213006796
+    }
+  },
+  "audio_manifest": [
+    {
+      "key": "audio/1/2026/11/01/03a79230-e3aa-40d6-aa66-a0690ca89d4d.wav",
+      "bytes": 1016910,
+      "sha256": "2943c370d713c2e219f5d46731ec7fcc49cce58241f4c7c9f6b5687775573b53"
+    },
+    {
+      "key": "audio/1/2026/11/01/1bc4417a-b77e-4eac-a13a-fbba29cfe90d.wav",
+      "bytes": 801102,
+      "sha256": "ff4eef060608383ecd0dcf35a21099d5e2939d054566b85766014ed3caa81041"
+    },
+    {
+      "key": "audio/1/2026/11/01/54c10b48-58e6-48c8-a795-bb1d4d77623f.wav",
+      "bytes": 96078,
+      "sha256": "09c53349dd220cfa37064066f0c26687eb27d953b9aab2df589ff9ef8a96f5a1"
+    },
+    {
+      "key": "audio/1/2026/11/01/e430b0f5-3162-409b-adda-3016ea656090.wav",
+      "bytes": 160080,
+      "sha256": "651d635d41440b348aa0317f58f472ba93679993bdd1cd57fe1b92eeaeaf3484"
+    },
+    {
+      "key": "audio/1/2026/11/02/3e6d7cc4-edc8-4a8e-acdd-4242ee28073a.wav",
+      "bytes": 32078,
+      "sha256": "144c7d3857577804121eb60213d78b91235e4923ab2b9f9b7677526967946cd2"
+    },
+    {
+      "key": "audio/1/2026/11/02/541edd74-d0cf-4c15-aa04-8c48098abdd3.wav",
+      "bytes": 45854,
+      "sha256": "31009d42258bd90bedff46a0a5ff7a6a15fa12b6ba38af92766d5a9791c08382"
+    },
+    {
+      "key": "audio/1/2026/11/02/d2cd2d0b-ce4c-4c6f-aea7-96a9c41d4238.wav",
+      "bytes": 1016910,
+      "sha256": "69d9bccf01ceb42191dd3fb36ad6f1e31f5e53bd89be77aca5b5f4448288a695"
+    },
+    {
+      "key": "audio/2/2026/11/01/57a2d5c0-52cd-4b44-a8eb-eb5e9a473d70.wav",
+      "bytes": 1016910,
+      "sha256": "33180897b44f404dd8eade12cd62089cba2377af59cc62acc0c3b01d4e448484"
+    },
+    {
+      "key": "audio/2/2026/11/01/70c0d4cd-1d56-4e78-a267-757e69cdf183.wav",
+      "bytes": 41129724,
+      "sha256": "44a9c83294d643e92db663a04e0d2df8bf0975d1022e14810ac6bd7f0ced4e2f"
+    },
+    {
+      "key": "audio/2/2026/11/02/1da7cad5-271e-45b8-a118-7f0fe9987833.wav",
+      "bytes": 1016910,
+      "sha256": "35ca531cd24983842b4593051a93925e263d09c1c7ca174b1cca802481b74198"
+    },
+    {
+      "key": "audio/2/2026/11/02/c1c815ea-b634-4ea2-ac30-43462048d021.wav",
+      "bytes": 41129722,
+      "sha256": "4540b2b0681b3b6cce115201ef2cf55027a447f530f55d423f2d07750e26d7e9"
+    },
+    {
+      "key": "audio/2/2026/11/02/cdf26cfa-da31-4760-a295-0a44f327b74f.wav",
+      "bytes": 32078,
+      "sha256": "bd2de5d50740068f4ad64fc72c5d726b75bac8c758cc4d377f7e8e03fa331bca"
+    },
+    {
+      "key": "audio/2/2026/11/02/f7e20556-1c7d-4dce-a05f-c4e7760ab6ac.wav",
+      "bytes": 160078,
+      "sha256": "685eb29956286818fa092cd09b4578d8cbc6e9925f077500e0b57401c44fc080"
+    },
+    {
+      "key": "audio/3/2026/11/01/40375025-57c3-40ee-a3e6-bc28adef9f2c.wav",
+      "bytes": 96078,
+      "sha256": "65887a6ffb0d72c111d720b031a54fd7e330d2de69e28e755aee380187e9d088"
+    },
+    {
+      "key": "audio/3/2026/11/01/9d4f10c3-260b-4db5-aed1-4cc538ab72f4.wav",
+      "bytes": 160074,
+      "sha256": "2649a9ce5126184b04de001f23c09b697566e6814c31bb357cd0b193c26d27c8"
+    },
+    {
+      "key": "audio/3/2026/11/01/dba5ed92-342a-452f-a3c6-71c93659c289.wav",
+      "bytes": 41129724,
+      "sha256": "6497236c72ecf44039e89a2a5d6d93f12be1ae7a9117ce2bdd4a7c92eed5b125"
+    },
+    {
+      "key": "audio/3/2026/11/02/1f221973-d58e-4ef2-ab47-0b7ec496e716.wav",
+      "bytes": 96078,
+      "sha256": "4a77dd77115445de715be285a145633661ae4a9d84d68752c6e55acc9dc859c6"
+    },
+    {
+      "key": "audio/3/2026/11/02/5f2f9e45-d3dc-445b-a81f-c029017049c7.wav",
+      "bytes": 1016910,
+      "sha256": "a7546b3df3a949cd314f1409cafc6cd878d3a3f14c92d1efe49086f67b478ba1"
+    },
+    {
+      "key": "audio/3/2026/11/02/a9daa0d9-4220-42b1-a2a2-202db56a6ada.wav",
+      "bytes": 41129724,
+      "sha256": "14c7dd2fea5e0ff6dd78b58eecdb8f51fc38e08286bc7947f9827089b6a7f2d2"
+    },
+    {
+      "key": "audio/4/2026/11/01/2975b522-6a73-455e-ad5d-f93bcaeacd9a.wav",
+      "bytes": 96078,
+      "sha256": "d8bfa8aea274fe8b8ce7c893f7a1bb1f97b60f2692a20a0e479fa6c0e75343aa"
+    },
+    {
+      "key": "audio/4/2026/11/01/46c52f26-f182-4e98-af20-61d54abcd793.wav",
+      "bytes": 160074,
+      "sha256": "6bf990d7d77e18b4fb50c82fdf9787b571194b94a17768b5de1efa8573b408ef"
+    },
+    {
+      "key": "audio/4/2026/11/01/7e3ce727-ac73-446b-a841-e416bbc39b70.wav",
+      "bytes": 145750,
+      "sha256": "7e64589d2277812d406a9ed6d0f250e799aab9ac641b91ecdc22d645819a176d"
+    },
+    {
+      "key": "audio/4/2026/11/02/0af02a1e-4a8a-4833-aa99-bbef2e2f2d64.wav",
+      "bytes": 32078,
+      "sha256": "47557b01c987f4fdf860968f7f1af898e8f08bee8d1c885f3f8ee313b48f21ab"
+    },
+    {
+      "key": "audio/4/2026/11/02/2acc8899-c59b-4654-ab74-371712be7f0c.wav",
+      "bytes": 160070,
+      "sha256": "12a2e6c6c77eb004c2eeefbea0639b950e7f2ad4898cee9ab78e288b1b4f5e4f"
+    },
+    {
+      "key": "audio/4/2026/11/02/9d3561c2-aa85-4c2c-a734-6c668c1f973e.wav",
+      "bytes": 41129724,
+      "sha256": "99ffb12c45ab20133649f686b67b76e582ab90778b1792c5dcda4ee43a1989e8"
+    }
+  ],
+  "new_replay_scenarios": {
+    "status": "passed",
+    "client": "edge.replay_client",
+    "footage": "recorded CARLA, no live simulator",
+    "credentials": "private empty-database bootstrap",
+    "scenarios": [
+      {
+        "scenario": "emergency",
+        "recording": "emergency",
+        "command_id": 4,
+        "acknowledged": true,
+        "record_id": "b9dc9704-d106-4e2d-8272-76ac3a4ba462",
+        "alert_id": "6b0681dd5ee6b447ea491466",
+        "record_states": [
+          "pending",
+          "processed"
+        ],
+        "prediction": "emergency",
+        "confidence": 0.9983042478561401,
+        "model_version": "cnn-v1",
+        "audio_sha256": "b0ce84a3c012d144a1f97394cab2830512078d660e809eecb8abc4fa8ad0a9e1",
+        "uploaded_audio_sha256": "b0ce84a3c012d144a1f97394cab2830512078d660e809eecb8abc4fa8ad0a9e1",
+        "signed_audio_sha256": "b0ce84a3c012d144a1f97394cab2830512078d660e809eecb8abc4fa8ad0a9e1",
+        "distinct_recorded_frames_observed": 2,
+        "distinct_recorded_gps_points_observed": 2,
+        "sound_event_seconds": 0.73,
+        "ack_observed_after_seconds": 2.006,
+        "elapsed_seconds": 2.993
+      },
+      {
+        "scenario": "in_vehicle",
+        "recording": "in_vehicle_crash",
+        "command_id": 5,
+        "acknowledged": true,
+        "record_id": "0c559508-53c2-4db7-b620-d38692d9d860",
+        "alert_id": "6b0681e45ee6b447ea4914cb",
+        "record_states": [
+          "processed"
+        ],
+        "prediction": "in_vehicle",
+        "confidence": 0.9980625510215759,
+        "model_version": "cnn-v1",
+        "audio_sha256": "db6946133c37fbd4513fe932dbb71e0b077bf7d240beaed339eb6c88e48c903b",
+        "uploaded_audio_sha256": "db6946133c37fbd4513fe932dbb71e0b077bf7d240beaed339eb6c88e48c903b",
+        "signed_audio_sha256": "db6946133c37fbd4513fe932dbb71e0b077bf7d240beaed339eb6c88e48c903b",
+        "distinct_recorded_frames_observed": 7,
+        "distinct_recorded_gps_points_observed": 6,
+        "sound_event_seconds": 6.0,
+        "ack_observed_after_seconds": 7.136,
+        "elapsed_seconds": 7.357
+      },
+      {
+        "scenario": "human",
+        "recording": "human_pullover",
+        "command_id": 6,
+        "acknowledged": true,
+        "record_id": "89751662-bd5c-46cd-affd-9251842b48b1",
+        "alert_id": "6b0681f45ee6b447ea491598",
+        "record_states": [
+          "processed"
+        ],
+        "prediction": "human",
+        "confidence": 0.9955821633338928,
+        "model_version": "cnn-v1",
+        "audio_sha256": "6b6f9e4214128b5b93747d31d7b345eb9ea8ebaa3163ffb345c0c703583b62e1",
+        "uploaded_audio_sha256": "6b6f9e4214128b5b93747d31d7b345eb9ea8ebaa3163ffb345c0c703583b62e1",
+        "signed_audio_sha256": "6b6f9e4214128b5b93747d31d7b345eb9ea8ebaa3163ffb345c0c703583b62e1",
+        "distinct_recorded_frames_observed": 12,
+        "distinct_recorded_gps_points_observed": 11,
+        "sound_event_seconds": 15.0,
+        "ack_observed_after_seconds": 15.686,
+        "elapsed_seconds": 15.935
+      },
+      {
+        "scenario": "traffic",
+        "recording": "traffic",
+        "command_id": 7,
+        "acknowledged": true,
+        "record_id": "7fc99277-b4f5-487d-97c5-d3171468436a",
+        "alert_id": "6b0681fc5ee6b447ea4915fb",
+        "record_states": [
+          "processed"
+        ],
+        "prediction": "traffic",
+        "confidence": 0.9990326166152954,
+        "model_version": "cnn-v1",
+        "audio_sha256": "a68194618270455da3743e50c43b3dbd3ca83df435ace0ca229424bb1b55c417",
+        "uploaded_audio_sha256": "a68194618270455da3743e50c43b3dbd3ca83df435ace0ca229424bb1b55c417",
+        "signed_audio_sha256": "a68194618270455da3743e50c43b3dbd3ca83df435ace0ca229424bb1b55c417",
+        "distinct_recorded_frames_observed": 7,
+        "distinct_recorded_gps_points_observed": 6,
+        "sound_event_seconds": 6.0,
+        "ack_observed_after_seconds": 6.701,
+        "elapsed_seconds": 6.964
+      },
+      {
+        "scenario": "environmental",
+        "recording": "environmental",
+        "command_id": 8,
+        "acknowledged": true,
+        "record_id": "cc0f486a-d4c6-415e-b569-0f39c8c6bfee",
+        "alert_id": "6b0681fd5ee6b447ea491615",
+        "record_states": [
+          "pending",
+          "processed"
+        ],
+        "prediction": "environmental",
+        "confidence": 0.9888868927955627,
+        "model_version": "cnn-v1",
+        "audio_sha256": "5d53de8ad6f516773d2f23d76d4bacfa81a07d230f80943e513a24d258305d51",
+        "uploaded_audio_sha256": "5d53de8ad6f516773d2f23d76d4bacfa81a07d230f80943e513a24d258305d51",
+        "signed_audio_sha256": "5d53de8ad6f516773d2f23d76d4bacfa81a07d230f80943e513a24d258305d51",
+        "distinct_recorded_frames_observed": 3,
+        "distinct_recorded_gps_points_observed": 2,
+        "sound_event_seconds": 0.0,
+        "ack_observed_after_seconds": 0.73,
+        "elapsed_seconds": 2.891
+      }
+    ],
+    "process_stopped_before_backup": true
+  },
+  "real_restore": {
+    "sql_status": "passed",
+    "sql_tables": 9,
+    "mongo_status": "passed",
+    "mongo_collections": 5,
+    "encrypted_wifi_and_key_hash_preserved": true,
+    "original_source_preserved": true
+  },
+  "native_application_checks_before_optional_recording": [
+    {
+      "check": "version-python",
+      "exit_code": 0,
+      "log": "logs/version-python.log"
+    },
+    {
+      "check": "version-postgres",
+      "exit_code": 0,
+      "log": "logs/version-postgres.log"
+    },
+    {
+      "check": "version-mongodb",
+      "exit_code": 0,
+      "log": "logs/version-mongodb.log"
+    },
+    {
+      "check": "version-minio",
+      "exit_code": 0,
+      "log": "logs/version-minio.log"
+    },
+    {
+      "check": "version-node",
+      "exit_code": 0,
+      "log": "logs/version-node.log"
+    },
+    {
+      "check": "python-dependencies",
+      "exit_code": 0,
+      "log": "logs/python-dependencies.log"
+    },
+    {
+      "check": "unit-tests",
+      "exit_code": 0,
+      "log": "logs/unit-tests.log"
+    },
+    {
+      "check": "postgres-init",
+      "exit_code": 0,
+      "log": "logs/postgres-init.log"
+    },
+    {
+      "check": "migration-db-create",
+      "exit_code": 0,
+      "log": "logs/migration-db-create.log"
+    },
+    {
+      "check": "postgres-migrations",
+      "exit_code": 0,
+      "log": "logs/postgres-migrations.log"
+    },
+    {
+      "check": "live-db-drop",
+      "exit_code": 0,
+      "log": "logs/live-db-drop.log"
+    },
+    {
+      "check": "live-db-create",
+      "exit_code": 0,
+      "log": "logs/live-db-create.log"
+    },
+    {
+      "check": "bucket-create",
+      "exit_code": 0,
+      "log": "logs/bucket-create.log"
+    },
+    {
+      "check": "live-migrations",
+      "exit_code": 0,
+      "log": "logs/live-migrations.log"
+    },
+    {
+      "check": "private-bootstrap",
+      "exit_code": 0,
+      "log": "logs/private-bootstrap.log"
+    },
+    {
+      "check": "private-bootstrap-verify",
+      "exit_code": 0,
+      "log": "logs/private-bootstrap-verify.log"
+    },
+    {
+      "check": "private-bootstrap-refuse-repeat",
+      "exit_code": 1,
+      "log": "logs/private-bootstrap-refuse-repeat.log"
+    },
+    {
+      "check": "private-bootstrap-preserved",
+      "exit_code": 0,
+      "log": "logs/private-bootstrap-preserved.log"
+    },
+    {
+      "check": "historical-import-and-audio",
+      "exit_code": 0,
+      "log": "logs/historical-import-and-audio.log"
+    },
+    {
+      "check": "live-components",
+      "exit_code": 0,
+      "log": "logs/live-components.log"
+    },
+    {
+      "check": "live-platform",
+      "exit_code": 0,
+      "log": "logs/live-platform.log"
+    },
+    {
+      "check": "frontend-build",
+      "exit_code": 0,
+      "log": "logs/frontend-build.log"
+    },
+    {
+      "check": "browser-components",
+      "exit_code": 0,
+      "log": "logs/browser-components.log"
+    },
+    {
+      "check": "browser-replay",
+      "exit_code": 0,
+      "log": "logs/browser-replay.log"
+    },
+    {
+      "check": "historical-preserved-after-replay",
+      "exit_code": 0,
+      "log": "logs/historical-preserved-after-replay.log"
+    }
+  ],
+  "cleanup": {
+    "production": {
+      "owned_containers_and_anonymous_volumes_removed": true,
+      "owned_internal_network_removed": true,
+      "errors": [],
+      "existing_resources_pruned": false
+    },
+    "native": {
+      "owned_processes_stopped": true,
+      "errors": [],
+      "temporary_stores_removed": true
+    },
+    "image_unit_container_removed": true
+  },
+  "video_status": "Full C1-C5 rehearsal video not completed; optional filming paused. Encoder/audio/privacy smoke only passed.",
+  "cloud_status": "AWS actions and credit consumption unauthorized; actual IAM/network/RDS/Atlas/S3/SES and cloud recording not tested.",
+  "prepared_source_commit": "d1f1d8463b37a3c663469e76d578d4a4c1cb0c30",
+  "private_owner_email_configuration": {
+    "synthetic_addresses_only": true,
+    "private_input_mode_0600": true,
+    "two_owner_overrides_applied": true,
+    "sql_and_private_bundle_login_emails_match": true,
+    "canonical_bootstrap_identity_preserved": true,
+    "car_ownership_preserved": true,
+    "staff_identities_and_roles_unchanged": true,
+    "no_subscriptions_created": true,
+    "ses_sending_disabled": true
+  },
+  "evidence_privacy": {
+    "status": "passed",
+    "files_checked": 39,
+    "synthetic_owner_addresses_absent": true,
+    "owned_postgres_negative_case_log_redacted": true,
+    "actual_recipient_provided": false,
+    "aws_actions": false,
+    "ses_sent": false
+  },
+  "owner_email_context_safety": {
+    "status": "passed",
+    "started_at": "2026-11-25T06:39:20.582111+00:00",
+    "scope": "Synthetic canaries only; actual .dockerignore; FROM scratch; no containers started; no AWS/data/credentials",
+    "network": "none",
+    "pull": false,
+    "existing_resources_pruned": false,
+    "image_id": "sha256:e40d0bb1f1da85435db5bc88d1681d34d8755bc7b44fabfb5f824ac24e710be9",
+    "owner_email_canaries_excluded": 3,
+    "safe_application_file_preserved": true,
+    "private_source_files_used": false,
+    "container_started": false,
+    "owned_container_removed": true,
+    "owned_image_removed": true,
+    "finished_at": "2026-11-25T06:39:21.353786+00:00"
+  },
+  "final_evidence_directories": [
+    "final-image-unit",
+    "final-production",
+    "infra-unit",
+    "owner-email-context-safety.json"
+  ]
+}
