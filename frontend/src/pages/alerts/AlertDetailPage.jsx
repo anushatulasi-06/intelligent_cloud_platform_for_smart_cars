@@ -25,6 +25,9 @@ export default function AlertDetailPage() {
   const [actionError, setActionError] = useState(null);
   const alert = useAsync(() => getAlert(id), [id]);
   const audio = useAsync(() => alertAudio(id), [id]);
+  const [audioFailed, setAudioFailed] = useState(false);
+  useEffect(() => { setAudioFailed(false); }, [audio.data?.url]);
+  function refreshAudio() { setAudioFailed(false); audio.reload(); }
 
   // The presigned link expires after expires_in seconds; fetch a new one shortly before.
   const audioReload = audio.reload;
@@ -80,6 +83,7 @@ export default function AlertDetailPage() {
         <h1>Alert {a.id.slice(0, 6)}…</h1>
         <span className="frame-id">F7</span>
       </div>
+      {a.import_provenance && <p className="muted small"><StatusBadge value="historical" label="Historical fixture" /> Original alert facts and probabilities were retained during import. This audio has not been reclassified by the current model.</p>}
 
       <div className="two-col">
         <section className="panel">
@@ -113,12 +117,13 @@ export default function AlertDetailPage() {
         <h2>Audio clip (presigned S3 link, 5 min)</h2>
         {audio.loading && !audio.data && <p className="muted">Loading audio link...</p>}
         {audio.error && (
-          <p className="state-error">Error: {audio.error.message} <button className="btn btn-sm" onClick={audio.reload}>Retry</button></p>
+          <p className="state-error">Error: {audio.error.message} <button className="btn btn-sm" onClick={refreshAudio}>Retry</button></p>
         )}
         {audio.data && (
           <>
-            <audio controls preload="none" src={audio.data.url} className="audio" />
-            <p className="muted small">Mock link, refreshed automatically before it expires: <code>{audio.data.url}</code></p>
+            <audio controls preload="none" src={audio.data.url} className="audio" aria-label="Alert audio recording" onError={() => setAudioFailed(true)} />
+            <p className="muted small"><a href={audio.data.url} target="_blank" rel="noreferrer">Open / download audio</a> · The temporary audio link refreshes automatically.</p>
+            {audioFailed && <p className="state-error" role="alert">Audio could not be played. <button className="btn btn-sm" onClick={refreshAudio}>Refresh audio link</button></p>}
           </>
         )}
       </section>

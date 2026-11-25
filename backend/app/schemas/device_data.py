@@ -2,6 +2,8 @@
 from datetime import datetime
 from typing import Literal
 
+from app.schemas.history import HistoricalImportProvenance
+
 from pydantic import BaseModel
 
 RecordStatus = Literal["pending", "processing", "processed", "failed"]
@@ -31,6 +33,7 @@ class RecordDetail(UploadReceipt):
     error: str | None = None
     alert_id: str | None = None
     s3_object_key: str
+    import_provenance: HistoricalImportProvenance | None = None
 
 
 class RecordPage(BaseModel):

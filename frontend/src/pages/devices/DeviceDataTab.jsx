@@ -47,6 +47,7 @@ function RecordDetail({ id, onClose, onRetry, retrying }) {
         {record.loading && !r && <p>Loading record...</p>}
         {r && <>
           <code>{r.record_id}</code>
+          {r.import_provenance && <p className="muted small"><StatusBadge value="historical" label="Historical fixture" /> Original alert results were preserved. This audio was imported without running the current classifier.</p>}
           <dl className="kv">
             {[
               ['Car / device', `${r.car_id} / ${r.device_id}`],
@@ -128,7 +129,7 @@ export default function DeviceDataTab() {
       {filterError && <p className="state-error" role="alert">{filterError}</p>}
       <p className="muted small">Dates use your local time zone. Select a record for audio, processing details and the generated alert.</p>
       <DataTable rows={records.data?.items} rowKey="record_id" loading={records.loading && !records.data} error={records.error} empty="No records match the filters" onRowClick={(r) => setSelected(r.record_id)} columns={[
-        { key: 'record_id', header: 'Record', render: (r) => <button className="btn btn-sm" title={r.record_id} onClick={(e) => { e.stopPropagation(); setSelected(r.record_id); }}>{r.record_id.slice(0, 8)}…</button> },
+        { key: 'record_id', header: 'Record', render: (r) => <span className="cell-inline"><button className="btn btn-sm" title={r.record_id} onClick={(e) => { e.stopPropagation(); setSelected(r.record_id); }}>{r.record_id.slice(0, 8)}…</button>{r.import_provenance && <StatusBadge value="historical" label="Historical fixture" />}</span> },
         { key: 'car_id', header: 'Car', render: (r) => `Car ${r.car_id}` },
         { key: 'received_timestamp', header: 'Received', render: (r) => formatDateTime(r.received_timestamp) },
         { key: 'status', header: 'Status', render: (r) => <StatusBadge value={r.status} tone={r.status === 'pending' ? 'medium' : undefined} /> },

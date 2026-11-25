@@ -35,6 +35,8 @@ import tempfile
 from urllib.parse import urlsplit
 import uuid
 
+from verify_history_local import stage_audio
+
 
 ROOT = Path(__file__).resolve().parents[1]
 LABEL = "org.autosound.production-local-qa"
@@ -271,7 +273,7 @@ def replay_check(bundle, s3_client, bucket):
             ensure(response.status_code==200 and digest(response.content)==expected_audio,
                    'Recorded replay signed audio bytes differ for '+category)
             report['scenarios'].append({'scenario':category,'recording':folder,'command_id':command_id,
-                'acknowledged':True,'record_id':record['record_id'],'record_states':sorted(states),
+                'acknowledged':True,'record_id':record['record_id'],'alert_id':alert['id'],'record_states':sorted(states),
                 'prediction':alert['sound_type'],'confidence':alert['confidence'],'model_version':alert['model_version'],
                 'audio_sha256':expected_audio,'uploaded_audio_sha256':digest(raw),'signed_audio_sha256':digest(response.content),
                 'distinct_recorded_frames_observed':len(frames),'distinct_recorded_gps_points_observed':len(positions),
@@ -324,6 +326,11 @@ try:
     private_values.extend(row['device_key'] for row in bundle['devices'])
     ensure(len(bundle['users'])==4 and len(bundle['devices'])==5 and bundle_path.stat().st_mode&0o777==0o600,
            'Private production bootstrap counts or bundle permissions differ')
+    historical_dir=os.environ.get('QA_HISTORICAL_AUDIO_DIR')
+    if historical_dir:
+        sys.path.insert(0,str(WORK))
+        from verify_history_local import apply_local_history, verify_history
+        REPORT['historical_import']=apply_local_history(Path(historical_dir))
     source_api=api_start(8000,dict(os.environ),'api-source')
     cloud_user=next(row for row in bundle['users'] if row['role']=='cloud_staff')
     cloud=login(8000,cloud_user)
@@ -331,6 +338,11 @@ try:
     ready=http(8000,'GET','/admin/readiness',token=cloud)[1]
     ensure(ready['scope']['side_effect_modes']=={'email':'logged','backup':'real'},'Server did not confirm real backups and disabled email')
     REPORT['source_readiness']=ready
+    if historical_dir:
+        REPORT['historical_before']=verify_history('http://127.0.0.1:8000',Path(historical_dir),bundle,
+                                                   object_origin='http://minio:9000')
+        ensure(REPORT['historical_before']['observed_alert_count']==25,'Fresh private history must contain exactly25 alerts')
+        REPORT['historical_before']['before_replay_alert_count']=25
     if os.environ.get('QA_FRONTEND_ENABLED')=='true':
         with httpx.Client(base_url='http://frontend:8080',trust_env=False,follow_redirects=False,timeout=30) as web:
             wait('production nginx',lambda:web.get('/healthz').status_code==200)
@@ -355,7 +367,10 @@ try:
         passed('Built production nginx serves static assets/SPA fallback and proxies real health/private JWT/readiness')
     original_component=component_check(8000,'components-source',bundle)
     REPORT['components_source']=original_component
-    replay_check(bundle,client,bucket)
+    replay_result=replay_check(bundle,client,bucket)
+    if historical_dir:
+        REPORT['historical_after_replay']=verify_history('http://127.0.0.1:8000',Path(historical_dir),bundle,
+                                                        object_origin='http://minio:9000',replay=replay_result)
     # Explicit rich sentinel rows plus sequence gaps exercise more than row counts.
     wifi_password='qa-'+uuid.uuid4().hex
     sentinel_key='qa-'+uuid.uuid4().hex
@@ -514,6 +529,9 @@ try:
     restored_api=api_start(8001,restored_env,'api-restored')
     restored_cloud=login(8001,cloud_user)
     wait('restored model/workers readiness',lambda:http(8001,'GET','/admin/readiness',token=restored_cloud)[0]==200)
+    if historical_dir:
+        REPORT['historical_restored']=verify_history('http://127.0.0.1:8001',Path(historical_dir),bundle,
+                                                    object_origin='http://minio:9000',replay=replay_result)
     for user in bundle['users']: login(8001,user)
     mic=next(row for row in bundle['devices'] if row['name']=='mic-1')
     with httpx.Client(base_url='http://127.0.0.1:8001',trust_env=False,timeout=30) as c:
@@ -575,6 +593,7 @@ def main():
     parser.add_argument('--minio-image',required=True)
     parser.add_argument('--frontend-image',help='optional prebuilt production nginx frontend image')
     parser.add_argument('--output',type=Path,required=True,help='new/empty evidence directory')
+    parser.add_argument('--historical-audio-dir',type=Path,help='Private directory containing all25 historical WAVs; validated before starting containers')
     args=parser.parse_args()
     os.umask(0o077)
     output=args.output.absolute()
@@ -614,20 +633,25 @@ def main():
         ensure(result.returncode==expected,'Docker '+str(command[0])+' failed; see diagnostic logs')
         return result.stdout
 
-    def container(name,image,environment,command,alias):
+    def container(name,image,environment,command,alias,mounts=()):
         target=prefix+'-'+name
         envfile=runtime/(name+'.env')
         envfile.write_text(''.join(key+'='+value+'\n' for key,value in environment.items()))
         envfile.chmod(0o600)
+        mount_args=[part for value in mounts for part in ('--mount',value)]
         docker('create','--pull=never','--name',target,'--label',LABEL+'='+run_id,
                '--network',network,'--network-alias',alias,'--dns','127.0.0.1','--env-file',envfile,
-               '--entrypoint',command[0],image,*command[1:],log=name+'-create.log')
+               *mount_args,'--entrypoint',command[0],image,*command[1:],log=name+'-create.log')
         owned.append(target)
         docker('start',target,log=name+'-start.log')
         return target
 
     code=1
     try:
+        historical_audio=runtime/'historical-audio'
+        if args.historical_audio_dir:
+            report['historical_media_validation']=stage_audio(args.historical_audio_dir,historical_audio,readable_mount=True)
+            (output/'historical-media-manifest.json').write_text(json.dumps(report['historical_media_validation'],indent=2)+'\n')
         for name,image in (('api',args.api_image),('postgres',args.postgres_image),('mongo',args.mongo_image),('minio',args.minio_image)):
             info=json.loads(docker('image','inspect',image,'--format','{{json .}}'))
             report['images'][name]={key:info.get(key) for key in ('Id','RepoTags','Architecture','Os')}
@@ -667,11 +691,18 @@ def main():
             'QA_MONGO_ADMIN_URI':mongo_admin,'OMP_NUM_THREADS':'1','MKL_NUM_THREADS':'1',
             'QA_FRONTEND_ENABLED':'true' if args.frontend_image else 'false',
         }
-        api=container('api',args.api_image,api_environment,['python','-c','import time; time.sleep(86400)'],'api')
+        mounts=[]
+        if args.historical_audio_dir:
+            api_environment['QA_HISTORICAL_AUDIO_DIR']='/tmp/historical-audio'
+            mounts=['type=bind,src='+str(historical_audio)+',dst=/tmp/historical-audio,readonly']
+        api=container('api',args.api_image,api_environment,['python','-c','import time; time.sleep(86400)'],'api',mounts)
         docker('exec',api,'python','-c',"from pathlib import Path; Path('/tmp/production-qa').mkdir(mode=0o700,exist_ok=True)")
         docker('exec','-i',api,'python','-c',
                "import sys; from pathlib import Path; Path('/tmp/production-qa/verify_components.py').write_bytes(sys.stdin.buffer.read())",
                input=(ROOT/'scripts'/'verify_components.py').read_bytes())
+        docker('exec','-i',api,'python','-c',
+               "import sys; from pathlib import Path; Path('/tmp/production-qa/verify_history_local.py').write_bytes(sys.stdin.buffer.read())",
+               input=(ROOT/'scripts'/'verify_history_local.py').read_bytes())
         if args.frontend_image:
             container('frontend',args.frontend_image,{},['nginx','-g','daemon off;'],'frontend')
         result=subprocess.run([str(args.docker),'--host',args.docker_host,'exec','-i',api,'python','-'],

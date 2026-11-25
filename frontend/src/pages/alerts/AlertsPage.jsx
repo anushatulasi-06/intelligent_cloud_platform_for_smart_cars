@@ -72,6 +72,7 @@ export default function AlertsPage() {
       render: (a) => (
         <span className="cell-inline">
           <SoundType value={a.sound_type} />
+          {a.import_provenance && <StatusBadge value="historical" label="Historical fixture" />}
           {a.is_anomaly && <StatusBadge value="review" />}
         </span>
       ),

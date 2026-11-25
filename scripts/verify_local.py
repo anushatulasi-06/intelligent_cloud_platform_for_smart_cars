@@ -28,6 +28,7 @@ import ctypes
 import json
 import os
 from pathlib import Path
+import re
 import secrets
 import shutil
 import signal
@@ -38,6 +39,8 @@ import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
+
+from verify_history_local import credentials_env, stage_audio
 
 
 PG_PORT, MONGO_PORT, S3_PORT, CONSOLE_PORT, API_PORT, UI_PORT = 15432, 17017, 19000, 19001, 18000, 15173
@@ -281,9 +284,14 @@ def run_inside(args):
               "checks": []}
     processes = None
     code = 1
+    private_values = []
     runtime = Path(tempfile.mkdtemp(prefix="autosound-local-qa-"))
     try:
         report["network_before"] = network_evidence(args.ip, args._host_netns)
+        historical_audio = runtime / "historical-audio"
+        if args.historical_audio_dir:
+            report["historical_media_validation"] = stage_audio(args.historical_audio_dir, historical_audio)
+            write_json(output / "historical-media-manifest.json", report["historical_media_validation"])
         check(os.getuid() != 0, "PostgreSQL requires the inner process to run as a non-root mapped user")
         source = runtime / "source"
         source.mkdir()
@@ -410,10 +418,18 @@ print('PASS private bootstrap: 4 matching private logins, 5 matching private dev
         report["private_bootstrap"] = {"status": "passed", "private_accounts": 4, "private_device_keys": 5,
                                        "bundle_mode": "0600", "repeat_refused": True, "bundle_preserved": True}
         write_json(output / "private-bootstrap-verification.json", report["private_bootstrap"])
-        processes.run("bootstrap-db-drop", [args.postgres_bin / "dropdb", *connection, "--force", DATABASE], runtime)
-        processes.run("bootstrap-db-create", [args.postgres_bin / "createdb", *connection, DATABASE], runtime)
-        processes.run("demo-migrations", [py, "-m", "alembic", "upgrade", "head"], backend)
-        processes.run("local-demo-seed", [py, "-m", "app.db.seed"], backend)
+        if args.private_bootstrap:
+            bundle = json.loads(private_bundle.read_text())
+            private_values.extend(row['password'] for row in bundle['users'])
+            private_values.extend(row['device_key'] for row in bundle['devices'])
+            env.update(credentials_env(bundle))
+            report["private_bootstrap"]["retained_for_live_checks"] = True
+        else:
+            processes.run("bootstrap-db-drop", [args.postgres_bin / "dropdb", *connection, "--force", DATABASE], runtime)
+            processes.run("bootstrap-db-create", [args.postgres_bin / "createdb", *connection, DATABASE], runtime)
+            processes.run("demo-migrations", [py, "-m", "alembic", "upgrade", "head"], backend)
+            processes.run("local-demo-seed", [py, "-m", "app.db.seed"], backend)
+        write_json(output / "private-bootstrap-verification.json", report["private_bootstrap"])
 
         api = processes.start("api", [py, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1",
                                        "--port", API_PORT, "--workers", "1", "--no-proxy-headers", "--no-access-log"], backend)
@@ -424,8 +440,8 @@ print('PASS private bootstrap: 4 matching private logins, 5 matching private dev
             check(status == 200 and body.get("access_token"), "Local seeded login failed")
             return body["access_token"]
 
-        cloud = login("cloud@autosound.dev", "cloud-dev-pass")
-        iot = login("iot@autosound.dev", "iot-dev-pass")
+        cloud = login(env.get("VERIFY_CLOUD_EMAIL", "cloud@autosound.dev"), env.get("VERIFY_CLOUD_PASSWORD", "cloud-dev-pass"))
+        iot = login(env.get("VERIFY_IOT_EMAIL", "iot@autosound.dev"), env.get("VERIFY_IOT_PASSWORD", "iot-dev-pass"))
         wait_for("model and workers readiness", lambda: http("GET", "/admin/readiness", token=cloud)[0] == 200,
                  job=api, timeout=120)
         check(http("GET", "/admin/readiness")[0] == 401, "Readiness must reject anonymous requests")
@@ -448,9 +464,19 @@ print('PASS private bootstrap: 4 matching private logins, 5 matching private dev
         report["readiness"]["restored"] = 200
         write_json(output / "readiness-verification.json", report["readiness"])
 
+        history_command = [py, source / "scripts" / "verify_history_local.py", "--base-url", API,
+                           "--object-origin", S3, "--audio-dir", historical_audio,
+                           "--bundle", private_bundle]
+        if args.historical_audio_dir:
+            processes.run("historical-import-and-audio", [*history_command, "--apply-local", "--output",
+                          output / "historical-verification.json"], backend)
+            report["historical_before"] = json.loads((output / "historical-verification.json").read_text())
+
         edge_env = {**env, "EDGE_API_URL": API, "EDGE_CAR_ID": "1", "EDGE_DEVICE_ID": "1",
                     "EDGE_DEVICE_KEY": "dev-device-key-mic-1", "EDGE_CAMERA_DEVICE_ID": "5",
                     "EDGE_CAMERA_DEVICE_KEY": "dev-device-key-cam-1"}
+        if args.private_bootstrap:
+            edge_env.update({key: value for key, value in env.items() if key.startswith("EDGE_")})
         edge = processes.start("virtual-edge", [py, "-m", "edge.demo_client", "--no-audio-playback",
                                                 "--buffer-dir", runtime / "edge-buffer"], backend, edge_env)
         wait_for("virtual edge and camera", lambda: (lambda result: result[0] == 200 and result[1].get("online")
@@ -485,6 +511,18 @@ print('PASS private bootstrap: 4 matching private logins, 5 matching private dev
         replay_env = {**browser_env, "API_BASE_URL": API, "UI_EVIDENCE_DIR": str(output / "replay")}
         processes.run("browser-replay", [args.node, source / "scripts" / "verify_replay_ui.cjs"],
                       source, replay_env, timeout=420)
+        if args.historical_audio_dir:
+            processes.run("historical-preserved-after-replay", [*history_command, "--replay-evidence",
+                          output / "replay" / "replay-browser-verification.json", "--output",
+                          output / "historical-after-replay.json"], backend)
+            report["historical_after_replay"] = json.loads((output / "historical-after-replay.json").read_text())
+        if args.record_demo:
+            recording_env = {**replay_env, "RECORD_OUTPUT_DIR": str(output / "video"),
+                             "UI_EVIDENCE_DIR": str(output / "video"),
+                             "HISTORICAL_EVIDENCE_FILE": str(output / "historical-verification.json")}
+            processes.run("record-private-demo", [args.node, source / "scripts" / "record_local_demo.cjs"],
+                          source, recording_env, timeout=600)
+            report["demo_recording"] = "video"
         report["network_after"] = network_evidence(args.ip, args._host_netns)
         report["status"] = "passed"
         code = 0
@@ -506,6 +544,16 @@ print('PASS private bootstrap: 4 matching private logins, 5 matching private dev
             code, report["status"] = 1, "failed"
             report["cleanup"]["temporary_stores_removed"] = False
         report["finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        # Diagnostic libraries can include authorization material in exception text.
+        # Preserve useful evidence without retaining the temporary bootstrap credentials.
+        for path in output.rglob('*'):
+            if path.is_file() and path.suffix in {'.log', '.json', '.xml', '.txt'}:
+                text = path.read_text(errors='replace')
+                for value in private_values:
+                    text = text.replace(value, '<private-bootstrap-secret>')
+                text = re.sub(r'eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}', '<jwt>', text)
+                text = re.sub(r'(X-Amz-Signature=)[0-9a-fA-F]{64}', r'\1<signature>', text)
+                path.write_text(text)
         write_json(output / "verification.json", report)
         print(f"Local QA {report['status']}; evidence: {output / 'verification.json'}", flush=True)
     return code
@@ -523,9 +571,17 @@ def parse_args():
     parser.add_argument("--output", type=Path, required=True, help="new/empty directory for JSON, JUnit, logs and screenshots")
     parser.add_argument("--application-only", action="store_true",
                         help="Re-run the application/UI on fresh stores, omitting backend unit/migration tests. Omissions are recorded; keep separate passing test evidence.")
+    parser.add_argument("--private-bootstrap", action="store_true", help="Keep private bootstrap accounts/keys for all live checks; do not restore public development seed")
+    parser.add_argument("--historical-audio-dir", type=Path, help="Private directory containing all 25 historical WAV files; implies --private-bootstrap")
+    parser.add_argument("--record-demo", action="store_true", help="Record the private historical/replay UI before cleanup; requires --historical-audio-dir")
     parser.add_argument("--_inside", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--_host-netns", default="", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    check(not args.record_demo or args.historical_audio_dir is not None,
+          "--record-demo requires --historical-audio-dir")
+    if args.historical_audio_dir:
+        args.historical_audio_dir = Path(os.path.abspath(args.historical_audio_dir))
+        args.private_bootstrap = True
     for name in ("python", "postgres_bin", "mongod", "minio", "node_modules", "node", "chromium", "output"):
         # Do not resolve Python's final symlink: resolving bin/python can bypass its virtualenv.
         setattr(args, name, Path(os.path.abspath(getattr(args, name))))

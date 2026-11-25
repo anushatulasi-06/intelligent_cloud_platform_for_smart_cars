@@ -2,6 +2,8 @@
 from datetime import datetime
 from typing import Literal
 
+from app.schemas.history import HistoricalImportProvenance
+
 from pydantic import BaseModel, ConfigDict, Field
 
 SoundType = Literal["emergency", "in_vehicle", "human", "traffic", "environmental"]
@@ -20,6 +22,7 @@ class AlertListItem(BaseModel):
     severity: str | None = None
     status: str
     timestamp: datetime | None = None
+    import_provenance: HistoricalImportProvenance | None = None
 
 
 class AlertPage(BaseModel):

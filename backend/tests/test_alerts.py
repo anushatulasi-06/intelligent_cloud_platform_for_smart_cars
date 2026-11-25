@@ -137,7 +137,8 @@ def test_staff_sees_all_newest_first(client):
 def test_list_item_shape(client, ids):
     item = client.get("/alerts", headers=STAFF).json()["items"][0]
     assert set(item) == {"id", "record_id", "car_id", "device_id", "sound_type", "confidence", "is_anomaly",
-                         "severity", "status", "timestamp"}
+                         "severity", "status", "timestamp", "import_provenance"}
+    assert item["import_provenance"] is None
     assert item["id"] == ids[0] and len(item["id"]) == 24
     assert "probs" not in item and "s3_object_key" not in item
 
