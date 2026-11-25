@@ -12,7 +12,7 @@ Example::
       --postgres-image postgres:16-bookworm --mongo-image mongo:7.0 \
       --minio-image autosound-minio:local --output /path/to/empty-evidence-directory
 
-Actual production APP_ENV/secrets/model/workers and pg_dump/mongodump are used.
+Actual production APP_ENV/secrets/model/workers, recorded CARLA replay, and pg_dump/mongodump are used.
 All clients run inside the API container. Only the owned backup job's lifecycle
 fields differ between its dump-time running state and its completed source state.
 No claim is made of an atomic snapshot across independently written databases.
@@ -42,7 +42,7 @@ LABEL = "org.autosound.production-local-qa"
 # This program is sent over Docker exec stdin, never through a public endpoint.
 # Credentials stay in the disposable container/env-file and are not evidence.
 INNER = r'''
-import base64, difflib, gzip, hashlib, importlib.metadata, json, os, re, signal, socket, subprocess, sys, time, uuid
+import base64, csv, difflib, gzip, hashlib, importlib.metadata, json, os, re, signal, socket, subprocess, sys, time, uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -55,9 +55,10 @@ from pymongo import MongoClient
 WORK = Path('/tmp/production-qa')
 WORK.mkdir(mode=0o700, exist_ok=True)
 REPORT = {'status':'running','scope':'Production Docker image; local internal network; real dumps/restores; SES disabled',
-          'not_verified':['AWS deployment, IAM, billing, SES delivery or public TLS','CARLA','Atomic cross-database backup under concurrent writes'],
+          'not_verified':['AWS deployment, IAM, billing, SES delivery or public TLS','Live CARLA server (replay uses recorded footage)','Atomic cross-database backup under concurrent writes'],
           'checks':[]}
 apis=[]
+private_values=[]
 
 class Failed(RuntimeError): pass
 def ensure(ok, message):
@@ -164,6 +165,133 @@ def component_check(port,label,bundle):
     ensure(result.get('result')=='PASS','Real component verifier did not pass')
     return result
 
+def replay_check(bundle, s3_client, bucket):
+    # This is an actual CLI process from the image, not an in-process fake edge adapter.
+    # Its private credentials remain in this disposable container's memory/environment.
+    mic=next(row for row in bundle['devices'] if row['name']=='mic-1')
+    camera=next(row for row in bundle['devices'] if row['name']=='cam-1')
+    ensure(mic['car_id']==camera['car_id'],'Private replay devices are on different cars')
+    car_id=mic['car_id']
+    iot=login(8000,next(row for row in bundle['users'] if row['role']=='iot_staff'))
+    cloud_token=login(8000,next(row for row in bundle['users'] if row['role']=='cloud_staff'))
+    replay_env={**os.environ,'EDGE_API_URL':'http://127.0.0.1:8000','EDGE_CAR_ID':str(car_id),
+                'EDGE_DEVICE_ID':str(mic['id']),'EDGE_DEVICE_KEY':mic['device_key'],
+                'EDGE_CAMERA_DEVICE_ID':str(camera['id']),'EDGE_CAMERA_DEVICE_KEY':camera['device_key']}
+    log=(WORK/'replay-client.log').open('wb')
+    process=subprocess.Popen([sys.executable,'-m','edge.replay_client','--no-audio-playback',
+                              '--buffer-dir',str(WORK/'replay-buffer')],
+                             env=replay_env,stdout=log,stderr=subprocess.STDOUT)
+    apis.append((process,log))  # The outer finally also owns cleanup if any assertion fails.
+    report={'status':'running','client':'edge.replay_client','footage':'recorded CARLA, no live simulator',
+            'credentials':'private empty-database bootstrap','scenarios':[]}
+    REPORT['replay']=report
+    state_path=f'/simulator/{car_id}/state'
+    records_path=f'/device-data?car_id={car_id}&device_id={mic["id"]}&page_size=100'
+    frame_key=f'frames/{car_id}/latest.jpg'
+    root=Path('/app/backend/edge')
+    clips=json.loads((root/'edge_scenarios.json').read_text())
+    folders={'emergency':'emergency','in_vehicle':'in_vehicle_crash','human':'human_pullover',
+             'traffic':'traffic','environmental':'environmental'}
+    try:
+        def online():
+            ensure(process.poll() is None,'Recorded replay process exited before readiness')
+            status,state=http(8000,'GET',state_path,token=iot)
+            return (status==200 and state.get('online') and state.get('edge_mode')=='carla_replay'
+                    and state.get('frame_at') and state.get('position'))
+        wait('private recorded replay heartbeat/frame',online,60)
+        for category,folder in folders.items():
+            directory=root/'carla_recordings'/folder
+            with (directory/'telemetry.csv').open(newline='') as stream:
+                rows=list(csv.DictReader(stream))
+            expected_positions={(round(float(row['lat']),7),round(float(row['lon']),7)) for row in rows}
+            expected_frames={digest((directory/row['file']).read_bytes()) for row in rows}
+            expected_audio=digest((root/clips[category]).read_bytes())
+            metadata=json.loads((directory/'scenario.json').read_text())
+            ensure(len(metadata['events'])==1,'Replay fixture must contain exactly one sound event')
+            event_seconds={'in_vehicle':6.0,'human':15.0,'traffic':6.0,'environmental':0.0}.get(
+                category,max(0.0,float(metadata['events'][0]['t_s'])-float(rows[0]['t_s'])))
+            ensure(len(expected_positions)>1 and len(expected_frames)>1,'Recorded replay fixture lacks movement/frames')
+            status,before=http(8000,'GET',records_path,token=iot)
+            ensure(status==200,'Replay record baseline failed')
+            before_ids={row['record_id'] for row in before['items']}
+            status,queued=http(8000,'POST',f'/devices/{mic["id"]}/commands',
+                               {'command':'simulate_event','payload':{'scenario':category}},iot)
+            ensure(status==202 and queued.get('command_id'),'Recorded replay scenario was not queued')
+            command_id=queued['command_id']
+            started=time.monotonic();end=started+90
+            positions=set();frames=set();states=set();record=None;acknowledged=False;ack_seconds=None
+            while time.monotonic()<end:
+                ensure(process.poll() is None,'Recorded replay process stopped during '+category)
+                status,history=http(8000,'GET',f'/devices/{mic["id"]}/commands?limit=100',token=iot)
+                ensure(status==200,'Replay command history failed')
+                command=next((row for row in history if row['command_id']==command_id),None)
+                ensure(command is not None and command['status'] not in ('failed','expired'),
+                       'Recorded replay command failed or expired for '+category)
+                acknowledged=command['status']=='acknowledged'
+                if acknowledged and ack_seconds is None:
+                    ack_seconds=time.monotonic()-started
+                    ensure(ack_seconds>=max(0.0,event_seconds-1.5),'Replay acknowledged before its sound event for '+category)
+                status,state=http(8000,'GET',state_path,token=iot)
+                ensure(status==200 and state.get('edge_mode')=='carla_replay','Recorded replay source was not labelled explicitly')
+                position=state.get('position') or {}
+                if position.get('lat') is not None and position.get('lon') is not None:
+                    point=(round(float(position['lat']),7),round(float(position['lon']),7))
+                    if point in expected_positions: positions.add(point)
+                if state.get('frame_at'):
+                    raw=s3_client.get_object(Bucket=bucket,Key=frame_key)['Body'].read()
+                    sha=digest(raw)
+                    if sha in expected_frames: frames.add(sha)
+                status,listing=http(8000,'GET',records_path,token=iot)
+                ensure(status==200,'Replay F13 listing failed')
+                added=[row for row in listing['items'] if row['record_id'] not in before_ids]
+                ensure(len(added)<=1,'A replay command uploaded duplicate audio records')
+                if added:
+                    record=added[0];states.add(record['status'])
+                    ensure(record.get('trigger')==category,'Replay upload has the wrong scenario provenance')
+                    ensure(record['status']!='failed','Recorded replay model processing failed for '+category)
+                if (acknowledged and record and record['status']=='processed' and len(positions)>1 and len(frames)>1):
+                    break
+                time.sleep(.5)
+            ensure(acknowledged and record and record['status']=='processed',
+                   'Timed out waiting for replay ACK and processed record for '+category)
+            ensure(len(positions)>1 and len(frames)>1,'Recorded replay camera/GPS did not advance for '+category)
+            status,detail=http(8000,'GET',f'/device-data/{record["record_id"]}',token=iot)
+            ensure(status==200 and detail.get('processed') and detail.get('alert_id'),'Replay F13 detail is not linked to an alert')
+            status,alert=http(8000,'GET',f'/alerts/{detail["alert_id"]}',token=cloud_token)
+            ensure(status==200 and alert.get('record_id')==record['record_id'] and alert.get('model_version')=='cnn-v1',
+                   'Recorded replay alert is missing deployed-model provenance')
+            # Expected labels apply only to these five known fixtures, not population accuracy.
+            ensure(alert.get('sound_type')==category,'Recorded replay fixture prediction differs for '+category)
+            raw=s3_client.get_object(Bucket=bucket,Key=detail['s3_object_key'])['Body'].read()
+            ensure(digest(raw)==expected_audio,'Recorded replay uploaded different audio bytes for '+category)
+            status,link=http(8000,'GET',f'/device-data/{record["record_id"]}/audio',token=iot)
+            ensure(status==200 and link.get('url'),'Recorded replay signed audio link is missing')
+            with httpx.Client(trust_env=False,follow_redirects=False,timeout=30) as audio_client:
+                response=audio_client.get(link['url'])
+            ensure(response.status_code==200 and digest(response.content)==expected_audio,
+                   'Recorded replay signed audio bytes differ for '+category)
+            report['scenarios'].append({'scenario':category,'recording':folder,'command_id':command_id,
+                'acknowledged':True,'record_id':record['record_id'],'record_states':sorted(states),
+                'prediction':alert['sound_type'],'confidence':alert['confidence'],'model_version':alert['model_version'],
+                'audio_sha256':expected_audio,'uploaded_audio_sha256':digest(raw),'signed_audio_sha256':digest(response.content),
+                'distinct_recorded_frames_observed':len(frames),'distinct_recorded_gps_points_observed':len(positions),
+                'sound_event_seconds':event_seconds,'ack_observed_after_seconds':round(ack_seconds,3),
+                'elapsed_seconds':round(time.monotonic()-started,3)})
+            print('PASS recorded replay '+category+': ACK, processed alert, matching audio, moving recorded camera/GPS',flush=True)
+        report['status']='passed'
+    finally:
+        if process.poll() is None:
+            process.send_signal(signal.SIGINT)
+            try: process.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                process.kill();process.wait(timeout=10)
+        log.close()
+        report['process_stopped_before_backup']=process.poll() is not None
+        ensure(report['process_stopped_before_backup'],'Replay writer remained active before backup')
+    ensure(process.returncode in (0,-signal.SIGINT),'Replay process did not shut down cleanly')
+    passed('All five recorded CARLA replay scenarios used private device keys, real model processing, matching audio and recorded camera/GPS; replay stopped before backups')
+    return report
+
 try:
     ensure(os.environ['APP_ENV']=='production' and os.environ['DEV_FAKE_BACKUP']=='false'
            and os.environ['DEV_FAKE_EMAIL']=='true','Unsafe production/local side-effect configuration')
@@ -192,6 +320,8 @@ try:
     bundle_path=WORK/'bootstrap.json'
     tool('private-bootstrap',[sys.executable,'-m','app.db.bootstrap','--initialize-empty-database','--credentials-file',str(bundle_path)])
     bundle=json.loads(bundle_path.read_text())
+    private_values.extend(row['password'] for row in bundle['users'])
+    private_values.extend(row['device_key'] for row in bundle['devices'])
     ensure(len(bundle['users'])==4 and len(bundle['devices'])==5 and bundle_path.stat().st_mode&0o777==0o600,
            'Private production bootstrap counts or bundle permissions differ')
     source_api=api_start(8000,dict(os.environ),'api-source')
@@ -225,6 +355,7 @@ try:
         passed('Built production nginx serves static assets/SPA fallback and proxies real health/private JWT/readiness')
     original_component=component_check(8000,'components-source',bundle)
     REPORT['components_source']=original_component
+    replay_check(bundle,client,bucket)
     # Explicit rich sentinel rows plus sequence gaps exercise more than row counts.
     wifi_password='qa-'+uuid.uuid4().hex
     sentinel_key='qa-'+uuid.uuid4().hex
@@ -414,7 +545,13 @@ finally:
             try: process.wait(timeout=20)
             except subprocess.TimeoutExpired: process.kill(); process.wait(timeout=10)
         log.close()
-    (WORK/'verification.json').write_text(json.dumps(REPORT,indent=2,default=str)+'\n')
+    def redact_private(text):
+        for value in sorted(private_values,key=len,reverse=True): text=text.replace(value,'<private-bootstrap-secret>')
+        text=re.sub(r'eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}','<jwt>',text)
+        return re.sub(r'(X-Amz-Signature=)[0-9a-fA-F]{64}',r'\1<signature>',text)
+    for path in WORK.glob('*.log'):
+        path.write_text(redact_private(path.read_text(errors='replace')))
+    (WORK/'verification.json').write_text(redact_private(json.dumps(REPORT,indent=2,default=str)+'\n'))
 sys.exit(0 if REPORT['status']=='passed' else 1)
 '''
 
@@ -459,7 +596,7 @@ def main():
     env={key:os.environ[key] for key in ('PATH','HOME','XDG_RUNTIME_DIR') if key in os.environ}
     env['DOCKER_CONFIG']=str(runtime/'docker-config')
     report={'status':'running','started_at':datetime.now(timezone.utc).isoformat(),
-            'scope':'Local prebuilt production Docker image; no pulls/builds/AWS/SES/CARLA',
+            'scope':'Local prebuilt production Docker image and recorded CARLA replay; no pulls/builds/AWS/SES/live CARLA',
             'run_label':{LABEL:run_id},'images':{},'cleanup':{}}
     secret_values=[]
 
