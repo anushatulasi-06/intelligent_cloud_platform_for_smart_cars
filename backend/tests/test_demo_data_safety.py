@@ -167,3 +167,53 @@ def test_feed_stops_when_car_no_longer_matches_seed_identity(feed_db):
     demo.tick_routes(repo, state, NOW + timedelta(seconds=5), set(), {c[0] for c in demo.load_cars()})
     assert state == {}
     assert list(feed_db.car_positions.find()) == before
+
+
+# --refresh: the original local-demo behaviour, opt-in and refused in production.
+
+def test_refresh_is_refused_in_production_before_database_access(monkeypatch):
+    monkeypatch.setattr(demo, "get_settings", lambda: type("S", (), {"APP_ENV": "production"})())
+    monkeypatch.setattr(demo, "load_cars", lambda: pytest.fail("Refused --refresh accessed a database"))
+    with pytest.raises(SystemExit) as exc:
+        demo.main(["--demo-only", "--refresh"])
+    assert exc.value.code == 2
+
+
+def test_refresh_rewrites_demo_history_to_end_now(feed_db):
+    repo = PositionRepo()
+    stale = position(10, NOW - timedelta(days=1), source=demo.SOURCE)
+    repo.add(stale)
+    started = datetime.now(timezone.utc)
+
+    demo.main(["--demo-only", "--refresh", "--minutes", "1", "--keep-alerts"])
+
+    points = list(feed_db.car_positions.find({"car_id": 10}))
+    assert len(points) == 12 and all(p["source"] == demo.SOURCE for p in points)
+    assert min(p["ts"] for p in points) > NOW            # the day-old point is gone
+    assert max(p["ts"] for p in points) >= started - timedelta(seconds=demo.STEP_SECONDS)
+
+
+@pytest.mark.parametrize("source", [None, "carla"])
+def test_refresh_leaves_cars_with_non_demo_positions_untouched(feed_db, source):
+    PositionRepo().add(position(10, NOW - timedelta(days=1), source=source))
+    before = deepcopy(list(feed_db.car_positions.find()))
+    demo.main(["--demo-only", "--refresh", "--minutes", "1", "--keep-alerts"])
+    assert list(feed_db.car_positions.find()) == before
+
+
+def test_refresh_moves_only_development_seed_alerts_into_the_window(feed_db):
+    seed_record = demo.load_seed_alerts()[0]["record_id"]
+    old = NOW - timedelta(days=30)
+    feed_db.alerts.insert_many([
+        {"record_id": seed_record, "car_id": 10, "timestamp": old, "lat": 1, "lon": 2, "status": "new"},
+        {"record_id": "real-record", "car_id": 11, "timestamp": old, "lat": 3, "lon": 4, "status": "new"},
+    ])
+    started = datetime.now(timezone.utc)
+
+    demo.main(["--demo-only", "--refresh", "--minutes", "1"])
+
+    seeded = feed_db.alerts.find_one({"record_id": seed_record})
+    assert seeded["timestamp"] >= started - timedelta(minutes=1, seconds=5)
+    assert (seeded["lat"], seeded["lon"]) != (1, 2)       # placed on car 10's fresh route
+    real = feed_db.alerts.find_one({"record_id": "real-record"})
+    assert (real["timestamp"], real["lat"], real["lon"]) == (old, 3, 4)

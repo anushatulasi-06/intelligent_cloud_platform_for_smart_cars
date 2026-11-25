@@ -103,7 +103,6 @@ export default function AlertsPage() {
     <div className="page">
       <div className="page-head">
         <h1>Alerts</h1>
-        <span className="frame-id">F12</span>
       </div>
       <FilterBar
         fields={FILTER_FIELDS}

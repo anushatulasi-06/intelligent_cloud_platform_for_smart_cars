@@ -78,7 +78,6 @@ export default function AlertDetailPage() {
       {back}
       <div className="page-head">
         <h1>Alert {a.id.slice(0, 6)}…</h1>
-        <span className="frame-id">F7</span>
       </div>
 
       <div className="two-col">
@@ -110,7 +109,7 @@ export default function AlertDetailPage() {
       </div>
 
       <section className="panel">
-        <h2>Audio clip (presigned S3 link, 5 min)</h2>
+        <h2>Audio clip</h2>
         {audio.loading && !audio.data && <p className="muted">Loading audio link...</p>}
         {audio.error && (
           <p className="state-error">Error: {audio.error.message} <button className="btn btn-sm" onClick={audio.reload}>Retry</button></p>
@@ -118,7 +117,6 @@ export default function AlertDetailPage() {
         {audio.data && (
           <>
             <audio controls preload="none" src={audio.data.url} className="audio" />
-            <p className="muted small">Mock link, refreshed automatically before it expires: <code>{audio.data.url}</code></p>
           </>
         )}
       </section>

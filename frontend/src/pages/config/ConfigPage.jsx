@@ -14,7 +14,6 @@ export default function ConfigPage() {
     <div className="page">
       <div className="page-head">
         <h1>Config · {tab.label}</h1>
-        <span className="frame-id">{tab.frame}</span>
       </div>
       {tabKey === 'alert-types' && <AlertTypesTab />}
       {tabKey === 'models' && <ModelsTab />}
