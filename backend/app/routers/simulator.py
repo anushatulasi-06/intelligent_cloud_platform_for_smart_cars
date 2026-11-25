@@ -12,9 +12,9 @@ from app.db.repositories import CarRepo
 from app.services.errors import Unavailable
 
 SCENARIO_FILES = {
-    "emergency": "1-54084-A-42.wav", "in_vehicle": "1-20133-A-39.wav",
-    "human": "1-211527-A-20.wav", "traffic": "1-17124-A-43.wav",
-    "environmental": "1-17367-A-10.wav",
+    "emergency": "emergency.wav", "in_vehicle": "in_vehicle.wav",
+    "human": "human.wav", "traffic": "traffic.wav",
+    "environmental": "environmental.wav",
 }
 SCENARIO_DIRECTORY = FilePath(__file__).resolve().parents[2] / "edge" / "demo_clips"
 Scenario = Literal["emergency", "in_vehicle", "human", "traffic", "environmental"]

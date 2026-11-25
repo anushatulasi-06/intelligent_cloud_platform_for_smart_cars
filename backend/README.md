@@ -223,7 +223,7 @@ backend/
 │       ├── repositories/  # the only code that queries a store
 │       ├── migrations/    # Alembic: 0001_initial_schema, 0002_device_commands
 │       └── seed.py        # idempotent demo data (seed_data/alerts.json)
-├── edge/                  # edge clients: local demo, CARLA adapter, bundled scenario clips
+├── edge/                  # edge clients (CARLA replay, local demo, live CARLA), recordings, scenario clips
 ├── tests/                 # pytest: one file per area; no external services needed
 ├── Dockerfile             # API image (local Docker stack, AWS option B)
 └── alembic.ini, pytest.ini, requirements.txt, .env.example

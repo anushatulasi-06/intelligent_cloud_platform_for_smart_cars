@@ -1,0 +1,23 @@
+{
+  "scenario": "environmental",
+  "sound_class": "environmental",
+  "clip_hint": "rain, thunder, wind",
+  "town": "Carla/Maps/Town10HD_Opt",
+  "seconds": 35,
+  "interval_s": 1.0,
+  "frames": 35,
+  "camera": "640x360",
+  "events": [
+    {
+      "t_s": 5.0,
+      "label": "heavy storm: rain, wind, thunder",
+      "sound_class": "environmental"
+    }
+  ],
+  "map_origin": {
+    "lat": 37.3333,
+    "lon": -121.8907,
+    "meaning": "CARLA (0,0) placed here; lat/lon columns are on the real map"
+  },
+  "note": "Send one clip of this sound class at each event time when replaying."
+}

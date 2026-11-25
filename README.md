@@ -54,7 +54,7 @@ flowchart TB
 ```
 
 **One sound, end to end:**
-1. **Capture (C2/C3).** An edge client (a CARLA car or the local demo) uploads a clip to
+1. **Capture (C2/C3).** An edge client (a live CARLA car, a recorded CARLA drive, or the local demo) uploads a clip to
    `POST /device-data`. C3 validates it, stores it in S3 and queues a record.
 2. **Classify (C4).** The processing worker claims the record. The orchestrator builds a log-mel
    spectrogram, classifies it into one of five categories, and flags it as an anomaly if its
@@ -75,7 +75,8 @@ flowchart TB
 | Run everything on my laptop | [`infra/README.md`](infra/README.md): without Docker (Homebrew + MinIO) or all in Docker |
 | Deploy to AWS | [`infra/aws/SETUP.md`](infra/aws/SETUP.md) (scripts, frontend on S3) or [`infra/aws/docker/SETUP.md`](infra/aws/docker/SETUP.md) (Docker on EC2) |
 | Fill every page with demo data | [`infra/README.md` → Demo data](infra/README.md#demo-data) |
-| Connect CARLA | [`infra/README.md` → Edge clients and CARLA](infra/README.md#edge-clients-and-carla) |
+| Show real CARLA footage without a GPU | [Replay recorded CARLA scenarios](backend/edge/README.md#replay-recorded-carla-scenarios) |
+| Connect live CARLA | [`infra/README.md` → Edge clients and CARLA](infra/README.md#edge-clients-and-carla) |
 
 Sign in with a seeded account. These are development only; the passwords are public in this
 repository:
@@ -95,7 +96,7 @@ repository:
 | [`frontend/README.md`](frontend/README.md) | Every page by component, roles and access, the API layer, code layout |
 | [`infra/README.md`](infra/README.md) | Local setups, seeded accounts, demo data, live verification, edge clients and CARLA |
 | [`infra/aws/SETUP.md`](infra/aws/SETUP.md) · [`infra/aws/docker/SETUP.md`](infra/aws/docker/SETUP.md) | Complete AWS deployment, option A · option B |
-| [`backend/edge/README.md`](backend/edge/README.md) | Edge clients: configuration, commands, audio scenarios, buffering |
+| [`backend/edge/README.md`](backend/edge/README.md) | Edge clients (CARLA replay, local demo, live CARLA), recording new scenarios, commands, audio, buffering |
 
 ---
 

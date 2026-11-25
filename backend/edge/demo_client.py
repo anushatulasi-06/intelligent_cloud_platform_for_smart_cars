@@ -24,7 +24,8 @@ from edge.carla_client import CarlaEdgeClient, CloudTransport, _device_from_env,
 from edge.audio_playback import SystemAudioPlayer
 
 log = logging.getLogger(__name__)
-BUNDLED_SCENARIOS = Path(__file__).with_name("demo_clips") / "scenarios.json"
+# The same clip mapping as the CARLA and replay clients use.
+BUNDLED_SCENARIOS = Path(__file__).with_name("edge_scenarios.json")
 
 
 def make_synthetic_scenarios(directory: Path) -> dict[str, Path]:
