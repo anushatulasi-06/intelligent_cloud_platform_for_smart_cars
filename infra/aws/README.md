@@ -38,6 +38,10 @@ world: choose a scenario to begin playback, then Start/Stop route resume/pause t
 The position feed also requires `--demo-only` and preserves real history
 and all alerts; it is a demonstration of untouched demo cars, not live CARLA data.
 
+For the local evidence matrix, proposed test window, credit-per-trial arithmetic and written
+questions to settle before any launch, read [AWS test readiness](AWS_TEST_READINESS.md).
+Preparing that packet does not authorize AWS actions or credit use.
+
 ## Account plan and resource sizing
 
 Both guides use **us-west-2**, a Linux **x86_64** EC2 instance, private **Single-AZ RDS

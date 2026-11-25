@@ -1,0 +1,325 @@
+{
+  "author": "Rishi Sheth",
+  "verified_on": "2026-11-24 America/Los_Angeles",
+  "scope": "Disposable local tests only; recorded CARLA replay, not a live simulator or an AWS deployment",
+  "application_source_commit": "fc6708058e499b6c3747132c6302ddaeb6273454",
+  "source_dirty": false,
+  "production_images": {
+    "api": "sha256:6ce26a9a22ee762a4d7439272e0841fa7d07c80bcadf99c481a8a57c129f6f6e",
+    "postgres": "sha256:74b11758bfe1b381b55d2628584c663bac5d029c7e40b15ee00ec631134eb2bc",
+    "mongo": "sha256:11426daab9bc9efd469d663da0bd9cf10320e42cb25058f7219a6f513aeaae80",
+    "minio": "sha256:be5e85e455b5c3b793baeaaaca37602d9f7f1e81dc262dda6c234aba13b0809a",
+    "frontend": "sha256:1e85dc31621707dce52f16e73daae5c12cf066dc3f263a8acc9e44f0199fe9bc"
+  },
+  "production_backend_tests": {
+    "total": 656,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 10,
+    "passed": 646
+  },
+  "postgres_migration_tests_passed": 10,
+  "offline_infrastructure_tests_passed": 18,
+  "application_checks": [
+    {
+      "check": "version-python",
+      "exit_code": 0,
+      "log": "logs/version-python.log"
+    },
+    {
+      "check": "version-postgres",
+      "exit_code": 0,
+      "log": "logs/version-postgres.log"
+    },
+    {
+      "check": "version-mongodb",
+      "exit_code": 0,
+      "log": "logs/version-mongodb.log"
+    },
+    {
+      "check": "version-minio",
+      "exit_code": 0,
+      "log": "logs/version-minio.log"
+    },
+    {
+      "check": "version-node",
+      "exit_code": 0,
+      "log": "logs/version-node.log"
+    },
+    {
+      "check": "python-dependencies",
+      "exit_code": 0,
+      "log": "logs/python-dependencies.log"
+    },
+    {
+      "check": "postgres-init",
+      "exit_code": 0,
+      "log": "logs/postgres-init.log"
+    },
+    {
+      "check": "migration-db-create",
+      "exit_code": 0,
+      "log": "logs/migration-db-create.log"
+    },
+    {
+      "check": "live-db-drop",
+      "exit_code": 0,
+      "log": "logs/live-db-drop.log"
+    },
+    {
+      "check": "live-db-create",
+      "exit_code": 0,
+      "log": "logs/live-db-create.log"
+    },
+    {
+      "check": "bucket-create",
+      "exit_code": 0,
+      "log": "logs/bucket-create.log"
+    },
+    {
+      "check": "live-migrations",
+      "exit_code": 0,
+      "log": "logs/live-migrations.log"
+    },
+    {
+      "check": "private-bootstrap",
+      "exit_code": 0,
+      "log": "logs/private-bootstrap.log"
+    },
+    {
+      "check": "private-bootstrap-verify",
+      "exit_code": 0,
+      "log": "logs/private-bootstrap-verify.log"
+    },
+    {
+      "check": "private-bootstrap-refuse-repeat",
+      "exit_code": 1,
+      "log": "logs/private-bootstrap-refuse-repeat.log"
+    },
+    {
+      "check": "private-bootstrap-preserved",
+      "exit_code": 0,
+      "log": "logs/private-bootstrap-preserved.log"
+    },
+    {
+      "check": "bootstrap-db-drop",
+      "exit_code": 0,
+      "log": "logs/bootstrap-db-drop.log"
+    },
+    {
+      "check": "bootstrap-db-create",
+      "exit_code": 0,
+      "log": "logs/bootstrap-db-create.log"
+    },
+    {
+      "check": "demo-migrations",
+      "exit_code": 0,
+      "log": "logs/demo-migrations.log"
+    },
+    {
+      "check": "local-demo-seed",
+      "exit_code": 0,
+      "log": "logs/local-demo-seed.log"
+    },
+    {
+      "check": "live-components",
+      "exit_code": 0,
+      "log": "logs/live-components.log"
+    },
+    {
+      "check": "live-platform",
+      "exit_code": 0,
+      "log": "logs/live-platform.log"
+    },
+    {
+      "check": "frontend-build",
+      "exit_code": 0,
+      "log": "logs/frontend-build.log"
+    },
+    {
+      "check": "browser-components",
+      "exit_code": 0,
+      "log": "logs/browser-components.log"
+    },
+    {
+      "check": "browser-replay",
+      "exit_code": 0,
+      "log": "logs/browser-replay.log"
+    }
+  ],
+  "browser": {
+    "result": "PASS",
+    "recorded_scenarios": 5,
+    "preview_recovery_checks": [
+      "Rejected command cancels its waiting preview",
+      "failed command cancels its waiting preview",
+      "expired command cancels its waiting preview",
+      "Autoplay rejection offers working explicit playback",
+      "Download retry waits for acknowledgement before automatic playback"
+    ],
+    "cloud_read_only": true,
+    "page_errors": []
+  },
+  "production_replay": {
+    "status": "passed",
+    "client": "edge.replay_client",
+    "footage": "recorded CARLA, no live simulator",
+    "credentials": "private empty-database bootstrap",
+    "scenarios": [
+      {
+        "scenario": "emergency",
+        "recording": "emergency",
+        "command_id": 4,
+        "acknowledged": true,
+        "record_id": "ce81e641-0ff4-4a4e-ab83-eff22433e74c",
+        "record_states": [
+          "pending",
+          "processed"
+        ],
+        "prediction": "emergency",
+        "confidence": 0.9983042478561401,
+        "model_version": "cnn-v1",
+        "audio_sha256": "b0ce84a3c012d144a1f97394cab2830512078d660e809eecb8abc4fa8ad0a9e1",
+        "uploaded_audio_sha256": "b0ce84a3c012d144a1f97394cab2830512078d660e809eecb8abc4fa8ad0a9e1",
+        "signed_audio_sha256": "b0ce84a3c012d144a1f97394cab2830512078d660e809eecb8abc4fa8ad0a9e1",
+        "distinct_recorded_frames_observed": 3,
+        "distinct_recorded_gps_points_observed": 2,
+        "sound_event_seconds": 0.73,
+        "ack_observed_after_seconds": 2.035,
+        "elapsed_seconds": 3.62
+      },
+      {
+        "scenario": "in_vehicle",
+        "recording": "in_vehicle_crash",
+        "command_id": 5,
+        "acknowledged": true,
+        "record_id": "2c9cf41e-a13a-41a2-b601-38539b735903",
+        "record_states": [
+          "processed"
+        ],
+        "prediction": "in_vehicle",
+        "confidence": 0.9980625510215759,
+        "model_version": "cnn-v1",
+        "audio_sha256": "db6946133c37fbd4513fe932dbb71e0b077bf7d240beaed339eb6c88e48c903b",
+        "uploaded_audio_sha256": "db6946133c37fbd4513fe932dbb71e0b077bf7d240beaed339eb6c88e48c903b",
+        "signed_audio_sha256": "db6946133c37fbd4513fe932dbb71e0b077bf7d240beaed339eb6c88e48c903b",
+        "distinct_recorded_frames_observed": 7,
+        "distinct_recorded_gps_points_observed": 6,
+        "sound_event_seconds": 6.0,
+        "ack_observed_after_seconds": 6.649,
+        "elapsed_seconds": 7.0
+      },
+      {
+        "scenario": "human",
+        "recording": "human_pullover",
+        "command_id": 6,
+        "acknowledged": true,
+        "record_id": "f28af6ac-cd57-446a-a2eb-0a8e4aacb4dc",
+        "record_states": [
+          "processed"
+        ],
+        "prediction": "human",
+        "confidence": 0.9955821633338928,
+        "model_version": "cnn-v1",
+        "audio_sha256": "6b6f9e4214128b5b93747d31d7b345eb9ea8ebaa3163ffb345c0c703583b62e1",
+        "uploaded_audio_sha256": "6b6f9e4214128b5b93747d31d7b345eb9ea8ebaa3163ffb345c0c703583b62e1",
+        "signed_audio_sha256": "6b6f9e4214128b5b93747d31d7b345eb9ea8ebaa3163ffb345c0c703583b62e1",
+        "distinct_recorded_frames_observed": 12,
+        "distinct_recorded_gps_points_observed": 11,
+        "sound_event_seconds": 15.0,
+        "ack_observed_after_seconds": 15.476,
+        "elapsed_seconds": 15.724
+      },
+      {
+        "scenario": "traffic",
+        "recording": "traffic",
+        "command_id": 7,
+        "acknowledged": true,
+        "record_id": "ff0fa30f-f17b-44a2-94eb-4899d8f37d17",
+        "record_states": [
+          "pending",
+          "processed"
+        ],
+        "prediction": "traffic",
+        "confidence": 0.9990326166152954,
+        "model_version": "cnn-v1",
+        "audio_sha256": "a68194618270455da3743e50c43b3dbd3ca83df435ace0ca229424bb1b55c417",
+        "uploaded_audio_sha256": "a68194618270455da3743e50c43b3dbd3ca83df435ace0ca229424bb1b55c417",
+        "signed_audio_sha256": "a68194618270455da3743e50c43b3dbd3ca83df435ace0ca229424bb1b55c417",
+        "distinct_recorded_frames_observed": 8,
+        "distinct_recorded_gps_points_observed": 7,
+        "sound_event_seconds": 6.0,
+        "ack_observed_after_seconds": 6.593,
+        "elapsed_seconds": 7.559
+      },
+      {
+        "scenario": "environmental",
+        "recording": "environmental",
+        "command_id": 8,
+        "acknowledged": true,
+        "record_id": "644eefba-61af-40a5-92f9-5046e87e3adc",
+        "record_states": [
+          "pending",
+          "processed"
+        ],
+        "prediction": "environmental",
+        "confidence": 0.9888868927955627,
+        "model_version": "cnn-v1",
+        "audio_sha256": "5d53de8ad6f516773d2f23d76d4bacfa81a07d230f80943e513a24d258305d51",
+        "uploaded_audio_sha256": "5d53de8ad6f516773d2f23d76d4bacfa81a07d230f80943e513a24d258305d51",
+        "signed_audio_sha256": "5d53de8ad6f516773d2f23d76d4bacfa81a07d230f80943e513a24d258305d51",
+        "distinct_recorded_frames_observed": 3,
+        "distinct_recorded_gps_points_observed": 2,
+        "sound_event_seconds": 0.0,
+        "ack_observed_after_seconds": 0.694,
+        "elapsed_seconds": 2.944
+      }
+    ],
+    "process_stopped_before_backup": true
+  },
+  "backup": {
+    "status": "passed",
+    "actual_dump_mode": true,
+    "consistency": "Quiescent application data; sequential PG/Mongo dumps, not an atomic cross-store snapshot",
+    "archive_checksums": {
+      "postgres": {
+        "bytes": 27382,
+        "sha256": "085421a3632db96513ed1c5d31ab558fa67af91575a07a13c6b4d4bae6b4bbe6"
+      },
+      "mongo": {
+        "bytes": 4026,
+        "sha256": "6612adeb03d8fcad959563295c09a6971358b2153399a782876ec7365a2a0f4f"
+      }
+    }
+  },
+  "restore": {
+    "sql_status": "passed",
+    "sql_tables": 9,
+    "mongo_status": "passed",
+    "mongo_collections": 5,
+    "actual_fk_and_unique_rejections": true,
+    "encrypted_wifi_and_key_hash_preserved": true,
+    "original_source_preserved": true,
+    "private_logins_verified": 4,
+    "real_processing_and_signed_audio_download": true
+  },
+  "cleanup": {
+    "application": {
+      "owned_processes_stopped": true,
+      "errors": [],
+      "temporary_stores_removed": true
+    },
+    "production": {
+      "owned_containers_and_anonymous_volumes_removed": true,
+      "owned_internal_network_removed": true,
+      "errors": [],
+      "existing_resources_pruned": false
+    },
+    "image_unit_container_removed": true
+  },
+  "not_verified": [
+    "Actual AWS deployment, IAM, networking, RDS, Atlas, S3 and SES connectivity",
+    "Cloud capacity, live CARLA, model dataset accuracy, atomic cross-store recovery"
+  ],
+  "full_local_evidence_bundle": "cmpe281-replay-local-nov24; original JSON/JUnit/logs retained outside Git; see AWS_TEST_READINESS.md"
+}
