@@ -708,12 +708,27 @@ def main():
         result=subprocess.run([str(args.docker),'--host',args.docker_host,'exec','-i',api,'python','-'],
                               env=env,input=INNER.encode(),capture_output=True,timeout=1800)
         (output/'production-checks.log').write_text(redact((result.stdout+result.stderr).decode(errors='replace')))
-        docker('cp',api+':/tmp/production-qa/verification.json',runtime/'inner-verification.json')
-        report['production_checks']=json.loads((runtime/'inner-verification.json').read_text())
+        def read_artifact(filename):
+            # Read as the same non-root UID that wrote the artifact. This avoids Docker's
+            # archive-copy path, without relaxing private directory/file permissions.
+            reader="import json,sys; from pathlib import Path; value=json.loads(Path(sys.argv[1]).read_text()); print(json.dumps(value))"
+            exported=subprocess.run([str(args.docker),'--host',args.docker_host,'exec',api,'python','-c',reader,
+                                     '/tmp/production-qa/'+filename],env=env,capture_output=True,timeout=30)
+            if exported.returncode:
+                (output/(filename+'.read-error.log')).write_text(redact(exported.stderr.decode(errors='replace')))
+                raise Failed('Required production artifact '+filename+' is missing, unreadable or invalid; see read-error log')
+            try:
+                value=json.loads(exported.stdout)
+            except (ValueError,UnicodeDecodeError):
+                raise Failed('Required production artifact '+filename+' did not contain valid JSON') from None
+            ensure(isinstance(value,dict),'Required production artifact '+filename+' is not a JSON object')
+            return value
+        report['production_checks']=read_artifact('verification.json')
+        report['evidence_export']={'method':'read-only docker exec stdlib JSON parse','container_user':'10001',
+                                   'private_permissions_changed':False}
         for filename in ('components-source.json','components-restored.json'):
-            copied=subprocess.run([str(args.docker),'--host',args.docker_host,'cp',api+':/tmp/production-qa/'+filename,str(runtime/filename)],env=env,capture_output=True)
-            if copied.returncode==0:
-                (output/filename).write_text(redact((runtime/filename).read_text()))
+            value=read_artifact(filename)
+            (output/filename).write_text(redact(json.dumps(value,indent=2)+'\n'))
         ensure(result.returncode==0 and report['production_checks']['status']=='passed','Production backup/restore checks failed; see production-checks.log')
         report['status']='passed'
         code=0

@@ -6,7 +6,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE || require.resolve('playwright', { paths: [path.join(__dirname, '../frontend')] }));
+const playwrightEntry = require.resolve(process.env.PLAYWRIGHT_MODULE || require.resolve('playwright', { paths: [path.join(__dirname, '../frontend')] }));
 
 function local(value) {
   const u = new URL(value);
@@ -42,6 +42,16 @@ function processOk(command, args) {
   assert.equal(result.status, 0, `${path.basename(command)} failed; media evidence was not finalized`);
   return result.stdout;
 }
+function executable(command) {
+  const candidates = command.includes(path.sep) ? [path.resolve(command)]
+    : (process.env.PATH || '').split(path.delimiter).map(directory => path.join(directory, command));
+  const found = candidates.find(candidate => {
+    try { fs.accessSync(candidate, fs.constants.X_OK); return fs.statSync(candidate).isFile(); }
+    catch { return false; }
+  });
+  assert(found, 'An existing FFmpeg executable is required; nothing will be installed');
+  return found;
+}
 
 (async () => {
   assert(process.platform === 'linux');
@@ -54,6 +64,19 @@ function processOk(command, args) {
   assert.equal(new Set(historical.alerts.map(row => row.id)).size, 25);
   fs.mkdirSync(OUTPUT, { recursive: true });
   fs.mkdirSync(path.join(OUTPUT, 'screens'), { recursive: true });
+  // recordVideo normally looks for Playwright's downloaded encoder under HOME. Reuse the
+  // preinstalled system FFmpeg through a PRIVATE disposable registry instead. Set this before
+  // importing Playwright, which computes its registry directory when the module is loaded.
+  assert(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE, 'The harness must supply its existing Chromium executable');
+  const coreEntry = require.resolve('playwright-core', { paths: [path.dirname(playwrightEntry)] });
+  const registry = JSON.parse(fs.readFileSync(path.join(path.dirname(coreEntry), 'browsers.json')));
+  const revision = registry.browsers.find(browser => browser.name === 'ffmpeg').revision;
+  const privateCache = path.join(OUTPUT, '.browser-cache');
+  const encoderDirectory = path.join(privateCache, `ffmpeg-${revision}`);
+  fs.mkdirSync(encoderDirectory, { recursive: true });
+  fs.symlinkSync(executable(FFMPEG), path.join(encoderDirectory, 'ffmpeg-linux'));
+  process.env.PLAYWRIGHT_BROWSERS_PATH = privateCache;
+  const { chromium } = require(playwrightEntry);
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'],
     ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {}) });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1080 },
@@ -354,8 +377,15 @@ function processOk(command, args) {
     const info = JSON.parse(processOk(FFPROBE, ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', target]));
     assert(info.streams.some(stream => stream.codec_type === 'audio' && stream.codec_name === 'aac'));
     assert(info.streams.some(stream => stream.codec_type === 'video' && stream.codec_name === 'h264'));
+    const volume = spawnSync(FFMPEG, ['-hide_banner', '-i', target, '-vn', '-af', 'volumedetect', '-f', 'null', '-'],
+      { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
+    assert.equal(volume.status, 0, 'Final audio decode failed');
+    const levels = Object.fromEntries([...volume.stderr.matchAll(/(mean_volume|max_volume):\s*(-?[0-9.]+) dB/g)]
+      .map(match => [match[1], Number(match[2])]));
+    assert(Number.isFinite(levels.max_volume) && levels.max_volume > -60, 'Encoded rehearsal soundtrack is silent');
     evidence.result = 'PASS'; evidence.video = { filename: path.basename(target), duration_seconds: Number(info.format.duration),
       video_codec: 'h264', audio_codec: 'aac', browser_audio_offset_seconds: offset, raw_video: path.relative(OUTPUT, rawVideo) };
+    evidence.video.encoded_audio_db = levels;
     evidence.browser_audio = audioResult;
     evidence.checks.push('Actual app-only WebAudio captured with nonzero RMS for all five new previews and three stored-audio plays');
     evidence.finished_at = new Date().toISOString();
@@ -369,6 +399,7 @@ function processOk(command, args) {
     throw error;
   } finally {
     await context.close().catch(() => {}); await browser.close();
+    fs.rmSync(privateCache, { recursive: true, force: true });
     fs.writeFileSync(path.join(OUTPUT, 'recording-verification.json'), JSON.stringify(evidence, null, 2));
   }
 })().catch(error => { console.error(safeError(error)); process.exitCode = 1; });

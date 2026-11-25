@@ -1,6 +1,6 @@
 # AWS trial readiness and credit planning
 
-Author: Rishi Sheth. Source: `7888e21`. **Review only; authorized AWS usage and credit
+Author: Rishi Sheth. Reviewed baseline: `cd5b022`, now on main. **Review only; authorized AWS usage and credit
 consumption remain $0.** This is a proposal, not permission to create resources, probe stores,
 send email or deploy. No account balance, identifier, recipient or credentials are recorded.
 
@@ -53,8 +53,8 @@ DB. Keep [guards/private bootstrap](README.md#deployment-guard); no live command
 | Trial time | Work and exit condition |
 |---|---|
 | 0–30 minutes | Timer starts at first billable resource. Startup/private settings/bootstrap/tunnel. If readiness or eligibility fails by minute 30, abort into teardown. |
-| 30–40 minutes | Real role/store checks and readiness, including an S3 write/read rather than health alone. |
-| 40–60 minutes | One five-scenario cycle; C2 config/commands and C3 idempotency/processing/audio. One camera/browser; sanitized hashes/results. |
+| 30–40 minutes | Real role/store checks and readiness; import the reviewed 25 historical alerts/audio, then check idempotence and signed downloads. |
+| 40–60 minutes | C1–C5 role/UI walkthrough and five new replay results; C2 config/commands and C3 idempotency/processing/audio. Record the actual trial with audible clips, one camera/browser and sanitized evidence. |
 | 60–75 minutes | Quiesce replay, one real backup, download/verify archives and restore into disposable local stores only. |
 | 75–90 minutes | At most one verified-recipient SES message, confirm receipt, finish role/failure checks and evidence. Stop feeds. |
 | 90–120 minutes | Remove owned resources, including IP/disks/database/snapshots/objects; handle Atlas separately. Verify cleanup; retain nothing without separate approval. |
@@ -63,10 +63,10 @@ Two hours is a stop target, **not a billing cap**: delays/retained resources cos
 cleanup is confirmed. Stopping EC2/RDS retains costs; RDS can restart after seven days. Logical
 dumps exclude media/secrets/server roles and are not atomic across databases; retain a private recovery plan.
 
-Historical media is optional for private bootstrap/new replay. Showing the old 25 alerts instead
-requires local WAV/key/hash validation and a reviewed uploader/import process; filename coverage
-in Drive is insufficient. That upload is not done or included here. See
-[the historical-media procedure](README.md#supplied-historical-audio).
+Anusha confirmed that the 25 historical alerts with playable audio are required in addition to
+five new replay results. Their original WAVs have been downloaded and validated locally;
+see [the safe historical import](HISTORICAL_IMPORT.md). Include their reviewed import and
+signed-audio checks in the trial. No AWS upload has been performed.
 
 ## Credit estimate for review
 
@@ -93,10 +93,11 @@ For the two-hour trial, use these explicit additional planning bounds:
 - **1,000 other PUT/LIST** and **20,000 GET/HEAD**: **$0.013**.
   `requests = 0.000005 × other_put_list + 0.0000004 × get_head`.
 - **1 GB average S3 data**: **$0.000063**; retention/versioning is extra.
-- **1 GB internet egress**: budget **$0.09**, without assuming unused shared free transfer.
+- **3 GB internet egress**: budget **$0.27**, without assuming unused shared free transfer.
+  Three complete historical verification phases alone stream about 1.92 GB; media may be long.
 - **One small SES email**, no attachments/add-ons: about **$0.0002**. Confirm Atlas M0 remains free.
 
-That is roughly **$0.36 before unmodeled items**. RDS CPU surplus, cross-AZ traffic, logs,
+With full historical-media checks, that is roughly **$0.54 before unmodeled items**. RDS CPU surplus, cross-AZ traffic, logs,
 snapshots, retries, delays, retention and other account usage add cost. Propose **$1 credit per
 two-hour trial plus a reserve** as contingency planning, not a cap/guarantee. It authorizes
 nothing under the current $0 instruction.
@@ -117,19 +118,21 @@ unit test; local regressions consume no AWS credits. Expiry, restrictions, uncov
 runtime/other usage reduce capacity. Credits do not extend the Free-plan period or make a cloud
 trial consume zero credits. Reconcile actual usage and cleanup before approving another trial.
 
-## Written decisions to settle with Anusha
+## Written decisions confirmed by Anusha
 
-A consolidated group-text reply can settle these; no call is required.
+Anusha reviewed `cd5b022` and approved its merge; that exact baseline is now on main. She
+confirmed Option B with the private SSH tunnel, fresh AWS/Atlas resources and the 4 GB
+`c7i-flex.large` candidate with one API worker. This is her expected sizing, not a measured
+cloud-capacity result. The 25 historical alerts/audio are required in addition to five new
+replay alerts. SES sender/recipient verification is not complete; the intended recipient will
+be provided privately later. Her proposed sequence is a two-hour trial with full cleanup,
+then a fresh deployment shortly before the demo, removed afterward. The demo date and
+later deployment duration are not supplied. Neither event has an authorized credit allowance.
 
-1. Confirm the tested review branch is ready to merge, including the four guide/environment
-   resolutions, replay controls/default and private bootstrap/tunnel protections.
-2. Confirm the target is Option B in Oregon and whether any project resources/Atlas M0 cluster
-   already exist. Confirm the x86 instance/memory requirement; the original `t3.medium` is not
-   listed as Free-plan eligible. RDS/Atlas/private S3/SES are still the intended services. Share
-   only configuration decisions and resource names/regions; never credentials or account IDs.
-3. Confirm whether the clean bootstrap plus five new replay alerts is the expected demo, or
-   whether historical media step 7.2 is required. Confirm whether Oregon SES sender/recipient
-   verification is complete and who will finish it. Budget-email verification is separate.
+Before either future cloud window, the owner still needs the intended private SES identities,
+the actual demo date/duration, and a reviewed credit allowance for that window. Real cloud
+resource settings, permissions and connections are established and verified only during the
+authorized trial. Keep all credentials and account identifiers out of group text and evidence.
 
 The account owner chooses the credit allowance after these decisions; a teammate's deployment
 request does not authorize credit use. Current instruction prohibits all further AWS actions,
@@ -147,6 +150,9 @@ including read-only console/API work. This packet is preparation only.
 | C5 and recovery | Real archive downloads have stable hashes and restore into fresh local stores; original cloud source preserved; active model/configuration and admin role checks pass |
 | SES | One intended verified recipient receives the expected alert/test email; identity, role and sandbox configuration confirmed without storing addresses in public evidence |
 | Completion | Sanitized UI screenshots/results; trial-owned resources removed and cleanup confirmed; actual credit usage reconciled when billing catches up before another trial |
+
+The historical follow-up is implemented locally on the review branch; its evidence and rehearsal
+are documented in [HISTORICAL_IMPORT.md](HISTORICAL_IMPORT.md).
 
 Ready for a controlled AWS attempt means local evidence is green, the written configuration
 choices are settled, the branch/revision is agreed, and the private configuration prerequisites
