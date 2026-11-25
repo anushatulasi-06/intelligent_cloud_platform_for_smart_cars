@@ -226,6 +226,68 @@ The November 24 upstream update adds recorded CARLA replay and new audio fixture
 November 23 image IDs and test counts above describe the earlier source snapshot, not proof of
 that update. Replay needs no GPU/server; live CARLA remains a separate integration.
 
+### Replay behavior and remaining limits
+
+The Simulator labels this feed **recorded CARLA replay**. A scenario starts its recording;
+Start route resumes a paused recording and rejects idle/finished playback. Stop route freezes
+its timeline. Stopping microphone capture cancels an outstanding sound event; starting capture
+again does not revive the cancelled command. Already captured FIFO audio remains queued.
+
+The scenario ACK confirms a durably buffered clip, not completed upload or model processing.
+F13 and the generated alert establish that later result. The client keeps a private command
+journal in its buffer volume: an ordinary restart reports an interrupted pre-event replay as
+failed, or retries a saved outcome without replaying audio. The API still delivers commands
+once, so a crash between server delivery and the first journal write can leave that command
+waiting until expiry. Server redelivery/receipt handling remains a hardening follow-up. File
+fsync/atomic replacement is not a claim of full power-loss recovery. Audio follows heartbeat
+and browser polling, so synchronization is approximate rather than frame exact.
+
+The three course-provided sound clips have no original license metadata in the supplied
+manifest. Their source is identified; ESC-50's collection license is applied only to the two
+ESC-50 clips. The five expected predictions are fixture regressions, not a population accuracy
+measurement or independent verification of the dataset split.
+
+### November 24 verification of the replay integration
+
+The safety work was rebased onto `main` at `d42a529` (including PR #9) on review branch
+`fix/aws-local-safety-replay`. The four guide/environment conflicts retain the private
+deployment controls, with `EDGE_CLIENT=replay_client` added. Both documented position-feed
+commands require `--demo-only`. All **18 offline infrastructure tests passed**, including a
+stubbed x86 target for the Docker control-flow test, explicit ARM-target rejection and invalid
+edge-selector rejection before external commands.
+
+The rebuilt backend image `autosound-production:local-nov24` is
+`sha256:6ce26a9a22ee762a4d7439272e0841fa7d07c80bcadf99c481a8a57c129f6f6e`.
+Inside that exact image, **646 backend tests passed, 10 PostgreSQL tests skipped, zero failures**;
+`pip check` passed with networking disabled. All **10 PostgreSQL migration tests passed** in a
+separate disposable native cluster. The backend suite includes 20 replay lifecycle/recording
+tests and five real exported-model fixture predictions.
+
+The final frontend image is
+`sha256:1e85dc31621707dce52f16e73daae5c12cf066dc3f263a8acc9e44f0199fe9bc`.
+A fresh isolated application run passed C1–C5 API checks, C2/C3 browser checks, all five real
+recorded-replay commands/uploads/predictions, matching stored WAV hashes, changing recorded
+camera/GPS, event-delayed audible previews, pause/resume and Cloud read-only monitoring.
+Separate browser fault injections passed queue rejection, failed/expired commands, autoplay
+recovery and download retry without early playback. This caught and fixed CSS overriding an
+audio player's `hidden` attribute. The final UI run used `--application-only`; its JSON explicitly
+records omitted unit/migration suites and must be read alongside their separate passing
+evidence. The unchanged backend suites were not repeated for that CSS correction.
+
+`verify_production_local.py` also passed against both final images: all five actual replay
+scenarios used private bootstrap device keys, the production model and local MinIO; uploaded
+and signed-download audio hashes matched. Replay stopped before real database backups.
+Genuine PostgreSQL/MongoDB dumps, actual restores, full schema/data/index/sequence/BSON
+comparisons and restored private logins/device keys/Wi-Fi/model inference all passed. All
+owned test processes, stores, containers, volumes and internal networks were cleaned up.
+
+The local evidence bundle is `cmpe281-replay-local-nov24/`: `application-final/verification.json`,
+`application-final/replay/replay-browser-verification.json` and screenshots,
+`image-unit/verification.json`/JUnit, `native-final/postgres-migrations.xml`,
+`production-final/verification.json`, and `infra-tests.log`. Earlier failing runs are retained;
+use the final paths above for the corrected result. No AWS deployment, managed-service
+requests, SES delivery or credit use was performed.
+
 **Remaining:** live CARLA if required; AWS instance capacity, IAM/network/S3/SES delivery
 and public TLS after separate authorization. Email stayed logged locally. These are small local
 fixtures, not an AWS load/capacity test or a model training/accuracy evaluation. Backups are
